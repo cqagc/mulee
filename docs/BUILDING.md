@@ -75,3 +75,48 @@ codesign --verify --deep --strict --verbose=2 build/dd/Build/Products/Debug/Mule
 - **只有 arm64**：和 App 一致，不做 universal。
 - **体积**：约增加 11 MB（aria2c 约 3 MB、dylib 约 7.5 MB、证书和许可证约 0.3 MB）。
 - 构建机上的 aria2 / openssl 若带有额外的 provider 模块，目前只打包 `ossl-modules` 下已有的文件。
+
+## BT 辅助进程 mulee-torrentd
+
+构建机需要 Xcode 命令行工具，以及 `brew install cmake boost`。先初始化固定版本的源码子模块：
+
+```sh
+git submodule update --init --recursive
+scripts/build-torrentd.sh --standalone
+python3 -I scripts/test-torrentd.py
+```
+
+脚本在源码副本中编译 OpenSSL 3.5.9，再编译 libtorrent-rasterbar 2.0.15，最后用 C++17
+编译 `Helpers/mulee-torrentd/`。不会修改 `ThirdParty/`。首次全量编译约 8 分钟；
+静态依赖缓存在 `${MULEE_THIRDPARTY_CACHE:-$SRCROOT/build/thirdparty}/<缓存键>/`，
+缓存键包含两个子模块提交号、编译参数、Boost 版本和工具链信息，命中后跳过依赖编译。
+`--standalone` 只产出 `<cache>/bin/mulee-torrentd`，可供命令行及 MuleeCore 集成测试使用：
+
+```sh
+build/thirdparty/bin/mulee-torrentd --state-dir "$PWD/build/torrent-state"
+```
+
+进程通过 stdin/stdout 的 JSON Lines 通信，协议见 `docs/TORRENTD-PROTOCOL.md`。
+关闭 stdin 或发送 `shutdown` 会保存 resume data 并退出。构建及辅助进程的子进程环境使用
+`LANG=en_US.UTF-8`、`LC_ALL=en_US.UTF-8`。自动测试只使用临时生成的数据和本机回环互传，
+不依赖公网或第三方 tracker。
+
+Xcode 构建在 aria2 阶段之后运行 “Bundle mulee-torrentd”，将二进制放入
+`Contents/Helpers/mulee-torrentd`，用 Xcode 的签名身份和 hardened runtime 签名，
+并在增量构建封印失效时重签 App。保持此二进制名，代理软件按进程名配置的直连规则才会生效。
+
+OpenSSL、libtorrent 和 Boost.JSON 均静态编入辅助进程，`otool -L` 校验只允许 `/usr/lib/`
+和 `/System/` 的系统库，运行机器无需 Homebrew。架构固定 arm64，所有源码均指定最低 macOS 26.0，
+避免构建机 Homebrew 二进制的最低系统版本漂移。Boost.JSON 的实现只在一个编译单元中引入，
+不链接 Boost 动态库。磁盘 I/O 保留 libtorrent 2.0 默认 mmap 后端。
+
+打包时许可证按现有 `Licenses/<库名>/` 风格收集：
+
+| 组件 | 许可证 | 包内文本 |
+|---|---|---|
+| libtorrent-rasterbar 2.0.15 | BSD-3-Clause | `Licenses/libtorrent/COPYING` |
+| OpenSSL 3.5.9 | Apache-2.0 | `Licenses/openssl/LICENSE.txt` |
+| Boost | BSL-1.0 | `Licenses/boost/LICENSE_1_0.txt` |
+
+Homebrew Boost 未附带顶层许可证时，脚本从 libtorrent 的聚合 `LICENSE` 提取完整且未改动的
+BSL-1.0 文本。`Licenses/README.txt` 追加对应组件和源码地址。

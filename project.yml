@@ -33,6 +33,9 @@ targets:
       - name: Bundle aria2
         script: '"$SRCROOT"/scripts/bundle-aria2.sh'
         basedOnDependencyAnalysis: false
+      - name: Bundle mulee-torrentd
+        script: '"$SRCROOT"/scripts/build-torrentd.sh'
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cqagc.mulee
