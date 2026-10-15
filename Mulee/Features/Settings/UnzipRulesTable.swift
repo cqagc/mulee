@@ -34,7 +34,7 @@ struct UnzipRulesTable: View {
             .frame(height: 190)
             HStack {
                 Button("新增规则", systemImage: MuleeSymbol.add.name, action: addRule)
-                Button("删除规则", systemImage: "minus", action: removeSelected)
+                Button("删除规则", systemImage: MuleeSymbol.remove.name, action: removeSelected)
                     .disabled(selection == nil)
                 Spacer()
                 Text("密码保存在钥匙串里，规则只存在本机")

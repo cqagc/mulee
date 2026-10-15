@@ -25,6 +25,7 @@ enum MuleeSymbol: String, CaseIterable {
 
     // 工具栏与操作
     case add = "plus"
+    case remove = "minus"
     case pause = "pause.fill"
     case resume = "play.fill"
     case search = "magnifyingglass"
@@ -44,7 +45,7 @@ enum MuleeSymbol: String, CaseIterable {
 
     // 解压规则
     case ruleSourceSite = "link"
-    case ruleFilenamePrefix = "textformat"
+    case ruleFilenamePrefix = "doc.text"
     case ruleFilenameRegex = "chevron.left.forwardslash.chevron.right"
     case rulePasswordBook = "key"
 

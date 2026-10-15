@@ -54,6 +54,7 @@ struct PortConnectivitySection: View {
                             .foregroundStyle(mapping.isAbnormal ? Theme.wait : Theme.success)
                     }
                     Toggle("自动端口映射", isOn: $model.portMapping)
+                        .toggleStyle(.switch)
                         .labelsHidden()
                 }
             } label: {

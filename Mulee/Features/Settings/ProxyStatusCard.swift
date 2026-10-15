@@ -23,6 +23,8 @@ struct ProxyStatusCard: View {
                     .foregroundStyle(.secondary)
                 Text(Self.rules)
                     .font(.callout.monospaced())
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(8)

@@ -32,7 +32,19 @@ struct SettingsView: View {
         .environment(model)
         .frame(width: 720)
         .frame(minHeight: 480)
+        #if DEBUG
+        .task(selectDebugLaunchTab)
+        #endif
     }
+
+    #if DEBUG
+    /// Debug 启动参数 -MuleeSettingsTab 指定的标签页（用于截图核对）。
+    private func selectDebugLaunchTab() async {
+        if let raw = DebugLaunchOptions.settingsTab, let tab = SettingsTab(rawValue: raw) {
+            selection = tab
+        }
+    }
+    #endif
 }
 
 #Preview {

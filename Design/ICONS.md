@@ -44,7 +44,8 @@ App 内图标**一律使用 SF Symbols**。唯一的自定义图标是菜单栏�
 
 | 操作 | 符号 | 枚举 |
 |---|---|---|
-| 新建下载 | `plus` | `.add` |
+| 新建下载 / 新增规则 | `plus` | `.add` |
+| 删除规则（列表下方的减号） | `minus` | `.remove` |
 | 全部暂停 / 暂停 | `pause.fill` | `.pause` |
 | 全部继续 / 继续 | `play.fill` | `.resume` |
 | 搜索 | `magnifyingglass` | `.search` |
@@ -80,7 +81,7 @@ App 内图标**一律使用 SF Symbols**。唯一的自定义图标是菜单栏�
 | 匹配方式 | 符号 | 枚举 |
 |---|---|---|
 | 来源网站 | `link` | `.ruleSourceSite` |
-| 文件名前缀 | `textformat` | `.ruleFilenamePrefix` |
+| 文件名前缀 | `doc.text` | `.ruleFilenamePrefix` |
 | 文件名规则（正则） | `chevron.left.forwardslash.chevron.right` | `.ruleFilenameRegex` |
 | 密码本 | `key` | `.rulePasswordBook` |
 
@@ -95,4 +96,5 @@ App 内图标**一律使用 SF Symbols**。唯一的自定义图标是菜单栏�
 
 1. 新增图标先改这份文档，再改 `MuleeSymbol`，测试会自动覆盖新符号。
 2. 只有图标的按钮必须带文字标签：`Button("暂停", systemImage: MuleeSymbol.pause.name, action: pause)`，需要时再加 `.labelStyle(.iconOnly)`。
-3. 状态不能只靠颜色区分：状态符号本身就不一样，色盲用户也能分辨。
+3. **不要用带文字的符号**（例如 `textformat`）：中文系统下 SF Symbols 会把它本地化成汉字「格式」，失去图标意义。
+4. 状态不能只靠颜色区分：状态符号本身就不一样，色盲用户也能分辨。
