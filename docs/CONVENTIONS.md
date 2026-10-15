@@ -28,9 +28,9 @@ Design/                     品牌、图标规范、原型
 - 设计以 Claude Design 原型为准：`Design/Prototype/` 下是原型源码（.dc.html），已实现界面的截图在 `docs/screenshots/`。颜色、间距、文案、信息层级要和原型一致；原型里的占位方块，换成 `Design/ICONS.md` 规定的 SF Symbols。
 - 示例数据、截图、测试里**不使用真实的影视、游戏、书籍等版权作品名**，用虚构名称或开源内容（例如 Big Buck Bunny、Sintel、Ubuntu）。
 - 图标只能通过 `MuleeSymbol` 枚举使用，不准在视图里写符号名字符串。
-- 颜色只能用资源目录里的 `AccentColor`、`WaitColor`、`SuccessColor` 和系统语义色（`.primary`、`.secondary`、`.tertiary` 等）。不准自己写十六进制颜色。
+- 颜色只能用资源目录里的 `AccentColor`、`WaitColor`、`SuccessColor` 和系统语义色（`.primary`、`.secondary`、`.tertiary` 等）。不准自己写十六进制颜色。文件类型图标是例外：按 `Design/ICONS.md` 的 OKLCH 公式生成动态亮暗颜色，不写十六进制常量。
 - 字号用系统文字样式（`.body`、`.callout`、`.subheadline`、`.caption` 等），不写死字号；`.caption2` 尽量不用。
-- 文件图标用 `NSWorkspace.shared.icon(for:)` 取系统图标。
+- 文件图标统一用 `FileTypeIcon` 的「虚实」圆角方块，不使用访达系统文件图标。列表用 32pt，详情头部用 64pt；图形、PDF 文字及格式角标按画布比例缩放，是固定字号禁令的例外。
 
 ## SwiftUI 规则（摘自 swiftui-pro 规范）
 

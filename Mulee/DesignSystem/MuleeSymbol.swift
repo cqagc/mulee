@@ -14,6 +14,19 @@ enum MuleeSymbol: String, CaseIterable {
     case ed2k = "antenna.radiowaves.left.and.right"
     case video = "play.rectangle"
 
+    // 文件类别（视频与代码复用 resume、ruleFilenameRegex，PDF 使用粗体文字）
+    case filePresentation = "rectangle.on.rectangle"
+    case fileEbook = "book.closed.fill"
+    case fileSpreadsheet = "tablecells.fill"
+    case fileImage = "photo"
+    case fileArchive = "doc.zipper"
+    case fileFolder = "folder.fill"
+    case fileDocument = "doc.text.fill"
+    case fileDiskImage = "opticaldisc.fill"
+    case fileAudio = "music.note"
+    case fileInstaller = "shippingbox.fill"
+    case fileOther = "doc.fill"
+
     // 任务状态
     case statusDownloading = "arrow.down"
     case statusSeeding = "arrow.up"
