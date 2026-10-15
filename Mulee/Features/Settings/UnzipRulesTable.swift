@@ -6,6 +6,8 @@ struct UnzipRulesTable: View {
     @Environment(AppModel.self) private var appModel
     @State private var selection: UnzipRule.ID?
     @State private var isAddingRule = false
+    @State private var isRemovingRule = false
+    @State private var storageIssue: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,7 +37,7 @@ struct UnzipRulesTable: View {
             HStack {
                 Button("新增规则", systemImage: MuleeSymbol.add.name, action: addRule)
                 Button("删除规则", systemImage: MuleeSymbol.remove.name, action: removeSelected)
-                    .disabled(selection == nil)
+                    .disabled(selection == nil || isRemovingRule)
                 Spacer()
                 Text("密码保存在钥匙串里，规则只存在本机")
                     .font(.callout)
@@ -44,6 +46,12 @@ struct UnzipRulesTable: View {
             .labelStyle(.iconOnly)
             .buttonStyle(.borderless)
             .padding(8)
+            if let issue = storageIssue ?? appModel.unzipRuleIssue {
+                Text(issue)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(8)
+            }
         }
         .sheet(isPresented: $isAddingRule) {
             AddUnzipRuleSheet()
@@ -56,8 +64,17 @@ struct UnzipRulesTable: View {
 
     private func removeSelected() {
         guard let selection else { return }
-        appModel.unzipRules.removeAll { $0.id == selection }
-        self.selection = nil
+        isRemovingRule = true
+        Task {
+            defer { isRemovingRule = false }
+            do {
+                try await appModel.removeUnzipRule(selection)
+                self.selection = nil
+                storageIssue = nil
+            } catch {
+                storageIssue = "暂时无法删除钥匙串密码，规则已保留"
+            }
+        }
     }
 
     static func title(for kind: UnzipRule.MatchKind) -> LocalizedStringKey {

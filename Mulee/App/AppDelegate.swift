@@ -5,6 +5,7 @@ import MuleeCore
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var coordinator: DownloadCoordinator?
+    private var extractionCoordinator: ExtractionCoordinator?
     private var startupTask: Task<Void, Never>?
     private var shutdownTask: Task<Void, Never>?
     private var timeoutTask: Task<Void, Never>?
@@ -18,12 +19,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !usesSampleData, !AppEnvironment.isRunningUnitTests, coordinator == nil else { return }
         self.model = model
         model.loadTaskHistory(from: TaskHistoryStore())
+        model.loadUnzipRules(from: UnzipRuleStore())
         self.settings = settings
         let stateDirectory = URL.applicationSupportDirectory.appending(path: "Mulee/aria2", directoryHint: .isDirectory)
         coordinator = DownloadCoordinator(
             model: model, engines: [Aria2Engine(stateDirectory: stateDirectory)],
             videoBootstrap: VideoEngineBootstrap()
         )
+        extractionCoordinator = ExtractionCoordinator(
+            model: model, settings: settings,
+            extractor: ArchiveExtractionService(passwords: model.extractionPasswords)
+        )
+        extractionCoordinator?.start()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -45,8 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !isTerminating else { return .terminateLater }
         isTerminating = true
         startupTask?.cancel()
+        extractionCoordinator?.cancel()
         model?.flushTaskHistory()
         shutdownTask = Task { [weak self] in
+            await self?.extractionCoordinator?.stop()
             await coordinator.stop()
             self?.finishTermination(sender)
         }
@@ -65,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func finishTermination(_ application: NSApplication) {
         guard !hasReplied else { return }
         hasReplied = true
+        model?.flushTaskHistory()
         timeoutTask?.cancel()
         application.reply(toApplicationShouldTerminate: true)
     }

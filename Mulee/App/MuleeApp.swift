@@ -22,6 +22,7 @@ struct MuleeApp: App {
                 ed2kID: .disconnected, kad: .disconnected, bittorrentPortReachable: nil,
                 p2pRoutedThroughProxy: false, p2pExitIP: nil, portMappingSucceeded: nil
             ),
+            unzipRules: usesSampleData ? MockData.unzipRules : [],
             preventsSleepWhileDownloading: settings.preventSleep
         )
         _model = State(initialValue: model)

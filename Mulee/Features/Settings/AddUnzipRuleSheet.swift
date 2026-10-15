@@ -8,6 +8,8 @@ struct AddUnzipRuleSheet: View {
     @State private var kind = UnzipRule.MatchKind.sourceSite
     @State private var pattern = ""
     @State private var password = ""
+    @State private var isSaving = false
+    @State private var storageIssue: String?
 
     private var canSave: Bool {
         !pattern.trimmingCharacters(in: .whitespaces).isEmpty && !password.isEmpty
@@ -25,6 +27,10 @@ struct AddUnzipRuleSheet: View {
                 TextField("条件", text: $pattern, prompt: Text("域名、前缀或正则"))
                     .font(.body.monospaced())
                 SecureField("密码", text: $password)
+                if let storageIssue {
+                    Text(storageIssue)
+                        .foregroundStyle(.secondary)
+                }
             }
             .formStyle(.grouped)
             HStack {
@@ -33,7 +39,7 @@ struct AddUnzipRuleSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Button("保存", action: save)
                     .keyboardShortcut(.defaultAction)
-                    .disabled(!canSave)
+                    .disabled(!canSave || isSaving)
             }
             .padding([.horizontal, .bottom])
         }
@@ -45,16 +51,19 @@ struct AddUnzipRuleSheet: View {
     }
 
     private func save() {
-        // TODO: 密码写入钥匙串，keychainItemID 指向该条目；现在只保存规则并记录密码长度。
-        let rule = UnzipRule(
-            matchKind: kind,
-            pattern: pattern.trimmingCharacters(in: .whitespaces),
-            keychainItemID: nil,
-            maskedLength: password.count,
-            hitCount: 0
-        )
-        appModel.unzipRules.append(rule)
-        dismiss()
+        isSaving = true
+        Task {
+            defer { isSaving = false }
+            do {
+                try await appModel.addUnzipRule(
+                    kind: kind, pattern: pattern.trimmingCharacters(in: .whitespacesAndNewlines), password: password
+                )
+                password = ""
+                dismiss()
+            } catch {
+                storageIssue = "暂时无法保存密码，规则尚未添加"
+            }
+        }
     }
 }
 
