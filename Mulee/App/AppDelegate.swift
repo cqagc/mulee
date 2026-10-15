@@ -9,12 +9,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var shutdownTask: Task<Void, Never>?
     private var timeoutTask: Task<Void, Never>?
     private var settings: SettingsModel?
+    private var model: AppModel?
     private var isTerminating = false
     private var hasReplied = false
 
     func configure(model: AppModel, settings: SettingsModel, usesSampleData: Bool) {
         // 示例数据模式和单元测试宿主都不启动真实引擎。
         guard !usesSampleData, !AppEnvironment.isRunningUnitTests, coordinator == nil else { return }
+        self.model = model
+        model.loadTaskHistory(from: TaskHistoryStore())
         self.settings = settings
         let stateDirectory = URL.applicationSupportDirectory.appending(path: "Mulee/aria2", directoryHint: .isDirectory)
         coordinator = DownloadCoordinator(model: model, engines: [Aria2Engine(stateDirectory: stateDirectory)])
@@ -36,6 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !isTerminating else { return .terminateLater }
         isTerminating = true
         startupTask?.cancel()
+        model?.flushTaskHistory()
         shutdownTask = Task { [weak self] in
             await coordinator.stop()
             self?.finishTermination(sender)

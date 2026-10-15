@@ -39,6 +39,9 @@ struct MuleeApp: App {
         }
         .defaultSize(width: 1240, height: 780)
         .keyboardShortcut("n", modifiers: [.command, .shift])
+        .commands {
+            TaskHistoryCommands(model: model)
+        }
 
         MenuBarExtra {
             MenuBarPanelView()

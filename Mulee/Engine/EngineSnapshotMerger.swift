@@ -1,16 +1,24 @@
 import Foundation
 import MuleeCore
 
-/// 只合并本次成功取得的引擎快照；查询失败不会误删任务。
+/// 只合并本次成功取得的引擎快照；终态历史不依赖引擎会话。
 enum EngineSnapshotMerger {
     static func merge(
         tasks: [DownloadTask],
         snapshots: [TaskKind: [EngineTaskSnapshot]],
         now: Date
     ) -> [DownloadTask] {
-        var result = tasks.filter { task in
-            guard let id = task.engineTaskID, let current = snapshots[task.kind] else { return true }
-            return current.contains { $0.engineTaskID == id }
+        var result = tasks.map { task in
+            guard let id = task.engineTaskID, let current = snapshots[task.kind],
+                  !current.contains(where: { $0.engineTaskID == id }),
+                  [.downloading, .queued, .paused].contains(task.status) else { return task }
+            var task = task
+            task.status = .failed
+            task.errorMessage = "上次退出前的进度没能恢复，可以重新下载"
+            task.downloadRate = 0
+            task.uploadRate = 0
+            task.estimatedTimeRemaining = nil
+            return task
         }
         for kind in TaskKind.allCases {
             for snapshot in snapshots[kind] ?? [] {
