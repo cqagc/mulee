@@ -6,7 +6,9 @@ enum BitTorrentRemoval {
     static func confirm(task: DownloadTask, model: AppModel) {
         let alert = NSAlert()
         alert.messageText = "删除「\(task.name)」？"
-        alert.informativeText = "可以只移除任务，或同时删除已下载的文件。"
+        alert.informativeText = task.kind == .ed2k && task.status != .completed
+            ? "未完成的电驴分块会随任务移除；已完成的文件可以保留。"
+            : "可以只移除任务，或同时删除已下载的文件。"
         alert.addButton(withTitle: "只删除任务")
         alert.addButton(withTitle: "取消")
         alert.addButton(withTitle: "同时删除文件")

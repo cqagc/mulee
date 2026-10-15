@@ -79,6 +79,8 @@ final class SettingsModel {
         static let ed2kUDPPort = "ed2k.udpPort"
         static let ed2kShare = "ed2k.shareCompleted"
         static let ed2kObfuscation = "ed2k.obfuscation"
+        static let ed2kConnectToServers = "ed2k.connectToServers"
+        static let ed2kEnableKad = "ed2k.enableKad"
         static let videoQuality = "video.quality"
         static let ytDlpChannel = "video.ytDlpChannel"
         static let updateBeforeRetry = "video.updateBeforeRetry"
@@ -134,6 +136,8 @@ final class SettingsModel {
     var ed2kUDPPort: Int { didSet { defaults.set(ed2kUDPPort, forKey: Key.ed2kUDPPort) } }
     var ed2kShare: Bool { didSet { defaults.set(ed2kShare, forKey: Key.ed2kShare) } }
     var ed2kObfuscation: Bool { didSet { defaults.set(ed2kObfuscation, forKey: Key.ed2kObfuscation) } }
+    var ed2kConnectToServers: Bool { didSet { defaults.set(ed2kConnectToServers, forKey: Key.ed2kConnectToServers) } }
+    var ed2kEnableKad: Bool { didSet { defaults.set(ed2kEnableKad, forKey: Key.ed2kEnableKad) } }
 
     // MARK: 视频
     var videoQuality: VideoQuality { didSet { defaults.set(videoQuality.rawValue, forKey: Key.videoQuality) } }
@@ -172,6 +176,8 @@ final class SettingsModel {
         ed2kUDPPort = Self.int(defaults, Key.ed2kUDPPort, 4672)
         ed2kShare = Self.bool(defaults, Key.ed2kShare, true)
         ed2kObfuscation = Self.bool(defaults, Key.ed2kObfuscation, true)
+        ed2kConnectToServers = Self.bool(defaults, Key.ed2kConnectToServers, true)
+        ed2kEnableKad = Self.bool(defaults, Key.ed2kEnableKad, true)
         videoQuality = Self.raw(defaults, Key.videoQuality, .compatible)
         ytDlpChannel = Self.raw(defaults, Key.ytDlpChannel, .stable)
         updateBeforeRetry = Self.bool(defaults, Key.updateBeforeRetry, true)

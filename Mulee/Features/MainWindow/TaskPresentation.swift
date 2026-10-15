@@ -162,6 +162,7 @@ struct TaskPresentation {
 
     var longTailStatus: String {
         guard task.status == .waitingForSources || task.status == .downloading else { return statusTitle }
+        if task.status == .downloading, task.downloadRate > 0 { return "正在下载" }
         return longTail?.queueRank.map { "排队中，第 \($0.formatted()) 位" } ?? "等待来源"
     }
 

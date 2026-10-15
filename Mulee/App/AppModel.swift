@@ -19,6 +19,7 @@ final class AppModel {
         didSet { updateSleepPrevention() }
     }
     var bitTorrent: BitTorrentController?
+    var ed2k: Ed2kController?
     var networkStatus: NetworkStatus
     var engineStates: [TaskKind: EngineState] = Dictionary(uniqueKeysWithValues: TaskKind.allCases.map { ($0, .unavailable) })
     /// 历史读取、备份或写入异常；独立于引擎启停，避免启动成功后覆盖诊断。
@@ -127,7 +128,7 @@ final class AppModel {
     }
 
     func remove(_ id: DownloadTask.ID) {
-        if let task = tasks.first(where: { $0.id == id }), task.kind == .bittorrent, coordinator != nil {
+        if let task = tasks.first(where: { $0.id == id }), [.bittorrent, .ed2k].contains(task.kind), coordinator != nil {
             BitTorrentRemoval.confirm(task: task, model: self)
             return
         }
@@ -156,10 +157,18 @@ final class AppModel {
 
     /// 只清理记录，不触碰已经下载的文件。
     func clearCompletedTasks() {
+        let ed2kTasks = tasks.filter { $0.status == .completed && $0.kind == .ed2k && $0.engineTaskID != nil }
+        let engineOwnedIDs = coordinator == nil ? Set<DownloadTask.ID>() : Set(ed2kTasks.map(\.id))
         for task in tasks where task.status == .completed {
+            guard !engineOwnedIDs.contains(task.id) else { continue }
             coordinator?.excludeFromSnapshots(task)
         }
-        tasks.removeAll { $0.status == .completed }
+        tasks.removeAll { $0.status == .completed && !engineOwnedIDs.contains($0.id) }
+        if let coordinator {
+            Task {
+                for task in ed2kTasks { await coordinator.remove(task.id, deleteFiles: false) }
+            }
+        }
         if let selectedTaskID, !tasks.contains(where: { $0.id == selectedTaskID }) {
             self.selectedTaskID = nil
         }

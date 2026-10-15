@@ -29,7 +29,12 @@ enum EngineStatusPresentation {
 
     nonisolated static func errorMessage(_ error: any Error, kind: TaskKind? = nil) -> String {
         switch error {
-        case EngineError.binaryNotFound: kind == .bittorrent ? "未找到 BT 下载工具" : "未找到 aria2"
+        case EngineError.binaryNotFound:
+            switch kind {
+            case .ed2k: "未找到电驴下载工具"
+            case .bittorrent: "未找到 BT 下载工具"
+            default: "未找到 aria2"
+            }
         case EngineError.notRunning: "下载引擎未运行"
         case EngineError.launchFailed(let reason): "引擎启动失败：\(reason)"
         case EngineError.rpc(let code, let message): "\(message)（\(code)）"
@@ -41,17 +46,17 @@ enum EngineStatusPresentation {
 
     static func ed2k(_ status: NetworkStatus.Ed2kID) -> String {
         switch status {
-        case .high: "High ID"
-        case .low: "Low ID"
-        case .disconnected: "未启用"
+        case .high: "可连入"
+        case .low: "连入受限"
+        case .disconnected: "未连接"
         }
     }
 
     static func kad(_ status: NetworkStatus.KadState) -> String {
         switch status {
-        case .open: "已连接"
+        case .open: "开放"
         case .firewalled: "受限"
-        case .disconnected: "未启用"
+        case .disconnected: "未连接"
         }
     }
 

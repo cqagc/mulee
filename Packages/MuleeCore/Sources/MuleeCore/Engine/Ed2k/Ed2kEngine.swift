@@ -80,8 +80,10 @@ public actor Ed2kEngine: DownloadEngine {
         updated.settings = settings
         updated.options.uploadLimit = settings.uploadLimit
         _ = try updated.managedValues()
-        if settings.tcpPort != self.settings.tcpPort || settings.udpPort != self.settings.udpPort || settings.enableKad != self.settings.enableKad || settings.connectToServers != self.settings.connectToServers {
-            // UDPEnable 改变同样要求重建 UDP socket。
+        if settings.tcpPort != self.settings.tcpPort || settings.udpPort != self.settings.udpPort
+            || settings.enableKad != self.settings.enableKad || settings.connectToServers != self.settings.connectToServers
+            || settings.shareCompletedFiles != self.settings.shareCompletedFiles || settings.obfuscation != self.settings.obfuscation {
+            // UDP socket、共享过滤和混淆偏好需要重新读取配置；队列保存在同一状态目录。
             await shutdown()
             try await launch(options: updated.options, settings: settings)
         } else {
@@ -442,6 +444,10 @@ public actor Ed2kEngine: DownloadEngine {
         }
         for record in history?.records.values ?? Dictionary<String, Ed2kTaskRecord>().values where !active.contains(record.hash) && record.completedAt != nil {
             result.append(Ed2kStatusMapper.completed(record, now: now))
+        }
+        if completedChanged, !settings.shareCompletedFiles {
+            // aMule 完成文件时会直接加入共享，重新扫描后按 ExcludeSharePatterns 排除。
+            _ = try await rpc.request(ECPacket(opcode: ECCode.Op.reloadShared)).checked()
         }
         try history?.flush(force: completedChanged)
         return result.sorted { $0.engineTaskID < $1.engineTaskID }

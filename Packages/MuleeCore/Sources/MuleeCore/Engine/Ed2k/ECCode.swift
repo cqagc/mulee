@@ -14,6 +14,7 @@ enum ECCode {
         static let downloads: UInt8 = 0x1F
         static let getShared: UInt8 = 0x10
         static let shared: UInt8 = 0x22
+        static let reloadShared: UInt8 = 0x23
         static let pause: UInt8 = 0x19
         static let resume: UInt8 = 0x1A
         static let delete: UInt8 = 0x1D

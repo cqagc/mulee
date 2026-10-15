@@ -27,6 +27,7 @@ struct MenuBarPanelView: View {
                 MenuBarWaitingNotice(count: presentation.waitingSourceCount)
             }
             MenuBarPasteField()
+            Ed2kNetworkStatusView(status: model.networkStatus)
             Divider()
             MenuBarFooter(pauseResumeAction: presentation.pauseResumeAction)
         }

@@ -29,8 +29,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.bitTorrent = BitTorrentController(
             engine: torrent, model: model, configuration: BitTorrentEngineConfiguration.configuration(from: settings)
         )
+        let ed2k = Ed2kEngine(
+            stateDirectory: URL.applicationSupportDirectory.appending(path: "Mulee/amule", directoryHint: .isDirectory),
+            settings: Ed2kEngineConfiguration.configuration(from: settings)
+        )
+        model.ed2k = Ed2kController(
+            engine: ed2k, model: model, configuration: Ed2kEngineConfiguration.configuration(from: settings)
+        )
         coordinator = DownloadCoordinator(
-            model: model, engines: [Aria2Engine(stateDirectory: stateDirectory), torrent],
+            model: model, engines: [Aria2Engine(stateDirectory: stateDirectory), torrent, ed2k],
             videoBootstrap: VideoEngineBootstrap()
         )
         extractionCoordinator = ExtractionCoordinator(
