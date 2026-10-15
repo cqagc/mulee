@@ -5,7 +5,9 @@ import Observation
 /// 全局 UI 状态。引擎接入前用 MockData 填充，所有操作只改内存里的示例数据。
 @Observable
 final class AppModel {
-    var tasks: [DownloadTask]
+    var tasks: [DownloadTask] {
+        didSet { updateSleepPrevention() }
+    }
     var networkStatus: NetworkStatus
     var unzipRules: [UnzipRule]
     /// 主窗口当前选中的任务。
@@ -16,12 +18,16 @@ final class AppModel {
     var pendingNewTaskText = ""
     /// 最近 30 次采样的总下载速度（字节/秒），最后一个是最新值。菜单栏速度曲线使用。
     var downloadRateHistory: [Int64]
+    /// 有任务在传输时阻止系统空闲睡眠。
+    @ObservationIgnored private let sleepPreventer: SleepPreventer
 
     init(
         tasks: [DownloadTask] = MockData.tasks,
         networkStatus: NetworkStatus = MockData.healthyNetwork,
-        unzipRules: [UnzipRule] = MockData.unzipRules
+        unzipRules: [UnzipRule] = MockData.unzipRules,
+        sleepPreventer: SleepPreventer = SleepPreventer()
     ) {
+        self.sleepPreventer = sleepPreventer
         self.tasks = tasks
         self.networkStatus = networkStatus
         self.unzipRules = unzipRules
@@ -31,6 +37,12 @@ final class AppModel {
         self.downloadRateHistory = (0..<30).map { index in
             Int64(Double(current) * (0.3 + 0.7 * Double(index) / 29))
         }
+        updateSleepPrevention()
+    }
+
+    /// 是否正在阻止系统睡眠（菜单栏底部提示用）。
+    var isPreventingSleep: Bool {
+        sleepPreventer.isPreventingSleep
     }
 
     var selectedTask: DownloadTask? {
@@ -94,6 +106,10 @@ final class AppModel {
         let newTasks = links.map { DownloadTask(link: $0, autoExtract: autoExtract) }
         tasks.insert(contentsOf: newTasks, at: 0)
         selectedTaskID = newTasks.first?.id ?? selectedTaskID
+    }
+
+    private func updateSleepPrevention() {
+        sleepPreventer.update(isActive: hasActiveTransfers)
     }
 
     private func pause(at index: Int) {
