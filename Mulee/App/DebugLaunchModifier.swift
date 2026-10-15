@@ -34,6 +34,12 @@ struct DebugLaunchModifier: ViewModifier {
         if DebugLaunchOptions.showsMenuBarPanelWindow {
             openWindow(id: "menu-bar-panel-preview")
         }
+        if DebugLaunchOptions.showsAbout {
+            openWindow(id: "about")
+        }
+        if DebugLaunchOptions.showsOnboarding {
+            openWindow(id: "onboarding")
+        }
         if DebugLaunchOptions.showsIconGallery {
             openWindow(id: "file-icon-gallery")
         }

@@ -5,6 +5,7 @@ import MuleeCore
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var openURLRouter: OpenURLRouter?
+    private var servicesProvider: DownloadServicesProvider?
     private var settingsRuntime: SettingsRuntime?
     private var coordinator: DownloadCoordinator?
     private var extractionCoordinator: ExtractionCoordinator?
@@ -18,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func configure(model: AppModel, settings: SettingsModel, usesSampleData: Bool) {
         openURLRouter = OpenURLRouter(model: model, settings: settings)
+        servicesProvider = DownloadServicesProvider(router: openURLRouter)
         self.model = model
         self.settings = settings
         // 示例数据模式和单元测试宿主都不启动真实引擎。
@@ -58,6 +60,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.servicesProvider = servicesProvider
+        NSUpdateDynamicServices()
         if !AppEnvironment.isRunningUnitTests, !Self.wasLaunchedAtLogin {
             model?.mainWindowRequest += 1
         }

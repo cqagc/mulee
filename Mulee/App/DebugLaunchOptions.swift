@@ -37,6 +37,10 @@ enum DebugLaunchOptions {
     /// 启动时打开亮暗对照的文件类型图标总览。
     static var showsIconGallery: Bool { defaults.bool(forKey: "MuleeShowIconGallery") }
 
+    /// 打开关于窗口和首次引导预览；引导预览禁止更改系统默认程序。
+    static var showsAbout: Bool { defaults.bool(forKey: "MuleeShowAbout") }
+    static var showsOnboarding: Bool { defaults.bool(forKey: "MuleeShowOnboarding") }
+
     /// 用「P2P 走了代理」的网络状态启动，查看警告样式。
     static var usesProxiedNetwork: Bool { defaults.bool(forKey: "MuleeProxiedNetwork") }
 

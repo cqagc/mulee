@@ -38,6 +38,7 @@ struct MuleeApp: App {
             MainWindowView()
                 .frame(minWidth: Theme.mainWindowMinWidth, minHeight: Theme.mainWindowMinHeight)
                 .debugLaunchOptions()
+                .modifier(OnboardingLaunchModifier())
                 .background(MainWindowRegistration(delegate: appDelegate))
                 .onOpenURL { url in
                     appDelegate.openURLRouter?.open([url])
@@ -54,6 +55,7 @@ struct MuleeApp: App {
         .keyboardShortcut("n", modifiers: [.command, .shift])
         .commands {
             TaskHistoryCommands(model: model)
+            AboutCommands()
         }
 
         MenuBarExtra {
@@ -79,6 +81,26 @@ struct MuleeApp: App {
                 .preferredColorScheme(DebugLaunchOptions.colorScheme)
                 #endif
         }
+
+        Window("关于 Mulee", id: "about") {
+            AboutView()
+                #if DEBUG
+                .preferredColorScheme(DebugLaunchOptions.colorScheme)
+                #endif
+        }
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+        .windowResizability(.contentSize)
+
+        Window("默认下载工具", id: "onboarding") {
+            OnboardingView()
+                #if DEBUG
+                .preferredColorScheme(DebugLaunchOptions.colorScheme)
+                #endif
+        }
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
+        .windowResizability(.contentSize)
 
         #if DEBUG
         Window("文件类型图标总览", id: "file-icon-gallery") {
