@@ -20,6 +20,7 @@ struct GeneralSettingsTab: View {
                 Toggle("全部完成后允许睡眠", isOn: $model.allowSleepWhenDone)
             }
             DefaultHandlerSection()
+            BrowserExtensionSection()
             Section {
                 Toggle(isOn: $model.watchClipboard) {
                     Text("监听剪贴板")

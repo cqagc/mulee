@@ -1,0 +1,28 @@
+Mulee 浏览器扩展 / Browser extension
+
+Chrome 安装：
+1. 把随 App 提供的 chrome 文件夹复制到固定位置（例如「文稿」）。
+2. 在 Chrome 打开 chrome://extensions，启用「开发者模式」。
+3. 点「加载已解压的扩展程序」，选择复制后的 chrome 文件夹。
+4. 首次发送时选择「打开 Mulee」，可勾选「始终允许」。
+也可解压 mulee-chrome.zip 后加载其中的 chrome 文件夹。
+
+Safari：在 Mulee 的「设置 → 通用 → 浏览器扩展」点「在 Safari 中启用」。
+
+扩展不收集数据、不联网、不读取或传递 cookie，只把你选择的链接交给本机 Mulee。
+「接管浏览器下载」默认关闭，仅支持提供 downloads API 的浏览器。
+需要登录 cookie 的下载可能失败，可临时关闭接管后用浏览器重试。
+所有下载都要在 Mulee 的新建下载面板确认。
+
+Chrome installation:
+1. Copy the bundled chrome folder to a permanent location, such as Documents.
+2. Open chrome://extensions and enable Developer mode.
+3. Choose Load unpacked and select the copied chrome folder.
+4. Choose Open Mulee in the external-protocol prompt; Always allow is optional.
+You can also extract mulee-chrome.zip and load its chrome folder.
+
+Safari: Mulee → Settings → General → Browser extensions → Enable in Safari.
+No data collection, network requests, or cookie access. Only selected links are
+sent to Mulee on this Mac. Optional download interception is off by default and
+requires the downloads API. Downloads requiring login cookies may fail; disable
+interception temporarily and retry in the browser. Confirm all downloads in Mulee.

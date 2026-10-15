@@ -1,0 +1,77 @@
+{
+    "name": {
+        "message": "Mulee Browser Extension"
+    },
+    "description": {
+        "message": "Send selected download links to Mulee on this Mac for confirmation."
+    },
+    "downloadLink": {
+        "message": "Download with Mulee"
+    },
+    "downloadSelection": {
+        "message": "Download selected links with Mulee"
+    },
+    "chooseLinks": {
+        "message": "Choose links to send to Mulee."
+    },
+    "pageLinks": {
+        "message": "Download links on this page"
+    },
+    "empty": {
+        "message": "No download links found. You can also right-click a link to download with Mulee."
+    },
+    "send": {
+        "message": "Send to Mulee"
+    },
+    "options": {
+        "message": "Download interception settings"
+    },
+    "takeover": {
+        "message": "Intercept browser downloads"
+    },
+    "takeoverHint": {
+        "message": "Off by default. Matching browser downloads are cancelled and sent to Mulee for confirmation. Downloads requiring login cookies may fail; temporarily disable interception if needed. Cookies are never read or forwarded."
+    },
+    "takeoverUnavailable": {
+        "message": "This browser does not provide the download interception API. Use the context menu or select links to send to Mulee."
+    },
+    "extensions": {
+        "message": "File extensions to intercept (spaces or commas)"
+    },
+    "save": {
+        "message": "Save extensions"
+    },
+    "saved": {
+        "message": "Extensions saved."
+    },
+    "confirmHint": {
+        "message": "Links open in Mulee on this Mac. Downloads start only after you confirm."
+    },
+    "sent": {
+        "message": "Sent to Mulee. Confirm the download in Mulee."
+    },
+    "sendFailed": {
+        "message": "Could not open Mulee. Make sure Mulee is installed and open, or temporarily disable interception and retry."
+    },
+    "invalidLinks": {
+        "message": "No valid remote download links."
+    },
+    "tooLarge": {
+        "message": "A link or the selected text exceeds 1 MiB. Reduce the selection and retry."
+    },
+    "restrictedPage": {
+        "message": "This page does not allow extensions to read it. Try a regular webpage."
+    },
+    "permissionDenied": {
+        "message": "Download permission was not granted. Interception remains off."
+    },
+    "externalPrompt": {
+        "message": "Choose “Open Mulee” in the browser prompt. You can select “Always allow”. This temporary tab closes when you return to the browser; close it manually if you cancel."
+    },
+    "openMulee": {
+        "message": "Open Mulee"
+    },
+    "closeTab": {
+        "message": "Close this tab"
+    }
+}
