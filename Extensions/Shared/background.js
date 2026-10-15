@@ -3,9 +3,11 @@
 if (typeof importScripts === "function") importScripts("core.js", "video-login.js");
 const extensionAPI = globalThis.browser || globalThis.chrome;
 const linksAPI = globalThis.MuleeLinks;
+// Chrome 也提供 browser 命名空间，只能按扩展 URL 的协议区分 Safari。
+const isSafari = extensionAPI.runtime.getURL("").startsWith("safari-web-extension:");
 
 async function openEntry(url) {
-    if (extensionAPI.runtime.sendNativeMessage && typeof globalThis.browser !== "undefined") {
+    if (extensionAPI.runtime.sendNativeMessage && isSafari) {
         try {
             const response = await extensionAPI.runtime.sendNativeMessage("com.cqagc.mulee", { url });
             if (response?.ok) return;

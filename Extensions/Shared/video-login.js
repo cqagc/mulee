@@ -38,7 +38,8 @@
             // Cookie 不写入 URL、storage 或控制台；失败不回退到 URL 通道。
             let response;
             try {
-                const safari = typeof root.browser !== "undefined";
+                // Chrome 也提供 browser 命名空间，只能按扩展 URL 的协议区分 Safari。
+                const safari = api.runtime.getURL("").startsWith("safari-web-extension:");
                 response = await api.runtime.sendNativeMessage(safari ? "com.cqagc.mulee" : "com.cqagc.mulee.video_login", request);
             } catch { throw new Error("videoLoginFailed"); }
             if (!response?.ok) throw new Error("videoLoginFailed");

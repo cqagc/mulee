@@ -16,14 +16,14 @@ function event() {
     };
 }
 
-function worker({ takeover = false, native = false } = {}) {
+function worker({ takeover = false, native = false, scheme = native ? "safari-web-extension" : "chrome-extension" } = {}) {
     const calls = [];
     const api = {
         runtime: {
             id: "test-extension",
             onInstalled: event(),
             onMessage: event(),
-            getURL: name => "chrome-extension://test-extension/" + name
+            getURL: name => scheme + "://test-extension/" + name
         },
         tabs: {
             onRemoved: event(),
@@ -92,6 +92,13 @@ test("Safari native messaging opens no temporary browser tabs", async () => {
     assert.equal(calls[0][0], "native");
     assert.equal(calls[0][1], "com.cqagc.mulee");
     assert.equal(new URL(calls[0][2].url).searchParams.get("text"), "密码：abc");
+});
+
+test("Chrome with a browser namespace still uses the protocol tab", async () => {
+    const { context, calls } = worker({ native: true, scheme: "chrome-extension" });
+    await vm.runInContext('sendLinks(["https://example.org/a.zip"], "", "")', context);
+    assert.equal(calls[0][0], "create");
+    assert.equal(calls.some(call => call[0] === "native"), false);
 });
 
 test("native host failure falls back to a temporary protocol tab", async () => {

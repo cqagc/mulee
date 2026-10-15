@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const login = require("../video-login.js");
 
-function fixture(enabled, granted = true) {
+function fixture(enabled, granted = true, scheme = "chrome-extension") {
     const reads = [];
     const messages = [];
     return {
@@ -14,6 +14,7 @@ function fixture(enabled, granted = true) {
             permissions: { contains: async () => granted },
             runtime: {
                 getManifest: () => ({ optional_permissions: ["cookies", "nativeMessaging"] }),
+                getURL: name => scheme + "://test-extension/" + name,
                 sendNativeMessage: async (host, payload) => { messages.push({ host, payload }); return { ok: true }; }
             },
             cookies: { getAll: async ({ domain }) => {
@@ -73,4 +74,23 @@ test("known short links still read only the matching permitted cookie domain", a
     const state = fixture(true);
     await login.transfer(state.api, ["https://b23.tv/example", "https://youtu.be/example"]);
     assert.deepEqual(state.reads, ["bilibili.com", "youtube.com"]);
+});
+
+test("Chrome exposing a browser namespace still uses the Chrome host", async () => {
+    globalThis.browser = {};
+    try {
+        const state = fixture(true);
+        await login.transfer(state.api, [], true);
+        assert.ok(state.messages.length > 0);
+        assert.ok(state.messages.every(({ host }) => host === "com.cqagc.mulee.video_login"));
+    } finally {
+        delete globalThis.browser;
+    }
+});
+
+test("Safari uses the app extension host", async () => {
+    const state = fixture(true, true, "safari-web-extension");
+    await login.transfer(state.api, [], true);
+    assert.ok(state.messages.length > 0);
+    assert.ok(state.messages.every(({ host }) => host === "com.cqagc.mulee"));
 });
