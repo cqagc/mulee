@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// 主窗口：原生侧边栏、任务列表和可收起的详情栏。
@@ -46,16 +47,21 @@ struct MainWindowView: View {
         .sheet(isPresented: $model.isShowingNewTask) {
             NewTaskSheet()
         }
-        .dropDestination(for: URL.self, action: dropTorrentFiles)
+        .onDrop(of: OpenURLDropHandler.types, isTargeted: nil, perform: dropLinks)
+        .alert("无法打开链接", isPresented: Binding(
+            get: { model.openURLIssue != nil },
+            set: { if !$0 { model.openURLIssue = nil } }
+        )) {
+            Button("好", role: .cancel) { model.openURLIssue = nil }
+        } message: {
+            Text(model.openURLIssue ?? "")
+        }
         .onChange(of: selection, clearHiddenSelection)
         .onChange(of: search, clearHiddenSelection)
     }
 
-    private func dropTorrentFiles(_ urls: [URL], _ location: CGPoint) -> Bool {
-        let text = NewTaskModel.torrentFileText(urls)
-        guard !text.isEmpty else { return false }
-        model.showNewTask(prefill: text)
-        return true
+    private func dropLinks(_ providers: [NSItemProvider]) -> Bool {
+        OpenURLDropHandler.accept(providers, model: model)
     }
 
     private func showNewTask() {

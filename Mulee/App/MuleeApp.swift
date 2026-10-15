@@ -34,10 +34,15 @@ struct MuleeApp: App {
             MainWindowView()
                 .frame(minWidth: Theme.mainWindowMinWidth, minHeight: Theme.mainWindowMinHeight)
                 .debugLaunchOptions()
+                .onOpenURL { url in
+                    appDelegate.openURLRouter?.open([url])
+                }
+                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
                 .modifier(SettingsSyncModifier())
                 .environment(model)
                 .environment(settings)
         }
+        .handlesExternalEvents(matching: ["*"])
         .defaultSize(width: 1240, height: 780)
         .keyboardShortcut("n", modifiers: [.command, .shift])
         .commands {
