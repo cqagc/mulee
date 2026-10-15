@@ -103,7 +103,7 @@ public actor Aria2Engine: DownloadEngine {
                 status = try await taskStatus(engineTaskID, using: client)
                 if ["complete", "error", "removed"].contains(status.status) { break }
                 guard ContinuousClock.now < deadline else {
-                    throw EngineError.rpc(code: 1, message: "等待 aria2 移除任务超时")
+                    throw EngineError.rpc(code: 1, message: String(localized: "等待 aria2 移除任务超时", bundle: .module))
                 }
                 try await Task.sleep(for: .milliseconds(25))
             } while true
@@ -161,7 +161,7 @@ public actor Aria2Engine: DownloadEngine {
             // Cancelling URLSession's child task also cancels any request still in flight.
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
-                    var lastError = "RPC 尚未就绪"
+                    var lastError = String(localized: "RPC 尚未就绪", bundle: .module)
                     while child.isRunning {
                         do {
                             let _: [String: Aria2RPCValue] = try await rpc.call("aria2.getVersion")
@@ -171,16 +171,16 @@ public actor Aria2Engine: DownloadEngine {
                         }
                         try await Task.sleep(for: .milliseconds(50))
                     }
-                    throw EngineError.launchFailed("aria2 进程提前退出：" + lastError)
+                    throw EngineError.launchFailed(String(localized: "aria2 进程提前退出：\(lastError)", bundle: .module))
                 }
                 group.addTask {
                     try await Task.sleep(for: .seconds(5))
-                    throw EngineError.launchFailed("等待 aria2 RPC 就绪超时（5 秒）")
+                    throw EngineError.launchFailed(String(localized: "等待 aria2 RPC 就绪超时（5 秒）", bundle: .module))
                 }
                 defer { group.cancelAll() }
                 _ = try await group.next()
             }
-            guard child.isRunning else { throw EngineError.launchFailed("aria2 进程提前退出") }
+            guard child.isRunning else { throw EngineError.launchFailed(String(localized: "aria2 进程提前退出", bundle: .module)) }
             client = rpc
         } catch {
             await child.finish(grace: .zero)
@@ -226,7 +226,7 @@ public actor Aria2Engine: DownloadEngine {
             return try String(contentsOf: url, encoding: .utf8)
                 .split(separator: "\n").suffix(8).joined(separator: "\n")
         } catch {
-            return "无法读取 aria2.log：\(error.localizedDescription)"
+            return String(localized: "无法读取 aria2.log：\(error.localizedDescription)", bundle: .module)
         }
     }
 }

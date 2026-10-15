@@ -72,7 +72,7 @@ struct UnzipRulesTable: View {
                 self.selection = nil
                 storageIssue = nil
             } catch {
-                storageIssue = "暂时无法删除钥匙串密码，规则已保留"
+                storageIssue = String(localized: "暂时无法删除钥匙串密码，规则已保留")
             }
         }
     }

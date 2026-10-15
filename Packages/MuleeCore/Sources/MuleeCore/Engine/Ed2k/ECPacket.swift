@@ -1,3 +1,5 @@
+import Foundation
+
 struct ECPacket: Sendable, Equatable {
     var opcode: UInt8
     var tags: [ECTag] = []
@@ -8,7 +10,7 @@ struct ECPacket: Sendable, Equatable {
         if opcode == ECCode.Op.failed {
             throw ECError.rejected(Ed2kErrorDescriptions.operation(tag(ECCode.Tag.string)?.string))
         }
-        guard opcode == expected else { throw ECError.malformed("操作回包类型不符（\(opcode)）") }
+        guard opcode == expected else { throw ECError.malformed(String(localized: "操作回包类型不符（\(opcode)）", bundle: .module)) }
         return self
     }
 }

@@ -106,7 +106,7 @@ public actor Ed2kEngine: DownloadEngine {
         let destination = (directory ?? configuration.options.downloadDirectory).standardizedFileURL
         guard destination.isFileURL, Ed2kStatusMapper.safePath(name: name, directory: destination) != nil,
               !destination.path.contains(where: { $0.isNewline || $0 == "\0" }) else {
-            throw ECError.rejected("文件名或保存目录无效")
+            throw ECError.rejected(String(localized: "文件名或保存目录无效", bundle: .module))
         }
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         let category = destination.path == configuration.options.downloadDirectory.standardizedFileURL.path
@@ -216,7 +216,7 @@ public actor Ed2kEngine: DownloadEngine {
                     try await Task.sleep(for: .milliseconds(100))
                 }
             }
-            guard ready, child.isRunning else { throw EngineError.launchFailed("等待电驴 EC 就绪超时或进程提前退出（30 秒）") }
+            guard ready, child.isRunning else { throw EngineError.launchFailed(String(localized: "等待电驴 EC 就绪超时或进程提前退出（30 秒）", bundle: .module)) }
             self.configuration = configuration
             self.settings = settings
             categories.removeAll()
@@ -323,7 +323,7 @@ public actor Ed2kEngine: DownloadEngine {
             ])
         ])).checked()
         let updated = try await readCategories(using: rpc)
-        guard let id = updated[directory.path] else { throw ECError.rejected("分类创建后无法确认保存目录") }
+        guard let id = updated[directory.path] else { throw ECError.rejected(String(localized: "分类创建后无法确认保存目录", bundle: .module)) }
         return id
     }
 
@@ -345,7 +345,7 @@ public actor Ed2kEngine: DownloadEngine {
     private func connectionTag(using rpc: ECClient) async throws -> ECTag {
         let packet = try await rpc.request(ECPacket(opcode: ECCode.Op.getConnectionState, tags: [.number(ECCode.Tag.detail, 2)]))
             .checked(ECCode.Op.miscData)
-        guard let tag = packet.tag(ECCode.Tag.connectionState) else { throw ECError.malformed("缺少网络状态") }
+        guard let tag = packet.tag(ECCode.Tag.connectionState) else { throw ECError.malformed(String(localized: "缺少网络状态", bundle: .module)) }
         return tag
     }
 
@@ -392,7 +392,7 @@ public actor Ed2kEngine: DownloadEngine {
         for tag in downloads.tags where tag.name == ECCode.Tag.partFile {
             guard let hash = tag.tag(ECCode.Tag.fileHash)?.hash,
                   let name = tag.tag(ECCode.Tag.name)?.string,
-                  let size = tag.tag(ECCode.Tag.size)?.number else { throw ECError.malformed("下载队列缺少文件信息") }
+                  let size = tag.tag(ECCode.Tag.size)?.number else { throw ECError.malformed(String(localized: "下载队列缺少文件信息", bundle: .module)) }
             active.insert(hash)
             let category = tag.tag(ECCode.Tag.category)?.number ?? 0
             let directory = categoryPaths.first { $0.value == category }.map { URL(fileURLWithPath: $0.key) }

@@ -266,7 +266,7 @@ public actor TorrentEngine: DownloadEngine {
             )
             try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: stateDirectory.path)
         } catch {
-            throw EngineError.launchFailed("无法创建 BT 状态目录，请检查访问权限")
+            throw EngineError.launchFailed(String(localized: "无法创建 BT 状态目录，请检查访问权限", bundle: .module))
         }
         let rpc = TorrentdClient(transport: transport, requestTimeout: requestTimeout)
         do {

@@ -24,7 +24,7 @@ struct Ed2kUnitTests {
                                     directory: URL(fileURLWithPath: "/data"), waitingSince: Date())
         let tag = ECTag.empty(0x300, children: [.number(0x308, 5), .number(0x30a, 3), .number(0x40d, 1)])
         let snapshot = try Ed2kStatusMapper.snapshot(tag: tag, record: record, rank: 7, now: Date())
-        #expect(snapshot.errorMessage?.contains("磁盘空间不足") == true)
+        #expect(snapshot.errorMessage?.contains(String(localized: "磁盘空间不足（aMule 状态码 5）", bundle: .module)) == true)
         guard case .ed2k(_, let info) = snapshot.detail else { Issue.record("缺少电驴详情"); return }
         #expect(info.queueRank == 7)
         #expect(info.sourceCount == 3)
@@ -121,7 +121,7 @@ struct Ed2kUnitTests {
     func failureResponses() {
         #expect(throws: ECError.self) { try ECTag.hash(0x300, String(repeating: "+f", count: 16)) }
         let response = ECPacket(opcode: ECCode.Op.failed, tags: [.string(0, "Invalid link or already on list.")])
-        #expect(throws: ECError.rejected("链接无效或任务已存在")) { try response.checked() }
+        #expect(throws: ECError.rejected(String(localized: "链接无效或任务已存在", bundle: .module))) { try response.checked() }
         #expect(throws: ECError.self) { try ECPacket(opcode: 0xff).checked() }
         #expect(Ed2kStatusMapper.safePath(name: "../example.bin", directory: URL(fileURLWithPath: "/data")) == nil)
     }

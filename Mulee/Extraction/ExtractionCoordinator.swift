@@ -31,7 +31,7 @@ final class ExtractionCoordinator {
             || model.tasks[index].status == .extracting {
             model.tasks[index].status = .completed
             model.tasks[index].postDownload.extractionState = .cancelled
-            model.tasks[index].postDownload.extractionFailure = "上次解压已中断，原压缩包已保留"
+            model.tasks[index].postDownload.extractionFailure = String(localized: "上次解压已中断，原压缩包已保留")
         }
         isUpdating = false
         tasksDidChange()
@@ -109,7 +109,7 @@ final class ExtractionCoordinator {
                 do {
                     try await model.extractionPasswords.setPassword(nil, for: "page-password-" + job.id.uuidString)
                 } catch {
-                    model.unzipRuleIssue = "无法移除临时解压密码：\(error.localizedDescription)"
+                    model.unzipRuleIssue = String(localized: "无法移除临时解压密码：\(error.localizedDescription)")
                 }
             }
             finish(outcome, job: job)
@@ -123,7 +123,7 @@ final class ExtractionCoordinator {
         guard settings.autoExtract else {
             update(Set(candidates)) { task in
                 task.postDownload.extractionState = .cancelled
-                task.postDownload.extractionFailure = "自动解压已关闭"
+                task.postDownload.extractionFailure = String(localized: "自动解压已关闭")
             }
             candidates.removeAll()
             return nil
@@ -147,7 +147,7 @@ final class ExtractionCoordinator {
             } catch {
                 update([id]) { task in
                     task.postDownload.extractionState = .failed
-                    task.postDownload.extractionFailure = "暂时无法读取压缩包所在文件夹"
+                    task.postDownload.extractionFailure = String(localized: "暂时无法读取压缩包所在文件夹")
                 }
                 candidates.removeAll { $0 == id }
                 continue
@@ -198,7 +198,7 @@ final class ExtractionCoordinator {
                 maskedLength: password.count, hitCount: 0
             )]
         } catch {
-            model.unzipRuleIssue = "无法临时保存页面解压密码：\(error.localizedDescription)"
+            model.unzipRuleIssue = String(localized: "无法临时保存页面解压密码：\(error.localizedDescription)")
             return job.rules
         }
     }
@@ -251,7 +251,7 @@ final class ExtractionCoordinator {
             case .failed:
                 task.postDownload.extractionState = outcome.failure == .cancelled ? .cancelled : .failed
                 task.postDownload.extractProgress = nil
-                task.postDownload.extractionFailure = outcome.failure?.localizedDescription ?? "暂时没能解压，原压缩包已保留"
+                task.postDownload.extractionFailure = outcome.failure?.localizedDescription ?? String(localized: "暂时没能解压，原压缩包已保留")
             }
         }
         if outcome.status == .waitingForVolumes {

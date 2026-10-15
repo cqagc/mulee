@@ -26,35 +26,44 @@ struct TaskPresentation {
         case .http: "HTTP"
         case .bittorrent: "BT"
         case .ed2k: "ED2K"
-        case .video: "视频"
+        case .video: String(localized: "视频")
         }
     }
 
-    var size: String { task.totalBytes.map(Self.bytes) ?? "大小未知" }
+    var size: String { task.totalBytes.map(Self.bytes) ?? String(localized: "大小未知") }
 
     var metadata: String {
         if task.status == .extracting, let rule = task.postDownload.matchedRuleName {
-            return "\(size) · 命中解压规则「\(rule)」"
+            return String(localized: "\(size) · 命中解压规则「\(rule)」")
         }
         switch task.detail {
         case .http(let connections):
             // 只有正在下载时连接数才有意义；排队、暂停、完成时只显示大小。
             guard task.status == .downloading, connections > 0 else { return size }
-            return "\(size) · \(connections.formatted()) 线程"
+            return String(localized: "\(size) · \(connections) 线程")
         case .bittorrent(let files, let selected, let peers, let ratio):
             if task.status == .seeding {
-                return "\(size) · 分享率 \(ratio.formatted(.number.precision(.fractionLength(2)))) / 1.00"
+                return String(localized: "\(size) · 分享率 \(ratio.formatted(.number.precision(.fractionLength(2)))) / 1.00")
             }
-            return "\(files.formatted()) 个文件，已选 \(selected.formatted()) 个 · \(peers.formatted()) 个节点"
+            return String(localized: "\(files) 个文件，已选 \(selected) 个 · \(peers) 个节点")
         case .ed2k(_, let info):
             if info.sourceCount > 0 {
-                let queue = info.queueRank.map { "，排队第 \($0.formatted()) 位" } ?? ""
-                return "\(size) · \(info.sourceCount.formatted()) 个来源\(queue)"
+                let queue = info.queueRank.map { String(localized: "，排队第 \($0) 位") } ?? ""
+                return String(localized: "\(size) · \(info.sourceCount) 个来源\(queue)")
             }
-            let lastSeen = info.lastCompleteSourceSeen.map { "，完整源最后出现于 \(monthDay($0))" } ?? "，尚未见到完整源"
-            return "\(size) · 暂无来源\(lastSeen)"
+            let lastSeen = info.lastCompleteSourceSeen.map { String(localized: "，完整源最后出现于 \(monthDay($0))") } ?? String(localized: "，尚未见到完整源")
+            return String(localized: "\(size) · 暂无来源\(lastSeen)")
         case .video(let site, let quality, let danmaku):
-            return "\(site.displayName) · \(quality)\(danmaku ? " · 弹幕转 ASS" : "")"
+            return "\(site.displayName) · \(Self.qualityTitle(quality))\(danmaku ? String(localized: " · 弹幕转 ASS") : "")"
+        }
+    }
+
+    private static func qualityTitle(_ value: String) -> String {
+        switch value {
+        case "自动": String(localized: "自动")
+        case "1080P 高码率": String(localized: "1080P 高码率")
+        case "2160p HEVC，兼容优先": String(localized: "2160p HEVC，兼容优先")
+        default: value
         }
     }
 
@@ -85,9 +94,9 @@ struct TaskPresentation {
 
     var progressText: String {
         switch task.status {
-        case .extracting: "解压中 · \(percent)"
-        case .seeding: "做种 \(percent) · 到 1:1 后\(seedingAction == .stop ? "停止" : "降速")"
-        case .postProcessing: "\(percent) · 合并音视频"
+        case .extracting: String(localized: "解压中 · \(percent)")
+        case .seeding: String(localized: "做种 \(percent) · 到 1:1 后\(seedingAction == .stop ? String(localized: "停止") : String(localized: "降速"))")
+        case .postProcessing: String(localized: "\(percent) · 合并音视频")
         case .completed: extractionStatus ?? size
         default: "\(percent) · \(receivedAndTotal)"
         }
@@ -95,45 +104,45 @@ struct TaskPresentation {
 
     var inspectorProgressText: String {
         guard [.downloading, .waitingForSources, .paused].contains(task.status), task.kind == .ed2k, let total = task.totalBytes else { return progressText }
-        return "\(percent) · 已收到 \(Self.bytes(task.receivedBytes))，剩余 \(Self.bytes(max(0, total - task.receivedBytes)))"
+        return String(localized: "\(percent) · 已收到 \(Self.bytes(task.receivedBytes))，剩余 \(Self.bytes(max(0, total - task.receivedBytes)))")
     }
 
     var statusTitle: String {
         switch task.status {
         case .downloading: Self.rate(task.downloadRate)
-        case .waitingForSources: "等待来源"
-        case .postProcessing: "处理中"
-        case .extracting: "解压中"
+        case .waitingForSources: String(localized: "等待来源")
+        case .postProcessing: String(localized: "处理中")
+        case .extracting: String(localized: "解压中")
         case .seeding: "↑ \(Self.rate(task.uploadRate))"
-        case .completed: extractionStatus ?? "已完成"
-        case .paused: "已暂停"
-        case .failed: "需要处理"
-        case .queued: "排队中"
-        case .engineUnavailable: "引擎未接入"
+        case .completed: extractionStatus ?? String(localized: "已完成")
+        case .paused: String(localized: "已暂停")
+        case .failed: String(localized: "需要处理")
+        case .queued: String(localized: "排队中")
+        case .engineUnavailable: String(localized: "引擎未接入")
         }
     }
 
     var statusSubtitle: String {
         switch task.status {
-        case .downloading: task.estimatedTimeRemaining.map { "剩 \(Self.duration($0, remaining: true))" } ?? "正在下载"
-        case .waitingForSources: longTail.map { "已挂 \(days(since: $0.waitingSince)) 天" } ?? "耐心等待"
-        case .postProcessing: "即将完成"
+        case .downloading: task.estimatedTimeRemaining.map { String(localized: "剩 \(Self.duration($0, remaining: true))") } ?? String(localized: "正在下载")
+        case .waitingForSources: longTail.map { String(localized: "已挂 \(days(since: $0.waitingSince)) 天") } ?? String(localized: "耐心等待")
+        case .postProcessing: String(localized: "即将完成")
         case .extracting:
             task.postDownload.extractionState == nil && task.postDownload.filenameEncoding != nil
-                ? "已修复文件名编码" : "正在解压文件"
-        case .seeding: "做种中"
+                ? String(localized: "已修复文件名编码") : String(localized: "正在解压文件")
+        case .seeding: String(localized: "做种中")
         case .completed:
             switch task.postDownload.extractionState {
-            case .waitingForVolumes: "其余分卷下完后继续"
-            case .queued: "正在处理其他压缩包"
-            case .failed, .cancelled: task.postDownload.extractionFailure ?? "原压缩包已保留"
-            case .succeeded: extractedItems.first?.lastPathComponent ?? "文件已准备好"
+            case .waitingForVolumes: String(localized: "其余分卷下完后继续")
+            case .queued: String(localized: "正在处理其他压缩包")
+            case .failed, .cancelled: task.postDownload.extractionFailure ?? String(localized: "原压缩包已保留")
+            case .succeeded: extractedItems.first?.lastPathComponent ?? String(localized: "文件已准备好")
             default: task.completedAt.map(time) ?? ""
             }
         case .paused: ""
-        case .failed: task.errorMessage ?? "可稍后重试"
-        case .queued: task.kind == .video && task.engineTaskID == nil ? "正在准备视频工具" : "等待空位"
-        case .engineUnavailable: "暂时只记录链接"
+        case .failed: task.errorMessage ?? String(localized: "可稍后重试")
+        case .queued: task.kind == .video && task.engineTaskID == nil ? String(localized: "正在准备视频工具") : String(localized: "等待空位")
+        case .engineUnavailable: String(localized: "暂时只记录链接")
         }
     }
 
@@ -153,7 +162,7 @@ struct TaskPresentation {
 
     var isStatusEmphasized: Bool { [.waitingForSources, .completed, .failed].contains(task.status) }
     var canPauseOrResume: Bool { [.downloading, .waitingForSources, .queued, .paused, .seeding].contains(task.status) }
-    var pauseTitle: String { task.status == .paused ? "继续" : "暂停" }
+    var pauseTitle: String { task.status == .paused ? String(localized: "继续") : String(localized: "暂停") }
     var pauseSymbol: MuleeSymbol { task.status == .paused ? .resume : .pause }
 
     var longTail: LongTailInfo? {
@@ -162,38 +171,38 @@ struct TaskPresentation {
 
     var longTailStatus: String {
         guard task.status == .waitingForSources || task.status == .downloading else { return statusTitle }
-        if task.status == .downloading, task.downloadRate > 0 { return "正在下载" }
-        return longTail?.queueRank.map { "排队中，第 \($0.formatted()) 位" } ?? "等待来源"
+        if task.status == .downloading, task.downloadRate > 0 { return String(localized: "正在下载") }
+        return longTail?.queueRank.map { String(localized: "排队中，第 \($0) 位") } ?? String(localized: "等待来源")
     }
 
     var sourceSummary: String {
         guard let info = longTail else { return "" }
-        return "\(info.sourceCount.formatted()) 个（\(info.completeSourceCount.formatted()) 个完整）"
+        return String(localized: "\(info.sourceCount) 个（\(info.completeSourceCount) 个完整）")
     }
 
     var lastCompleteSource: String {
-        guard let date = longTail?.lastCompleteSourceSeen else { return "尚未见到" }
+        guard let date = longTail?.lastCompleteSourceSeen else { return String(localized: "尚未见到") }
         let count = days(since: date)
-        return count == "0" ? "今天" : "\(count) 天前"
+        return count == 0 ? String(localized: "今天") : String(localized: "\(count) 天前")
     }
 
-    var waitingDuration: String { longTail.map { "\(days(since: $0.waitingSince)) 天" } ?? "" }
+    var waitingDuration: String { longTail.map { String(localized: "\(days(since: $0.waitingSince)) 天") } ?? "" }
     var transferDuration: String { longTail.map { Self.duration($0.activeTransferDuration) } ?? "" }
-    var extractionSetting: String { task.postDownload.autoExtract ? "开" : "关" }
+    var extractionSetting: String { task.postDownload.autoExtract ? String(localized: "开") : String(localized: "关") }
     var filenameEncoding: String {
-        guard let encoding = task.postDownload.filenameEncoding else { return "自动检测" }
-        return task.postDownload.extractionState == nil ? "自动检测（\(encoding)）" : encoding
+        guard let encoding = task.postDownload.filenameEncoding else { return String(localized: "自动检测") }
+        return task.postDownload.extractionState == nil ? String(localized: "自动检测（\(encoding)）") : encoding
     }
     var extractedItems: [URL] { task.postDownload.extractedItems ?? [] }
 
     var extractionStatus: String? {
         switch task.postDownload.extractionState {
-        case .queued: "等待解压"
-        case .waitingForVolumes: "等待其余分卷"
-        case .extracting: "解压中"
-        case .succeeded: "已解压"
-        case .failed: "解压未完成"
-        case .cancelled: "解压已取消"
+        case .queued: String(localized: "等待解压")
+        case .waitingForVolumes: String(localized: "等待其余分卷")
+        case .extracting: String(localized: "解压中")
+        case .succeeded: String(localized: "已解压")
+        case .failed: String(localized: "解压未完成")
+        case .cancelled: String(localized: "解压已取消")
         case nil: nil
         }
     }
@@ -222,7 +231,7 @@ struct TaskPresentation {
     }
 
     private var receivedAndTotal: String {
-        guard let total = task.totalBytes, total > 0 else { return "已收到 \(Self.bytes(task.receivedBytes))" }
+        guard let total = task.totalBytes, total > 0 else { return String(localized: "已收到 \(Self.bytes(task.receivedBytes))") }
         let units: ByteCountFormatStyle.Units = total >= 1_000_000_000 ? .gb : total >= 1_000_000 ? .mb : .kb
         let style = ByteCountFormatStyle(style: .file, allowedUnits: units, spellsOutZero: false, includesActualByteCount: false, locale: Self.displayLocale)
         let received = max(0, task.receivedBytes).formatted(style)
@@ -234,26 +243,26 @@ struct TaskPresentation {
         value.isFinite ? min(1, max(0, value)) : 0
     }
 
-    private func days(since date: Date) -> String {
-        max(0, calendar.dateComponents([.day], from: date, to: now).day ?? 0).formatted()
+    private func days(since date: Date) -> Int {
+        max(0, calendar.dateComponents([.day], from: date, to: now).day ?? 0)
     }
 
     private func monthDay(_ date: Date) -> String {
-        date.formatted(Date.FormatStyle(locale: Locale(identifier: "zh_CN"), calendar: calendar, timeZone: calendar.timeZone)
+        date.formatted(Date.FormatStyle(locale: Self.displayLocale, calendar: calendar, timeZone: calendar.timeZone)
             .month(.wide).day())
             .replacingOccurrences(of: "月", with: " 月 ")
             .replacingOccurrences(of: "日", with: " 日")
     }
 
     private func time(_ date: Date) -> String {
-        date.formatted(Date.FormatStyle(locale: Locale(identifier: "zh_CN"), calendar: calendar, timeZone: calendar.timeZone)
+        date.formatted(Date.FormatStyle(locale: Self.displayLocale, calendar: calendar, timeZone: calendar.timeZone)
             .hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
     }
 
     private static func duration(_ value: Duration, remaining: Bool = false) -> String {
         let units: Set<Duration.UnitsFormatStyle.Unit> = remaining && value < .seconds(3600)
             ? (value < .seconds(60) ? [.seconds] : [.minutes]) : [.hours, .minutes]
-        return max(.zero, value).formatted(.units(allowed: units, width: .wide).locale(Locale(identifier: "zh_CN")))
+        return max(.zero, value).formatted(.units(allowed: units, width: .wide).locale(Self.displayLocale))
             .replacingOccurrences(of: "小时", with: " 小时 ")
             .replacingOccurrences(of: "分钟", with: remaining ? " 分钟" : " 分")
             .replacingOccurrences(of: "秒钟", with: " 秒")

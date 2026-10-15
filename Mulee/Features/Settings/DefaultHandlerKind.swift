@@ -16,7 +16,7 @@ enum DefaultHandlerKind: String, CaseIterable, Identifiable {
     }
 
     var applicationName: String {
-        guard let url = applicationURL else { return "尚未设置" }
+        guard let url = applicationURL else { return String(localized: "尚未设置") }
         return FileManager.default.displayName(atPath: url.path)
     }
 

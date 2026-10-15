@@ -25,12 +25,12 @@ struct ECTag: Sendable, Equatable {
     static func hash(_ name: UInt16, _ hex: String) throws -> Self {
         guard hex.utf8.count == 32, hex.utf8.allSatisfy({
             (48...57).contains($0) || (65...70).contains($0) || (97...102).contains($0)
-        }) else { throw ECError.malformed("文件哈希无效") }
+        }) else { throw ECError.malformed(String(localized: "文件哈希无效", bundle: .module)) }
         let chars = Array(hex.utf8)
         var bytes = Data()
         for index in stride(from: 0, to: 32, by: 2) {
             guard let byte = UInt8(String(decoding: chars[index...index + 1], as: UTF8.self), radix: 16) else {
-                throw ECError.malformed("文件哈希无效")
+                throw ECError.malformed(String(localized: "文件哈希无效", bundle: .module))
             }
             bytes.append(byte)
         }

@@ -192,7 +192,7 @@ final class AppModel {
         do {
             try historyStore?.flush(tasks: tasks)
         } catch {
-            taskHistoryIssue = "无法保存任务历史：\(error.localizedDescription)"
+            taskHistoryIssue = String(localized: "无法保存任务历史：\(error.localizedDescription)")
         }
     }
 

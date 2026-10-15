@@ -66,7 +66,7 @@ struct NewTaskFooterView: View {
             draft.saveDirectory = url
             directoryError = nil
         case .failure(let error):
-            directoryError = "无法选择保存目录：\(error.localizedDescription)"
+            directoryError = String(localized: "无法选择保存目录：\(error.localizedDescription)")
         }
     }
 }

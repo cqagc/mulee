@@ -59,16 +59,16 @@ struct YtDlpUnitTests {
     }
 
     @Test(arguments: [
-        ("ERROR: Sign in to confirm your age", "需要登录"),
-        ("ERROR: not available in your country", "地区限制"),
-        ("ERROR: video has been deleted", "已删除"),
-        ("ERROR: connection timed out", "网络连接失败"),
-        ("ERROR: Unable to extract player response", "需要更新"),
-        ("ERROR: ffmpeg is not installed", "缺少可用的 ffmpeg")
+        ("ERROR: Sign in to confirm your age", "此视频需要登录，请提供有效的 cookies 文件。"),
+        ("ERROR: not available in your country", "此视频受地区限制。"),
+        ("ERROR: video has been deleted", "视频不存在或已删除。"),
+        ("ERROR: connection timed out", "网络连接失败，请检查网络与代理。"),
+        ("ERROR: Unable to extract player response", "视频网站规则已变化，需要更新 yt-dlp。"),
+        ("ERROR: ffmpeg is not installed", "缺少可用的 ffmpeg，无法合并音视频。")
     ])
     func readableErrors(raw: String, expected: String) {
         let message = YtDlpErrorDescriptions.message(raw)
-        #expect(message.contains(expected))
+        #expect(message.contains(String(localized: String.LocalizationValue(expected), bundle: .module)))
         #expect(message.hasSuffix(raw))
     }
 

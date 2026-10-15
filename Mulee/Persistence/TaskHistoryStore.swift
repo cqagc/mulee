@@ -34,18 +34,18 @@ final class TaskHistoryStore {
             data = try Data(contentsOf: fileURL)
         } catch {
             canSave = false
-            return LoadResult(tasks: [], issue: "无法读取任务历史：\(error.localizedDescription)")
+            return LoadResult(tasks: [], issue: String(localized: "无法读取任务历史：\(error.localizedDescription)"))
         }
         do {
             let document = try JSONDecoder().decode(Document.self, from: data)
             guard document.version == 1 else {
-                return quarantine(reason: "不支持的任务历史版本：\(document.version)")
+                return quarantine(reason: String(localized: "不支持的任务历史版本：\(document.version)"))
             }
             let tasks = Self.durableTasks(document.tasks)
             lastSavedTasks = tasks
             return LoadResult(tasks: tasks, issue: nil)
         } catch {
-            return quarantine(reason: "任务历史文件损坏：\(error.localizedDescription)")
+            return quarantine(reason: String(localized: "任务历史文件损坏：\(error.localizedDescription)"))
         }
     }
 
@@ -109,7 +109,7 @@ final class TaskHistoryStore {
             do {
                 try self.save(tasks: pendingTasks)
             } catch {
-                onError("无法保存任务历史：\(error.localizedDescription)")
+                onError(String(localized: "无法保存任务历史：\(error.localizedDescription)"))
             }
         }
     }
@@ -143,11 +143,11 @@ final class TaskHistoryStore {
         do {
             try FileManager.default.moveItem(at: fileURL, to: backup)
             lastSavedTasks = []
-            return LoadResult(tasks: [], issue: "\(reason)。已备份为 \(backup.lastPathComponent)，从空列表开始。")
+            return LoadResult(tasks: [], issue: String(localized: "\(reason)。已备份为 \(backup.lastPathComponent)，从空列表开始。"))
         } catch {
             // 备份失败时禁止覆盖原文件。
             canSave = false
-            return LoadResult(tasks: [], issue: "\(reason)。备份失败，已保留原文件并停用历史写入：\(error.localizedDescription)")
+            return LoadResult(tasks: [], issue: String(localized: "\(reason)。备份失败，已保留原文件并停用历史写入：\(error.localizedDescription)"))
         }
     }
 }

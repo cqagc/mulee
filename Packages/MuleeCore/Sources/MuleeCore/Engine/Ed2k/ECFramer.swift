@@ -11,7 +11,7 @@ struct ECFramer: Sendable {
             let header = Array(buffer.prefix(8))
             let flags = header[0..<4].reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
             let length = header[4..<8].reduce(0) { ($0 << 8) | Int($1) }
-            guard length > 0, length <= ECCodec.maximumPacketLength else { throw ECError.malformed("报文长度超限") }
+            guard length > 0, length <= ECCodec.maximumPacketLength else { throw ECError.malformed(String(localized: "报文长度超限", bundle: .module)) }
             guard buffer.count >= 8 + length else { break }
             let body = Data(buffer.dropFirst(8).prefix(length))
             packets.append(try ECCodec.decode(body: body, flags: flags))

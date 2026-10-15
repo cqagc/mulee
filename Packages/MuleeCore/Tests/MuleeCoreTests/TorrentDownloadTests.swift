@@ -33,7 +33,7 @@ import Testing
         try await TorrentFixtures.withEngine(fake: fake, session: session) { engine, root in
             try await engine.start(options: EngineOptions(downloadDirectory: root))
             let url = try #require(URL(string: "https://torrent.invalid/\(name)"))
-            await #expect(throws: EngineError.invalidResponse("种子文件超过大小上限（20 MB）")) {
+            await #expect(throws: EngineError.invalidResponse(String(localized: "种子文件超过大小上限（20 MB）", bundle: .module))) {
                 try await engine.add(link: .torrentFile(url: url, original: url.absoluteString), directory: nil)
             }
             #expect(await fake.sent.map(\.method) == ["configure"])

@@ -1,3 +1,5 @@
+import Foundation
+
 /// 电驴网络专用设置；限速单位为字节/秒，0 表示不限速。
 public struct Ed2kEngineSettings: Sendable, Hashable {
     public var tcpPort: UInt16
@@ -28,7 +30,7 @@ public struct Ed2kEngineSettings: Sendable, Hashable {
 
     func validate() throws {
         guard tcpPort > 0, udpPort > 0, uploadLimit >= 0 else {
-            throw ECError.rejected("TCP / UDP 端口须为 1–65535，上传限速不能小于 0")
+            throw ECError.rejected(String(localized: "TCP / UDP 端口须为 1–65535，上传限速不能小于 0", bundle: .module))
         }
     }
 }

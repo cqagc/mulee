@@ -21,7 +21,7 @@ public actor ManagedToolInstaller {
         let (temporary, response) = try await URLSession.shared.download(from: url)
         defer { try? FileManager.default.removeItem(at: temporary) }
         guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
-            throw EngineError.invalidResponse("工具下载失败：服务器响应异常")
+            throw EngineError.invalidResponse(String(localized: "工具下载失败：服务器响应异常", bundle: .module))
         }
         try FileManager.default.moveItem(at: temporary, to: destination)
     }
@@ -61,13 +61,13 @@ public actor ManagedToolInstaller {
                 return first.lowercased()
             }
         }
-        throw EngineError.invalidResponse("校验和文件中找不到 \(filename)")
+        throw EngineError.invalidResponse(String(localized: "校验和文件中找不到 \(filename)", bundle: .module))
     }
 
     private func validate(_ tool: ManagedTool) throws {
         guard !tool.name.isEmpty, tool.name != ".", tool.name != "..",
               !tool.name.contains("/"), !tool.name.contains("\\") else {
-            throw EngineError.invalidResponse("工具名称无效")
+            throw EngineError.invalidResponse(String(localized: "工具名称无效", bundle: .module))
         }
     }
 
@@ -90,7 +90,7 @@ public actor ManagedToolInstaller {
             )
         }
         guard try Self.digest(archive) == expected else {
-            throw EngineError.invalidResponse("SHA256 校验失败，未安装工具")
+            throw EngineError.invalidResponse(String(localized: "SHA256 校验失败，未安装工具", bundle: .module))
         }
         let executable: URL
         switch tool.extraction {
@@ -98,7 +98,7 @@ public actor ManagedToolInstaller {
             executable = archive
         case .zip(let entry):
             guard !entry.contains("/"), entry != ".", entry != "..", !entry.isEmpty else {
-                throw EngineError.invalidResponse("压缩包入口无效")
+                throw EngineError.invalidResponse(String(localized: "压缩包入口无效", bundle: .module))
             }
             // 只提取指定入口，避免压缩包路径穿越或覆盖其他文件。
             executable = staging.appendingPathComponent("executable")
@@ -106,7 +106,7 @@ public actor ManagedToolInstaller {
             process.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
             process.arguments = ["-p", archive.path, entry]
             guard fm.createFile(atPath: executable.path, contents: nil) else {
-                throw EngineError.launchFailed("无法创建工具临时文件")
+                throw EngineError.launchFailed(String(localized: "无法创建工具临时文件", bundle: .module))
             }
             let handle = try FileHandle(forWritingTo: executable)
             defer { try? handle.close() }
@@ -114,13 +114,13 @@ public actor ManagedToolInstaller {
             process.standardError = FileHandle.nullDevice
             try process.run()
             while process.isRunning { try await Task.sleep(for: .milliseconds(20)) }
-            guard process.terminationStatus == 0 else { throw EngineError.invalidResponse("工具解压失败") }
+            guard process.terminationStatus == 0 else { throw EngineError.invalidResponse(String(localized: "工具解压失败", bundle: .module)) }
         }
         let result = executable.path.withCString { removexattr($0, "com.apple.quarantine", 0) }
         if result != 0, errno != ENOATTR { throw POSIXError(.init(rawValue: errno) ?? .EIO) }
         try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
         let version = try await YtDlpProcess.capture(binary: executable, arguments: tool.versionArguments)
-        guard version.status == 0 else { throw EngineError.invalidResponse("工具版本检查失败：\(version.output)") }
+        guard version.status == 0 else { throw EngineError.invalidResponse(String(localized: "工具版本检查失败：\(version.output)", bundle: .module)) }
         let record = ManagedToolRecord(
             version: version.output.trimmingCharacters(in: .whitespacesAndNewlines),
             updatedAt: Date(), sha256: try Self.digest(executable)

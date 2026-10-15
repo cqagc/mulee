@@ -20,7 +20,7 @@ struct PostDownloadCard: View {
                 LabeledContent("命中规则", value: rule)
             }
             if let failure = presentation.task.postDownload.extractionFailure {
-                Text(failure + "。原压缩包已保留")
+                Text("\(failure)。原压缩包已保留")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

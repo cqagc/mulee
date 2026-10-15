@@ -38,9 +38,9 @@ struct MenuBarPresentation {
     static func trailingText(for task: DownloadTask) -> String {
         switch task.status {
         case .postProcessing:
-            "合并中"
+            String(localized: "合并中")
         case .extracting:
-            "解压中"
+            String(localized: "解压中")
         default:
             speedText(task.downloadRate)
         }

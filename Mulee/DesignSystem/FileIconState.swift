@@ -1,3 +1,5 @@
+import Foundation
+
 import MuleeCore
 
 /// 文件落盘前是虚线，落盘后是实心；进度只表示已收到的文件数据。
@@ -48,10 +50,10 @@ enum FileIconState: Equatable, Sendable {
 
     var title: String {
         switch self {
-        case .downloading: "下载中"
-        case .completed: "已完成"
-        case .attention: "需要注意"
-        case .engineUnavailable: "引擎未接入"
+        case .downloading: String(localized: "下载中")
+        case .completed: String(localized: "已完成")
+        case .attention: String(localized: "需要注意")
+        case .engineUnavailable: String(localized: "引擎未接入")
         }
     }
 }

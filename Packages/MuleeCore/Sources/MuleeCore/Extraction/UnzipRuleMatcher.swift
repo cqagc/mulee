@@ -20,7 +20,7 @@ public enum UnzipRuleMatcher {
                     let expression = try NSRegularExpression(pattern: rule.pattern)
                     matches = expression.firstMatch(in: filename, range: NSRange(filename.startIndex..., in: filename)) != nil
                 } catch {
-                    errors.append("密码规则「\(rule.pattern)」的正则表达式无效")
+                    errors.append(String(localized: "密码规则「\(rule.pattern)」的正则表达式无效", bundle: .module))
                     continue
                 }
             case .passwordBook:

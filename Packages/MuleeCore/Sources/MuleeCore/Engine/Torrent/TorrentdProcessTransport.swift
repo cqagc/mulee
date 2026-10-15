@@ -15,13 +15,13 @@ actor TorrentdProcessTransport: TorrentdTransport {
     }
 
     func start() throws -> AsyncStream<Data> {
-        guard process == nil else { throw EngineError.launchFailed("BT 引擎已启动") }
+        guard process == nil else { throw EngineError.launchFailed(String(localized: "BT 引擎已启动", bundle: .module)) }
         let process = Process()
         let stdin = Pipe()
         let stdout = Pipe()
         // 避免子进程恰好退出时，写入关闭的管道向 App 发送 SIGPIPE。
         guard fcntl(stdin.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1) != -1 else {
-            throw EngineError.launchFailed("无法创建 BT 引擎通信管道")
+            throw EngineError.launchFailed(String(localized: "无法创建 BT 引擎通信管道", bundle: .module))
         }
         let (stream, continuation) = AsyncStream<Data>.makeStream()
         stdout.fileHandleForReading.readabilityHandler = { handle in
@@ -47,7 +47,7 @@ actor TorrentdProcessTransport: TorrentdTransport {
         } catch {
             stdout.fileHandleForReading.readabilityHandler = nil
             continuation.finish()
-            throw EngineError.launchFailed("BT 引擎启动失败，请检查辅助程序的执行权限")
+            throw EngineError.launchFailed(String(localized: "BT 引擎启动失败，请检查辅助程序的执行权限", bundle: .module))
         }
         self.process = process
         input = stdin.fileHandleForWriting

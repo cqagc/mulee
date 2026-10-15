@@ -86,5 +86,5 @@ struct BencodeParser: Sendable {
         position += 1
     }
 
-    static func invalid() -> EngineError { .invalidResponse("种子文件无效或已损坏") }
+    static func invalid() -> EngineError { .invalidResponse(String(localized: "种子文件无效或已损坏", bundle: .module)) }
 }

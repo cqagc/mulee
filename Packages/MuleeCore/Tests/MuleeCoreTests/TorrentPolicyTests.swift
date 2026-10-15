@@ -80,7 +80,7 @@ import Testing
         let value = try TorrentFixtures.decodeTask(TorrentFixtures.task([
             "state": .string("error"), "error": .string("No space left on device")
         ]))
-        #expect(TorrentStatusMapper.snapshot(value).errorMessage == "磁盘空间不足")
+        #expect(TorrentStatusMapper.snapshot(value).errorMessage == String(localized: "磁盘空间不足", bundle: .module))
     }
 
     @Test("二进制按显式路径、包内、环境变量查找")

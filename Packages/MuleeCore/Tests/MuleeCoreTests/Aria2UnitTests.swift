@@ -22,7 +22,10 @@ struct Aria2UnitTests {
         #expect(snapshot.downloadRate == 128)
         #expect(snapshot.uploadRate == 8)
         #expect(snapshot.connections == 2)
-        #expect(snapshot.errorMessage == (raw == "error" ? "资源不存在（aria2 错误码 3）" : nil))
+        let missingResource = String(localized: "资源不存在", bundle: .module)
+        let code = 3
+        let expectedError = String(localized: "\(missingResource)（aria2 错误码 \(code)）", bundle: .module)
+        #expect(snapshot.errorMessage == (raw == "error" ? expectedError : nil))
     }
 
     @Test("未知名称从 URL 推断且长度零为 nil")
@@ -45,8 +48,10 @@ struct Aria2UnitTests {
         ("13", "文件已存在"), ("16", "文件创建失败"), ("19", "域名解析失败"),
         ("22", "服务器响应异常"), ("24", "需要登录认证"), ("99", "下载出错")
     ])
-    func errors(_ code: String, _ description: String) {
-        #expect(Aria2ErrorDescriptions.message(for: code) == "\(description)（aria2 错误码 \(code)）")
+    func errors(_ code: String, _ description: String) throws {
+        let number = try #require(Int(code))
+        let localized = String(localized: String.LocalizationValue(description), bundle: .module)
+        #expect(Aria2ErrorDescriptions.message(for: code) == String(localized: "\(localized)（aria2 错误码 \(number)）", bundle: .module))
     }
 
     @Test("配置保护密钥、限制连接数并只在存在时读取会话")
@@ -150,7 +155,7 @@ struct Aria2UnitTests {
         {"gid":"abc","status":"waiting","files":[{"path":"","uris":[{"uri":"\(uri)"}]}]}
         """
         let status = try JSONDecoder().decode(Aria2RPCModels.Status.self, from: Data(json.utf8))
-        #expect(Aria2StatusMapper.snapshot(status)?.name == name)
+        #expect(Aria2StatusMapper.snapshot(status)?.name == (name == "下载文件" ? String(localized: "下载文件", bundle: .module) : name))
     }
 
     @Test("引擎启动前所有业务操作抛 notRunning")

@@ -15,7 +15,7 @@ enum EngineSnapshotMerger {
                   [.downloading, .queued, .paused].contains(task.status) else { return task }
             var task = task
             task.status = .failed
-            task.errorMessage = "上次退出前的进度没能恢复，可以重新下载"
+            task.errorMessage = String(localized: "上次退出前的进度没能恢复，可以重新下载")
             task.downloadRate = 0
             task.uploadRate = 0
             task.estimatedTimeRemaining = nil

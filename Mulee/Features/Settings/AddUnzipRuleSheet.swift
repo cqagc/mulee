@@ -61,7 +61,7 @@ struct AddUnzipRuleSheet: View {
                 password = ""
                 dismiss()
             } catch {
-                storageIssue = "暂时无法保存密码，规则尚未添加"
+                storageIssue = String(localized: "暂时无法保存密码，规则尚未添加")
             }
         }
     }

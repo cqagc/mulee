@@ -16,7 +16,7 @@ struct Aria2StatusMapper: Sendable {
         let path = file.flatMap { $0.path.isEmpty ? nil : URL(fileURLWithPath: $0.path) }
         // URL.lastPathComponent already decodes percent escapes exactly once.
         let inferredName = path?.lastPathComponent ?? source?.lastPathComponent ?? ""
-        let name = (inferredName.isEmpty || inferredName == "/") ? "下载文件" : inferredName
+        let name = (inferredName.isEmpty || inferredName == "/") ? String(localized: "下载文件", bundle: .module) : inferredName
         let total = Int64(value.totalLength ?? "0") ?? 0
         return EngineTaskSnapshot(
             engineTaskID: value.gid, name: name, totalBytes: total > 0 ? total : nil,

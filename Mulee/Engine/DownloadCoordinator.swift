@@ -46,7 +46,7 @@ final class DownloadCoordinator {
             && model.tasks[index].engineTaskID == nil
             && [.queued, .paused].contains(model.tasks[index].status) {
             model.tasks[index].status = .failed
-            model.tasks[index].errorMessage = "上次退出时视频工具尚未准备好，可以重新下载"
+            model.tasks[index].errorMessage = String(localized: "上次退出时视频工具尚未准备好，可以重新下载")
         }
         if videoBootstrap != nil || videoEngineFactory != nil {
             model.engineStates[.video] = .preparing
@@ -239,7 +239,7 @@ final class DownloadCoordinator {
                 if case .failed(let reason) = model.engineStates[link.kind] {
                     task.errorMessage = reason
                 } else {
-                    task.errorMessage = "下载引擎未运行"
+                    task.errorMessage = String(localized: "下载引擎未运行")
                 }
             }
             if task.kind == .http {
@@ -271,7 +271,7 @@ final class DownloadCoordinator {
             return
         }
         guard let engine = engine(for: task.kind), let engineTaskID = task.engineTaskID else {
-            setError("下载引擎未运行", for: id)
+            setError(String(localized: "下载引擎未运行"), for: id)
             return
         }
         let wasSelected = model.selectedTaskID == id
@@ -347,7 +347,7 @@ final class DownloadCoordinator {
         guard let task = model.tasks.first(where: { $0.id == id }) else { return }
         if let engineTaskID = task.engineTaskID {
             guard let engine = engine(for: task.kind) else {
-                setError("下载引擎未运行", for: id)
+                setError(String(localized: "下载引擎未运行"), for: id)
                 return
             }
             do {

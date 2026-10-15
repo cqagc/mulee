@@ -21,7 +21,7 @@ struct DownloadSettingsTab: View {
                     }
                 }
                 Stepper(
-                    "同时进行的任务数：\(model.maxConcurrentTasks)",
+                    String(localized: "同时进行的任务数：\(model.maxConcurrentTasks)"),
                     value: $model.maxConcurrentTasks,
                     in: SettingsModel.maxConcurrentTasksRange
                 )

@@ -18,7 +18,7 @@ struct BitTorrentSettingsTab: View {
                 }
             }
             Section {
-                Toggle("自动端口映射（UPnP / NAT-PMP）", isOn: $model.portMapping)
+                Toggle("自动端口映射", isOn: $model.portMapping)
                 LabeledContent("BT 端口") {
                     TextField("BT 端口", value: $model.btPort, format: .number.grouping(.never))
                         .labelsHidden()

@@ -194,7 +194,7 @@ public actor YtDlpEngine: DownloadEngine {
             jobs = try JSONDecoder().decode([YtDlpJob].self, from: Data(contentsOf: file))
             guard Set(jobs.map(\.id)).count == jobs.count,
                   jobs.allSatisfy({ UUID(uuidString: $0.id) != nil }) else {
-                throw EngineError.invalidResponse("视频任务记录无效")
+                throw EngineError.invalidResponse(String(localized: "视频任务记录无效", bundle: .module))
             }
         }
         for index in jobs.indices where [.downloading, .postProcessing, .queued].contains(jobs[index].status) {
@@ -277,17 +277,17 @@ public actor YtDlpEngine: DownloadEngine {
             guard tokens[id] == token else { return }
             children[id] = nil
             if child.status != 0 {
-                let raw = errors.isEmpty ? "yt-dlp 退出码 \(child.status)" : errors
+                let raw = errors.isEmpty ? String(localized: "yt-dlp 退出码 \(child.status)", bundle: .module) : errors
                 if try await retry(id, token: token, raw: raw, channel: selectedChannel, updatesEnabled: shouldUpdate) { return }
                 throw EngineError.launchFailed(raw)
             }
             guard let index = jobs.firstIndex(where: { $0.id == id }),
                   let path = progress[id]?.finalPath else {
-                throw EngineError.invalidResponse("yt-dlp 未返回最终文件路径")
+                throw EngineError.invalidResponse(String(localized: "yt-dlp 未返回最终文件路径", bundle: .module))
             }
             let url = URL(fileURLWithPath: path)
             guard YtDlpFileSafety.belongs(url, to: jobs[index]), FileManager.default.fileExists(atPath: url.path) else {
-                throw EngineError.invalidResponse("yt-dlp 返回的文件不属于此任务")
+                throw EngineError.invalidResponse(String(localized: "yt-dlp 返回的文件不属于此任务", bundle: .module))
             }
             try await normalizeHEVC(
                 url, job: jobs[index], token: token, quality: selectedQuality,
@@ -353,7 +353,7 @@ public actor YtDlpEngine: DownloadEngine {
                 resolvedBinary = updated
             }
         } catch {
-            throw EngineError.launchFailed(raw + "\n更新 yt-dlp 失败：" + String(describing: error))
+            throw EngineError.launchFailed(String(localized: "\(raw)\n更新 yt-dlp 失败：\(String(describing: error))", bundle: .module))
         }
         try Task.checkCancellation()
         guard tokens[id] == token, let current = jobs.firstIndex(where: { $0.id == id }) else { return false }
@@ -443,7 +443,7 @@ public actor YtDlpEngine: DownloadEngine {
             let values = try xml.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
             guard YtDlpFileSafety.belongs(xml, to: job), values.isRegularFile == true,
                   values.isSymbolicLink != true else {
-                throw EngineError.invalidResponse("弹幕 XML 不属于此任务")
+                throw EngineError.invalidResponse(String(localized: "弹幕 XML 不属于此任务", bundle: .module))
             }
             guard let index = jobs.firstIndex(where: { $0.id == job.id }) else { throw CancellationError() }
             jobs[index].status = .postProcessing
@@ -503,7 +503,7 @@ public actor YtDlpEngine: DownloadEngine {
 
     private func persistOrReport() {
         do { try persist() } catch {
-            persistenceError = "无法保存视频任务：" + error.localizedDescription
+            persistenceError = String(localized: "无法保存视频任务：\(error.localizedDescription)", bundle: .module)
             Self.logger.error("无法保存视频任务：\(error.localizedDescription, privacy: .public)")
         }
     }
@@ -514,14 +514,14 @@ public actor YtDlpEngine: DownloadEngine {
 
     private func index(_ id: String) throws -> Int {
         guard let index = jobs.firstIndex(where: { $0.id == id }) else {
-            throw EngineError.invalidResponse("找不到视频任务：\(id)")
+            throw EngineError.invalidResponse(String(localized: "找不到视频任务：\(id)", bundle: .module))
         }
         return index
     }
 
     private static func validate(_ options: EngineOptions) throws {
         guard options.maxConcurrentDownloads > 0, options.downloadLimit >= 0 else {
-            throw EngineError.invalidResponse("并发数必须大于零，限速不能为负数")
+            throw EngineError.invalidResponse(String(localized: "并发数必须大于零，限速不能为负数", bundle: .module))
         }
     }
 }

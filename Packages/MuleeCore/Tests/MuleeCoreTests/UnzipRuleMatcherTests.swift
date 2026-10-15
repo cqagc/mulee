@@ -45,7 +45,7 @@ struct UnzipRuleMatcherTests {
         let result = UnzipRuleMatcher.match(rules: [invalid, valid], filename: "星42.zip", sourceURL: nil)
         #expect(result.matchedRule == valid)
         #expect(result.errors.count == 1)
-        #expect(result.errors.first?.contains("正则表达式无效") == true)
+        #expect(result.errors.first == String(localized: "密码规则「\(invalid.pattern)」的正则表达式无效", bundle: .module))
     }
 
     @Test("密码本兜底与空规则，没有密码标识的命中也停止")

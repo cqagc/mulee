@@ -30,7 +30,7 @@ import Testing
     func readyTimeout() async throws {
         let fake = TorrentFakeTransport(sendsReady: false)
         try await TorrentFixtures.withEngine(fake: fake, readyTimeout: .milliseconds(20)) { engine, root in
-            await #expect(throws: EngineError.launchFailed("等待 BT 引擎就绪超时")) {
+            await #expect(throws: EngineError.launchFailed(String(localized: "等待 BT 引擎就绪超时", bundle: .module))) {
                 try await engine.start(options: EngineOptions(downloadDirectory: root))
             }
             #expect(await fake.sent.isEmpty)

@@ -13,7 +13,7 @@ struct DefaultHandlerSection: View {
                 .foregroundStyle(.secondary)
             ForEach(DefaultHandlerKind.allCases) { kind in
                 LabeledContent(kind.title) {
-                    Text(names[kind] ?? "正在读取…")
+                    Text(names[kind] ?? String(localized: "正在读取…"))
                         .foregroundStyle(.secondary)
                     Button("设为 Mulee") { setDefaults([kind]) }
                         .accessibilityLabel("将 \(kind.title) 设为 Mulee")
