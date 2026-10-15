@@ -134,7 +134,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             guard alert.runModal() == .alertSecondButtonReturn else { return .terminateCancel }
         }
         settingsRuntime?.stop()
-        guard let coordinator else { return .terminateNow }
         isTerminating = true
         NetworkDiagnosticsService.shared.stop()
         startupTask?.cancel()
