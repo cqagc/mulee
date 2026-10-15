@@ -5,7 +5,13 @@ struct TaskRowView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            TaskFileIcon(task: presentation.task)
+            FileTypeIcon(
+                category: FileCategory(task: presentation.task),
+                state: FileIconState(task: presentation.task),
+                extension: presentation.task.fileExtension,
+                size: 32
+            )
+            .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(presentation.task.name)
                     .font(.body.weight(.medium))

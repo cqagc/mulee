@@ -5,7 +5,12 @@ struct TaskInspectorHeader: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            TaskFileIcon(task: presentation.task, size: 52)
+            FileTypeIcon(
+                category: FileCategory(task: presentation.task),
+                state: FileIconState(task: presentation.task),
+                extension: presentation.task.fileExtension,
+                size: 64
+            )
             VStack(alignment: .leading, spacing: 6) {
                 Text(presentation.task.name)
                     .font(.headline)

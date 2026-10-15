@@ -67,6 +67,12 @@ struct MuleeApp: App {
         }
 
         #if DEBUG
+        Window("文件类型图标总览", id: "file-icon-gallery") {
+            FileIconGalleryView()
+        }
+        .defaultSize(width: 1120, height: 1380)
+        .windowResizability(.contentSize)
+
         // 仅用于截图核对：把菜单栏面板放进普通窗口。
         Window("菜单栏面板预览", id: "menu-bar-panel-preview") {
             MenuBarPanelView()

@@ -34,6 +34,9 @@ enum DebugLaunchOptions {
     /// 把菜单栏面板放进普通窗口里显示（菜单栏弹窗无法直接截图）。
     static var showsMenuBarPanelWindow: Bool { defaults.bool(forKey: "MuleeShowMenuBarPanel") }
 
+    /// 启动时打开亮暗对照的文件类型图标总览。
+    static var showsIconGallery: Bool { defaults.bool(forKey: "MuleeShowIconGallery") }
+
     /// 用「P2P 走了代理」的网络状态启动，查看警告样式。
     static var usesProxiedNetwork: Bool { defaults.bool(forKey: "MuleeProxiedNetwork") }
 
