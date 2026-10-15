@@ -10,7 +10,7 @@ struct SpeedLimitSection: View {
             LabeledContent("全局下载限速") {
                 Picker("全局下载限速", selection: $model.downloadLimit) {
                     ForEach(SettingsModel.downloadLimitOptions, id: \.self) { limit in
-                        Text(Self.title(for: limit)).tag(limit)
+                        Text(Self.title(for: Double(limit))).tag(limit)
                     }
                 }
                 .labelsHidden()
@@ -18,7 +18,7 @@ struct SpeedLimitSection: View {
             }
             LabeledContent {
                 Picker("全局上传限速", selection: $model.uploadLimit) {
-                    ForEach(SettingsModel.downloadLimitOptions, id: \.self) { limit in
+                    ForEach(SettingsModel.uploadLimitOptions, id: \.self) { limit in
                         Text(Self.title(for: limit)).tag(limit)
                     }
                 }
@@ -50,8 +50,8 @@ struct SpeedLimitSection: View {
         }
     }
 
-    private static func title(for limit: Int) -> LocalizedStringKey {
-        limit == 0 ? "不限速" : "\(limit) MB/s"
+    private static func title(for limit: Double) -> LocalizedStringKey {
+        limit == 0 ? "不限速" : "\(limit.formatted(.number)) MB/s"
     }
 }
 

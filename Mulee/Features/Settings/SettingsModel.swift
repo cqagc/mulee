@@ -9,6 +9,8 @@ final class SettingsModel {
         case stop
         case throttle
 
+        static let allCases: [Self] = [.stop, .throttle]
+
         var id: Self { self }
     }
 
@@ -17,6 +19,8 @@ final class SettingsModel {
         case compatible
         case best
 
+        static let allCases: [Self] = [.compatible, .best]
+
         var id: Self { self }
     }
 
@@ -24,6 +28,8 @@ final class SettingsModel {
     enum YtDlpChannel: String, CaseIterable, Identifiable {
         case stable
         case nightly
+
+        static let allCases: [Self] = [.stable, .nightly]
 
         var id: Self { self }
     }
@@ -35,6 +41,8 @@ final class SettingsModel {
         case big5
         case shiftJIS
 
+        static let allCases: [Self] = [.auto, .gbk, .big5, .shiftJIS]
+
         var id: Self { self }
     }
 
@@ -43,6 +51,8 @@ final class SettingsModel {
         case keep
         case trash
         case delete
+
+        static let allCases: [Self] = [.keep, .trash, .delete]
 
         var id: Self { self }
     }
@@ -83,6 +93,7 @@ final class SettingsModel {
 
     /// 全局限速可选值（MB/s），0 表示不限速。
     static let downloadLimitOptions = [0, 1, 5, 10, 20]
+    static let uploadLimitOptions: [Double] = [0, 0.5, 1, 2, 5, 10]
     static let httpThreadOptions = [1, 4, 8, 16]
     static let maxConcurrentTasksRange = 1...10
     static let diskCacheRange = 32.0...512.0
@@ -107,7 +118,7 @@ final class SettingsModel {
 
     // MARK: 网络
     var downloadLimit: Int { didSet { defaults.set(downloadLimit, forKey: Key.downloadLimit) } }
-    var uploadLimit: Int { didSet { defaults.set(uploadLimit, forKey: Key.uploadLimit) } }
+    var uploadLimit: Double { didSet { defaults.set(uploadLimit, forKey: Key.uploadLimit) } }
     var scheduledLimit: Bool { didSet { defaults.set(scheduledLimit, forKey: Key.scheduledLimit) } }
     var diskCacheMB: Double { didSet { defaults.set(diskCacheMB, forKey: Key.diskCacheMB) } }
     var portMapping: Bool { didSet { defaults.set(portMapping, forKey: Key.portMapping) } }
@@ -148,7 +159,7 @@ final class SettingsModel {
         maxConcurrentTasks = Self.int(defaults, Key.maxConcurrentTasks, 5)
         httpThreads = Self.int(defaults, Key.httpThreads, 8)
         downloadLimit = Self.int(defaults, Key.downloadLimit, 0)
-        uploadLimit = Self.int(defaults, Key.uploadLimit, 2)
+        uploadLimit = defaults.object(forKey: Key.uploadLimit) as? Double ?? 2
         scheduledLimit = Self.bool(defaults, Key.scheduledLimit, true)
         diskCacheMB = defaults.object(forKey: Key.diskCacheMB) as? Double ?? 128
         portMapping = Self.bool(defaults, Key.portMapping, true)

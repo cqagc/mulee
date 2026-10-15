@@ -8,6 +8,9 @@ final class AppModel {
     var tasks: [DownloadTask] {
         didSet { updateSleepPrevention() }
     }
+    var preventsSleepWhileDownloading: Bool {
+        didSet { updateSleepPrevention() }
+    }
     var networkStatus: NetworkStatus
     var unzipRules: [UnzipRule]
     /// 主窗口当前选中的任务。
@@ -25,10 +28,12 @@ final class AppModel {
         tasks: [DownloadTask] = MockData.tasks,
         networkStatus: NetworkStatus = MockData.healthyNetwork,
         unzipRules: [UnzipRule] = MockData.unzipRules,
+        preventsSleepWhileDownloading: Bool = true,
         sleepPreventer: SleepPreventer = SleepPreventer()
     ) {
         self.sleepPreventer = sleepPreventer
         self.tasks = tasks
+        self.preventsSleepWhileDownloading = preventsSleepWhileDownloading
         self.networkStatus = networkStatus
         self.unzipRules = unzipRules
         self.selectedTaskID = MockData.longTailTask.id
@@ -109,7 +114,7 @@ final class AppModel {
     }
 
     private func updateSleepPrevention() {
-        sleepPreventer.update(isActive: hasActiveTransfers)
+        sleepPreventer.update(isActive: preventsSleepWhileDownloading && hasActiveTransfers)
     }
 
     private func pause(at index: Int) {

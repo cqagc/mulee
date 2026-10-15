@@ -56,4 +56,41 @@ import Testing
         #expect(reloaded.diskCacheMB == 256)
         #expect(reloaded.saveDirectory == "/tmp/x")
     }
+
+    @Test func everyPickerDefaultIsSelectable() throws {
+        let (defaults, name) = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let model = SettingsModel(defaults: defaults)
+
+        #expect(SettingsModel.downloadLimitOptions.contains(model.downloadLimit))
+        #expect(SettingsModel.uploadLimitOptions.contains(model.uploadLimit))
+        #expect(SettingsModel.httpThreadOptions.contains(model.httpThreads))
+        #expect(SettingsModel.SeedingAction.allCases.contains(model.seedingAction))
+        #expect(SettingsModel.VideoQuality.allCases.contains(model.videoQuality))
+        #expect(SettingsModel.YtDlpChannel.allCases.contains(model.ytDlpChannel))
+        #expect(SettingsModel.FilenameEncoding.allCases.contains(model.filenameEncoding))
+        #expect(SettingsModel.OriginalArchiveAction.allCases.contains(model.originalAction))
+    }
+
+    @Test("上传限速支持小数且仍以 MB/s 持久化", arguments: [0.0, 0.5, 1, 2, 5, 10])
+    func uploadLimitPersistsInMegabytes(_ limit: Double) throws {
+        let (defaults, name) = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        let model = SettingsModel(defaults: defaults)
+
+        model.uploadLimit = limit
+
+        #expect(SettingsModel.uploadLimitOptions.contains(limit))
+        #expect(defaults.double(forKey: "network.uploadLimitMBps") == limit)
+        #expect(SettingsModel(defaults: defaults).uploadLimit == limit)
+    }
+
+    @Test("既有整数上传限速按 MB/s 读取", arguments: [0, 1, 2, 5, 10, 20])
+    func legacyIntegerUploadLimitKeepsItsUnit(_ limit: Int) throws {
+        let (defaults, name) = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: name) }
+        defaults.set(limit, forKey: "network.uploadLimitMBps")
+
+        #expect(SettingsModel(defaults: defaults).uploadLimit == Double(limit))
+    }
 }

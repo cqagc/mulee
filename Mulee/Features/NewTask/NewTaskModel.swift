@@ -9,18 +9,22 @@ final class NewTaskModel {
         didSet { parseInput() }
     }
     private(set) var links: [NewTaskLinkModel] = []
-    var saveDirectory = URL.homeDirectory.appending(path: "Downloads/Mulee", directoryHint: .isDirectory)
-    var autoExtract = true
+    var saveDirectory: URL
+    var autoExtract: Bool
 
     private let parser: (String) -> [ParsedLink]
     private let metadataProvider: any TorrentMetadataProvider
 
     init(
         inputText: String = "",
+        saveDirectory: URL = URL.homeDirectory.appending(path: "Downloads/Mulee", directoryHint: .isDirectory),
+        autoExtract: Bool = true,
         parser: @escaping (String) -> [ParsedLink] = LinkParser.parse,
         metadataProvider: any TorrentMetadataProvider = ExampleTorrentMetadataProvider()
     ) {
         self.inputText = inputText
+        self.saveDirectory = saveDirectory
+        self.autoExtract = autoExtract
         self.parser = parser
         self.metadataProvider = metadataProvider
         parseInput()
@@ -41,13 +45,18 @@ final class NewTaskModel {
         return path
     }
 
-    /// 从全局状态取走预填文本；空预填不覆盖预览或已有草稿。
+    /// 从全局状态取走预填文本，追加到已有草稿；空预填不改变草稿。
     func consumePendingText(from model: AppModel) {
         let pendingText = model.pendingNewTaskText
+        guard !pendingText.isEmpty else { return }
+        mergePrefillText(pendingText)
         model.pendingNewTaskText = ""
-        if !pendingText.isEmpty {
-            inputText = pendingText
-        }
+    }
+
+    func mergePrefillText(_ text: String) {
+        guard !text.isEmpty else { return }
+        let separator = inputText.isEmpty || inputText.hasSuffix("\n") ? "" : "\n"
+        inputText += separator + text
     }
 
     func createTasks(in model: AppModel) {

@@ -36,9 +36,11 @@ public enum LinkParser {
         seen: inout Set<ParsedLink>
     ) {
         for part in text.split(whereSeparator: \.isWhitespace) {
-            // 允许链接出现在中文句子中；句读、引号与括号作为边界。
+            // 从协议头开始识别，允许前面紧贴中文。全角句读（，。；：！？、…）一律视为链接结束：
+            // URL 里不会出现未编码的全角句读，而「链接，提取码 abcd」这类写法很常见。
+            // 全角括号、书名号等可能是文件名的一部分，保留在链接内，结尾多出的单个括号再修剪。
             let matches = part.matches(
-                of: #/(?i)(?:https?://|ftp://|thunder://|magnet:\?)[^\s，。；：！？、…“”‘’（）《》〈〉【】「」『』<>"']+/#
+                of: #/(?i)(?:https?://|ftp://|thunder://|magnet:\?)[^\s，。；：！？、…]+/#
             )
             for match in matches {
                 let candidate = trimmingPunctuation(String(match.output))
@@ -51,12 +53,17 @@ public enum LinkParser {
 
     private static func trimmingPunctuation(_ text: String) -> String {
         var text = text
-        let openingCharacters: [Character: Character] = [")": "(", "]": "[", "}": "{"]
+        let openingCharacters: [Character: Character] = [
+            ")": "(", "]": "[", "}": "{", "）": "（", "」": "「", "』": "『",
+            "】": "【", "》": "《", "〉": "〈", "”": "“", "’": "‘", ">": "<"
+        ]
         while let last = text.last {
-            if ".,;!".contains(last) {
+            if "，。；：！？、…,.;:!?".contains(last) {
                 text.removeLast()
             } else if let opening = openingCharacters[last],
                       text.filter({ $0 == last }).count > text.filter({ $0 == opening }).count {
+                text.removeLast()
+            } else if "\"'".contains(last), text.filter({ $0 == last }).count.isMultiple(of: 2) == false {
                 text.removeLast()
             } else {
                 break

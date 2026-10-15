@@ -150,11 +150,57 @@ struct LinkParserTests {
         #expect(LinkParser.parse(text) == [.http(url: url, decodedFromThunder: false, original: text)])
     }
 
-    @Test("中文句子与 URL 尾部标点", arguments: ["，", "。", "；", "！", "？", "）", "】", ",", "."])
+    @Test("中文句子与 URL 尾部标点", arguments: [
+        "，", "。", "；", "：", "！", "？", "、", "…", ",", ".", ";", ":", "!", "?",
+        "）", "」", "』", "】", "”", "’", ")", "]", "}", "》", "〉", ">", "\"", "'", "）。"
+    ])
     func surroundingProse(_ punctuation: String) throws {
         let link = "https://example.com/archive.zip"
         let url = try #require(URL(string: link))
         #expect(LinkParser.parse("下载地址：\(link)\(punctuation)") == [
+            .http(url: url, decodedFromThunder: false, original: link)
+        ])
+    }
+
+    // 全角句读（，。；：！？、…）一律视为链接结束，见 LinkParserShareTextTests；这里只覆盖括号、引号和半角标点。
+    @Test("URL 内部的括号引号和半角标点不截断", arguments: [
+        "报告（最终版）.zip", "报告（最终版）", "报告(最终版)", "报告[最终版]", "报告{最终版}",
+        "报告「最终版」", "报告『最终版』", "报告【最终版】", "报告“最终版”", "报告‘最终版’",
+        "报告《最终版》", "报告〈最终版〉", "报告<最终版>", "报告\"最终版\"", "报告'最终版'",
+        "报告,.;:!?最终版.zip", "报告（最终版）?name=中文"
+    ])
+    func punctuationInsideURL(_ path: String) throws {
+        let link = "https://example.com/\(path)"
+        let url = try #require(URL(string: link))
+
+        #expect(LinkParser.parse("下载地址\(link)") == [
+            .http(url: url, decodedFromThunder: false, original: link)
+        ])
+    }
+
+    @Test("仅移除多余的尾部右括号引号", arguments: [
+        ("报告（最终版））。", "报告（最终版）"),
+        ("报告(最终版))!", "报告(最终版)"),
+        ("报告【最终版】】；", "报告【最终版】"),
+        ("报告“最终版””，", "报告“最终版”"),
+        ("报告'最终版''.", "报告'最终版'")
+    ])
+    func unmatchedTrailingClosers(_ path: String, _ expectedPath: String) throws {
+        let link = "https://example.com/\(expectedPath)"
+        let url = try #require(URL(string: link))
+
+        #expect(LinkParser.parse("https://example.com/\(path)") == [
+            .http(url: url, decodedFromThunder: false, original: link)
+        ])
+    }
+
+    // 半角逗号是合法的 URL 字符，无法和说明文字区分，所以只覆盖全角写法。
+    @Test("中文紧贴协议头且后接密码说明", arguments: ["，密码", "，密码：", "，提取码："])
+    func linkImmediatelyAfterChinese(_ label: String) throws {
+        let link = "https://a.com/x.zip"
+        let url = try #require(URL(string: link))
+
+        #expect(LinkParser.parse("下载地址\(link)\(label) 123") == [
             .http(url: url, decodedFromThunder: false, original: link)
         ])
     }
@@ -228,5 +274,35 @@ struct LinkParserTests {
     ])
     func emptyResults(_ text: String) {
         #expect(LinkParser.parse(text).isEmpty)
+    }
+}
+
+/// 中文分享文案里常见的「链接 + 提取码/密码」写法，全角句读之后的内容不能算进链接。
+@Suite struct LinkParserShareTextTests {
+    @Test("全角句读结束链接", arguments: [
+        "https://example.com/a.zip，提取码abcd",
+        "下载地址https://example.com/a.zip，密码 123",
+        "https://example.com/a.zip。",
+        "https://example.com/a.zip；备用：https://example.org/b.zip",
+        "地址：https://example.com/a.zip！",
+    ])
+    func fullWidthSentencePunctuationEndsLink(_ text: String) throws {
+        let links = LinkParser.parse(text)
+        let first = try #require(links.first)
+        guard case .http(let url, _, _) = first else {
+            Issue.record("应识别为 HTTP 直链：\(first)")
+            return
+        }
+        #expect(url.absoluteString == "https://example.com/a.zip")
+    }
+
+    @Test func fullWidthBracketsStayInsideFileName() throws {
+        let links = LinkParser.parse("资料：https://example.com/报告（最终版）.zip，密码 1234")
+        let first = try #require(links.first)
+        guard case .http(let url, _, _) = first else {
+            Issue.record("应识别为 HTTP 直链：\(first)")
+            return
+        }
+        #expect(url.lastPathComponent == "报告（最终版）.zip")
     }
 }
