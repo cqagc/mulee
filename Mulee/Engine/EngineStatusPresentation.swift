@@ -27,9 +27,9 @@ enum EngineStatusPresentation {
         ffmpegURL == nil ? .missingFFmpeg : .running
     }
 
-    nonisolated static func errorMessage(_ error: any Error) -> String {
+    nonisolated static func errorMessage(_ error: any Error, kind: TaskKind? = nil) -> String {
         switch error {
-        case EngineError.binaryNotFound: "未找到 aria2"
+        case EngineError.binaryNotFound: kind == .bittorrent ? "未找到 BT 下载工具" : "未找到 aria2"
         case EngineError.notRunning: "下载引擎未运行"
         case EngineError.launchFailed(let reason): "引擎启动失败：\(reason)"
         case EngineError.rpc(let code, let message): "\(message)（\(code)）"

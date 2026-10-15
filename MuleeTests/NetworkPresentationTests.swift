@@ -25,11 +25,11 @@ import Testing
     @Test func kadStates() {
         #expect(!NetworkPresentation.kadBadge(.open).isAbnormal)
         #expect(NetworkPresentation.kadBadge(.firewalled).isAbnormal)
-        #expect(NetworkPresentation.kadDescription(.firewalled) == "已连接，但外部无法主动连入（firewalled）")
+        #expect(NetworkPresentation.kadDescription(.firewalled) == "已连接，但外部暂时无法主动连入")
     }
 
     @Test func bittorrentAndMapping() {
-        #expect(NetworkPresentation.bittorrentPort(reachable: nil).text == "未检测")
+        #expect(NetworkPresentation.bittorrentPort(reachable: nil).text == "未确认")
         #expect(NetworkPresentation.bittorrentPort(reachable: false).isAbnormal)
         #expect(NetworkPresentation.portMapping(succeeded: nil) == nil)
         #expect(NetworkPresentation.portMapping(succeeded: false)?.text == "映射失败")

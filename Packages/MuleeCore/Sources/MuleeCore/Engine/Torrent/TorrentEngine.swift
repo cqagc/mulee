@@ -183,6 +183,20 @@ public actor TorrentEngine: DownloadEngine {
         )
     }
 
+    public func taskInfo(_ id: String) async throws -> TorrentTaskInfo {
+        let client = try await runningClient()
+        let result: TorrentdListResult = try await client.call("list", TorrentdEmpty())
+        guard let task = result.torrents.first(where: { $0.id == id }) else {
+            throw TorrentErrorDescriptions.error(for: "not_found")
+        }
+        return TorrentTaskInfo(
+            numPeers: task.numPeers, numSeeds: task.numSeeds,
+            listPeers: task.listPeers, listSeeds: task.listSeeds,
+            ratio: task.ratio, isPrivate: task.isPrivate,
+            uploadLimit: task.uploadLimit, hasMetadata: task.hasMetadata
+        )
+    }
+
     public func files(_ id: String) async throws -> [TorrentFileEntry] {
         let client = try await runningClient()
         let result: TorrentdFilesResult = try await client.call("files", TorrentdIDParameters(id: id))

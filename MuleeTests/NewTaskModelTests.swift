@@ -30,7 +30,7 @@ import Testing
     }
 
     @Test func exampleTorrentCalculatesSelectedAndTotalBytes() throws {
-        let draft = NewTaskModel(parser: { _ in [NewTaskPreviewData.links[0]] })
+        let draft = NewTaskModel(parser: { _ in [NewTaskPreviewData.links[0]] }, metadataProvider: ExampleTorrentMetadataProvider())
         let item = try #require(draft.links.first)
 
         #expect(item.files?.count == 4)
@@ -68,7 +68,7 @@ import Testing
 
     @Test func reparsingPreservesOptionsForUnchangedLinks() throws {
         let sampleLinks = NewTaskPreviewData.links
-        let draft = NewTaskModel(parser: { _ in sampleLinks })
+        let draft = NewTaskModel(parser: { _ in sampleLinks }, metadataProvider: ExampleTorrentMetadataProvider())
         let torrent = try #require(draft.links.first)
         let video = try #require(draft.links.last)
         torrent.files?[0].isSelected = false

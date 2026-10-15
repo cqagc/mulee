@@ -9,11 +9,16 @@ struct TaskPresentation {
     let task: DownloadTask
     let now: Date
     let calendar: Calendar
+    let seedingAction: SettingsModel.SeedingAction
 
-    init(task: DownloadTask, now: Date = .now, calendar: Calendar = .current) {
+    init(
+        task: DownloadTask, now: Date = .now, calendar: Calendar = .current,
+        seedingAction: SettingsModel.SeedingAction = .throttle
+    ) {
         self.task = task
         self.now = now
         self.calendar = calendar
+        self.seedingAction = seedingAction
     }
 
     var typeLabel: String {
@@ -81,7 +86,7 @@ struct TaskPresentation {
     var progressText: String {
         switch task.status {
         case .extracting: "解压中 · \(percent)"
-        case .seeding: "做种 \(percent) · 到 1:1 后降速"
+        case .seeding: "做种 \(percent) · 到 1:1 后\(seedingAction == .stop ? "停止" : "降速")"
         case .postProcessing: "\(percent) · 合并音视频"
         case .completed: extractionStatus ?? size
         default: "\(percent) · \(receivedAndTotal)"
@@ -147,7 +152,7 @@ struct TaskPresentation {
     }
 
     var isStatusEmphasized: Bool { [.waitingForSources, .completed, .failed].contains(task.status) }
-    var canPauseOrResume: Bool { [.downloading, .waitingForSources, .queued, .paused].contains(task.status) }
+    var canPauseOrResume: Bool { [.downloading, .waitingForSources, .queued, .paused, .seeding].contains(task.status) }
     var pauseTitle: String { task.status == .paused ? "继续" : "暂停" }
     var pauseSymbol: MuleeSymbol { task.status == .paused ? .resume : .pause }
 

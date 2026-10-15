@@ -1,3 +1,5 @@
+import AppKit
+import UniformTypeIdentifiers
 import MuleeCore
 import SwiftUI
 
@@ -42,6 +44,10 @@ struct NewTaskSheet: View {
                 .padding(.horizontal, 22)
                 .padding(.top, 14)
 
+            Button("打开种子文件…", action: openTorrentFiles)
+                .padding(.horizontal, 22)
+                .padding(.top, 10)
+
             Text("识别到 \(draft.linkCount) 个链接")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
@@ -76,10 +82,26 @@ struct NewTaskSheet: View {
             NewTaskFooterView(draft: draft, cancel: cancel, startDownload: startDownload)
         }
         .frame(width: 640)
+        .dropDestination(for: URL.self, action: dropTorrentFiles)
         .onAppear(perform: prepareDraft)
         .onChange(of: model.pendingNewTaskText) {
             consumePendingText()
         }
+    }
+
+    private func openTorrentFiles() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [UTType(filenameExtension: "torrent") ?? .data]
+        panel.allowsMultipleSelection = true
+        panel.canChooseDirectories = false
+        panel.prompt = "打开种子文件"
+        if panel.runModal() == .OK {
+            draft.appendTorrentFiles(panel.urls)
+        }
+    }
+
+    private func dropTorrentFiles(_ urls: [URL], _ location: CGPoint) -> Bool {
+        draft.appendTorrentFiles(urls)
     }
 
     private func prepareDraft() {
@@ -111,7 +133,7 @@ struct NewTaskSheet: View {
 #Preview("四种链接") {
     NewTaskSheet(draft: NewTaskModel(inputText: NewTaskPreviewData.inputText, parser: { _ in
         NewTaskPreviewData.links
-    }))
+    }, metadataProvider: ExampleTorrentMetadataProvider()))
     .environment(AppModel(tasks: MockData.tasks))
     .environment(SettingsModel())
 }

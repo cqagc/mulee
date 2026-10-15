@@ -39,7 +39,7 @@ struct PortConnectivitySection: View {
                     Text(bt.text)
                         .foregroundStyle(bt.isAbnormal ? Theme.wait : .secondary)
                     if status.bittorrentPortReachable == nil {
-                        Button("测试", action: testBitTorrentPort)
+                        Button("刷新", action: refreshBitTorrentPort)
                     }
                 }
             } label: {
@@ -64,8 +64,8 @@ struct PortConnectivitySection: View {
         }
     }
 
-    private func testBitTorrentPort() {
-        // TODO: 引擎接入后检测 BT 端口是否可从外部连入。
+    private func refreshBitTorrentPort() {
+        Task { await appModel.bitTorrent?.refreshSession() }
     }
 }
 

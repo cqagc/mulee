@@ -18,6 +18,7 @@ final class AppModel {
     var preventsSleepWhileDownloading: Bool {
         didSet { updateSleepPrevention() }
     }
+    var bitTorrent: BitTorrentController?
     var networkStatus: NetworkStatus
     var engineStates: [TaskKind: EngineState] = Dictionary(uniqueKeysWithValues: TaskKind.allCases.map { ($0, .unavailable) })
     /// 历史读取、备份或写入异常；独立于引擎启停，避免启动成功后覆盖诊断。
@@ -95,7 +96,7 @@ final class AppModel {
 
     /// 暂停所有未完成的任务。
     func pauseAll() {
-        for task in tasks where [.downloading, .waitingForSources, .queued].contains(task.status) {
+        for task in tasks where [.downloading, .waitingForSources, .queued, .seeding].contains(task.status) {
             pause(task.id)
         }
     }
@@ -126,6 +127,10 @@ final class AppModel {
     }
 
     func remove(_ id: DownloadTask.ID) {
+        if let task = tasks.first(where: { $0.id == id }), task.kind == .bittorrent, coordinator != nil {
+            BitTorrentRemoval.confirm(task: task, model: self)
+            return
+        }
         if let task = tasks.first(where: { $0.id == id }), task.status == .completed {
             coordinator?.excludeFromSnapshots(task)
             removeRecord(id)
@@ -177,9 +182,14 @@ final class AppModel {
     }
 
     /// 正式运行交给协调器；没有协调器时保留预览和测试的示例行为。
-    func addTasks(from links: [ParsedLink], autoExtract: Bool, directory: URL? = nil) {
+    func addTasks(
+        from links: [ParsedLink], autoExtract: Bool, directory: URL? = nil,
+        filePriorities: [ParsedLink: [Int]] = [:]
+    ) {
         if let coordinator {
-            Task { await coordinator.add(links: links, autoExtract: autoExtract, directory: directory) }
+            Task { await coordinator.add(
+                links: links, autoExtract: autoExtract, directory: directory, filePriorities: filePriorities
+            ) }
             return
         }
         let newTasks = links.map { DownloadTask(link: $0, autoExtract: autoExtract) }

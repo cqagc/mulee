@@ -9,7 +9,7 @@ struct MainWindowView: View {
 
     private var category: SidebarItem { selection ?? .all }
     private var canPauseAll: Bool {
-        model.tasks.contains { [.downloading, .waitingForSources].contains($0.status) }
+        model.tasks.contains { [.downloading, .waitingForSources, .seeding].contains($0.status) }
     }
 
     var body: some View {
@@ -46,8 +46,16 @@ struct MainWindowView: View {
         .sheet(isPresented: $model.isShowingNewTask) {
             NewTaskSheet()
         }
+        .dropDestination(for: URL.self, action: dropTorrentFiles)
         .onChange(of: selection, clearHiddenSelection)
         .onChange(of: search, clearHiddenSelection)
+    }
+
+    private func dropTorrentFiles(_ urls: [URL], _ location: CGPoint) -> Bool {
+        let text = NewTaskModel.torrentFileText(urls)
+        guard !text.isEmpty else { return false }
+        model.showNewTask(prefill: text)
+        return true
     }
 
     private func showNewTask() {
@@ -76,10 +84,12 @@ struct MainWindowView: View {
 #Preview {
     MainWindowView()
         .environment(AppModel())
+        .environment(SettingsModel())
 }
 
 #Preview("暗色") {
     MainWindowView()
         .environment(AppModel())
+        .environment(SettingsModel())
         .preferredColorScheme(.dark)
 }

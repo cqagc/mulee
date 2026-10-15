@@ -47,7 +47,7 @@ enum NetworkPresentation {
     static func kadDescription(_ state: NetworkStatus.KadState) -> String {
         switch state {
         case .open: "已连接"
-        case .firewalled: "已连接，但外部无法主动连入（firewalled）"
+        case .firewalled: "已连接，但外部暂时无法主动连入"
         case .disconnected: "未连接"
         }
     }
@@ -56,7 +56,7 @@ enum NetworkPresentation {
         switch reachable {
         case .some(true): Line(text: "可连入", isAbnormal: false)
         case .some(false): Line(text: "无法连入", isAbnormal: true)
-        case .none: Line(text: "未检测", isAbnormal: false)
+        case .none: Line(text: "未确认", isAbnormal: false)
         }
     }
 

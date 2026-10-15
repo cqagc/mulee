@@ -3,6 +3,7 @@ import SwiftUI
 
 struct TaskListView: View {
     @Environment(AppModel.self) private var model
+    @Environment(SettingsModel.self) private var settings
     let tasks: [DownloadTask]
     let isSearching: Bool
 
@@ -11,7 +12,7 @@ struct TaskListView: View {
 
         List(selection: $model.selectedTaskID) {
             ForEach(tasks) { task in
-                TaskRowView(presentation: TaskPresentation(task: task))
+                TaskRowView(presentation: TaskPresentation(task: task, seedingAction: settings.seedingAction))
                     .tag(task.id)
                     .listRowInsets(EdgeInsets(top: 9, leading: 10, bottom: 9, trailing: 10))
                     .listRowSeparator(.hidden)

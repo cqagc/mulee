@@ -34,6 +34,10 @@ actor TorrentdProcessTransport: TorrentdTransport {
             }
         }
         process.executableURL = binary
+        var environment = ProcessInfo.processInfo.environment
+        environment["LANG"] = "en_US.UTF-8"
+        environment["LC_ALL"] = "en_US.UTF-8"
+        process.environment = environment
         process.arguments = ["--state-dir", stateDirectory.path]
         process.standardInput = stdin
         process.standardOutput = stdout

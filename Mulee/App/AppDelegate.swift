@@ -22,8 +22,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.loadUnzipRules(from: UnzipRuleStore())
         self.settings = settings
         let stateDirectory = URL.applicationSupportDirectory.appending(path: "Mulee/aria2", directoryHint: .isDirectory)
+        let torrent = TorrentEngine(
+            stateDirectory: URL.applicationSupportDirectory.appending(path: "Mulee/torrent", directoryHint: .isDirectory),
+            settings: BitTorrentEngineConfiguration.configuration(from: settings)
+        )
+        model.bitTorrent = BitTorrentController(
+            engine: torrent, model: model, configuration: BitTorrentEngineConfiguration.configuration(from: settings)
+        )
         coordinator = DownloadCoordinator(
-            model: model, engines: [Aria2Engine(stateDirectory: stateDirectory)],
+            model: model, engines: [Aria2Engine(stateDirectory: stateDirectory), torrent],
             videoBootstrap: VideoEngineBootstrap()
         )
         extractionCoordinator = ExtractionCoordinator(

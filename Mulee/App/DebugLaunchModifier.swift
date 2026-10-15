@@ -19,6 +19,8 @@ struct DebugLaunchModifier: ViewModifier {
     }
 
     #if DEBUG
+    private static var didAddLaunchLinks = false
+
     private func applyLaunchOptions() async {
         if DebugLaunchOptions.usesProxiedNetwork {
             model.networkStatus = MockData.proxiedNetwork
@@ -35,9 +37,14 @@ struct DebugLaunchModifier: ViewModifier {
         if DebugLaunchOptions.showsIconGallery {
             openWindow(id: "file-icon-gallery")
         }
-        if let text = DebugLaunchOptions.linksToAdd {
-            // 给引擎留出启动时间，再走和「新建下载」完全相同的入口。
-            try? await Task.sleep(for: .seconds(3))
+        if let text = DebugLaunchOptions.linksToAdd, !Self.didAddLaunchLinks {
+            Self.didAddLaunchLinks = true
+            // 等待所需引擎就绪；慢启动不能把端到端任务误记为引擎未运行。
+            let kinds = Set(LinkParser.parse(text).map(\.kind))
+            for _ in 0..<120 {
+                if kinds.allSatisfy({ model.engineStates[$0] == .running }) { break }
+                do { try await Task.sleep(for: .seconds(1)) } catch { return }
+            }
             model.addTasks(from: LinkParser.parse(text), autoExtract: settings.autoExtract)
         }
     }
