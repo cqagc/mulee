@@ -23,7 +23,7 @@ struct MainWindowView: View {
             TaskListView(tasks: category.filter(model.tasks, search: search), isSearching: !search.isEmpty)
                 .navigationTitle(category.navigationTitle)
                 .navigationSubtitle(SidebarItem.subtitle(for: category.filter(model.tasks, search: search)))
-                .searchable(text: $search, prompt: "搜索任务")
+                .searchable(text: $search, prompt: String(localized: "搜索任务"))
         }
         .inspector(isPresented: $isShowingInspector) {
             TaskInspectorView(task: model.selectedTask)
@@ -34,14 +34,14 @@ struct MainWindowView: View {
                 Button("新建下载", systemImage: MuleeSymbol.add.name, action: showNewTask)
                     .help("新建下载（⌘N）")
                     .keyboardShortcut("n")
-                Button(canPauseAll ? "全部暂停" : "全部继续",
+                Button(canPauseAll ? String(localized: "全部暂停") : String(localized: "全部继续"),
                        systemImage: canPauseAll ? MuleeSymbol.pause.name : MuleeSymbol.resume.name,
                        action: toggleAll)
                     .help("全部暂停 / 继续")
                     .disabled(!canPauseAll && !model.tasks.contains { $0.status == .paused })
                 TransferSpeedView(downloadRate: model.totalDownloadRate, uploadRate: model.totalUploadRate)
-                Button(isShowingInspector ? "隐藏详情栏" : "显示详情栏", systemImage: MuleeSymbol.inspector.name, action: toggleInspector)
-                    .help(isShowingInspector ? "隐藏详情栏" : "显示详情栏")
+                Button(isShowingInspector ? String(localized: "隐藏详情栏") : String(localized: "显示详情栏"), systemImage: MuleeSymbol.inspector.name, action: toggleInspector)
+                    .help(isShowingInspector ? String(localized: "隐藏详情栏") : String(localized: "显示详情栏"))
             }
         }
         .sheet(isPresented: $model.isShowingNewTask) {

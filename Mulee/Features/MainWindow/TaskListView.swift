@@ -27,9 +27,9 @@ struct TaskListView: View {
         .listStyle(.inset)
         .overlay {
             if tasks.isEmpty {
-                ContentUnavailableView(isSearching ? "未找到任务" : "暂无任务",
+                ContentUnavailableView(isSearching ? String(localized: "未找到任务") : String(localized: "暂无任务"),
                                        systemImage: isSearching ? MuleeSymbol.search.name : MuleeSymbol.all.name,
-                                       description: Text(isSearching ? "试试其他任务名称。" : "新建下载后，任务会显示在这里。"))
+                                       description: Text(isSearching ? String(localized: "试试其他任务名称。") : String(localized: "新建下载后，任务会显示在这里。")))
             }
         }
     }

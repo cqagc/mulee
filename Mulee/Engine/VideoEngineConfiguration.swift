@@ -19,7 +19,7 @@ nonisolated struct VideoEngineConfiguration: Equatable, Sendable {
         )
     }
 
-    var qualityTitle: String { quality == .compatible ? "兼容优先" : "画质优先" }
+    var qualityTitle: String { quality == .compatible ? String(localized: "兼容优先") : String(localized: "画质优先") }
 
     func apply(to engine: YtDlpEngine) async throws {
         try await engine.configure(

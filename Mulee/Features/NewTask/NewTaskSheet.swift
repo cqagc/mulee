@@ -94,7 +94,7 @@ struct NewTaskSheet: View {
         panel.allowedContentTypes = [UTType(filenameExtension: "torrent") ?? .data]
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        panel.prompt = "打开种子文件"
+        panel.prompt = String(localized: "打开种子文件")
         if panel.runModal() == .OK {
             draft.appendTorrentFiles(panel.urls)
         }

@@ -26,7 +26,7 @@ final class NewTaskLinkModel: Identifiable {
                 torrentName = info.name
                 files = info.files.map { TorrentFile(name: $0.path, size: $0.size) }
             } catch {
-                metadataError = "无法读取种子文件，请重新选择完整的 .torrent 文件"
+                metadataError = String(localized: "无法读取种子文件，请重新选择完整的 .torrent 文件")
             }
         }
     }
@@ -54,7 +54,7 @@ final class NewTaskLinkModel: Identifiable {
         case .magnet, .torrentFile: "BT"
         case .ed2k: "ED2K"
         case .http: "HTTP"
-        case .video: "视频"
+        case .video: String(localized: "视频")
         }
     }
 
@@ -76,21 +76,21 @@ final class NewTaskLinkModel: Identifiable {
     var detail: String {
         switch link {
         case .magnet:
-            "磁力链接 · 正在获取元数据"
+            String(localized: "磁力链接 · 正在获取元数据")
         case .torrentFile:
             if let metadataError {
                 metadataError
             } else if let files {
-                "BT 种子文件 · \(files.count.formatted()) 个文件"
+                String(localized: "BT 种子文件 · \(files.count) 个文件")
             } else {
-                "BT 种子文件"
+                String(localized: "BT 种子文件")
             }
         case .ed2k:
-            "电驴链接 · 冷门资源可能需要长时间等待来源"
+            String(localized: "电驴链接 · 冷门资源可能需要长时间等待来源")
         case .http(let url, let decodedFromThunder, _):
-            decodedFromThunder ? "迅雷链接已解析为 \(url.absoluteString)" : "直链 · \(url.host() ?? url.absoluteString)"
+            decodedFromThunder ? String(localized: "迅雷链接已解析为 \(url.absoluteString)") : String(localized: "直链 · \(url.host() ?? url.absoluteString)")
         case .video(_, let site, _):
-            "\(site.displayName) · 视频链接"
+            String(localized: "\(site.displayName) · 视频链接")
         }
     }
 
@@ -101,6 +101,6 @@ final class NewTaskLinkModel: Identifiable {
         if case .ed2k(_, let size, _, _) = link {
             return size.formatted(.byteCount(style: .file))
         }
-        return "大小未知"
+        return String(localized: "大小未知")
     }
 }

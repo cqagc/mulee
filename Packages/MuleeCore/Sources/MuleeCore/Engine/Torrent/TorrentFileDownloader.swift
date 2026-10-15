@@ -13,17 +13,17 @@ struct TorrentFileDownloader: Sendable {
             let (bytes, response) = try await session.bytes(from: url)
             defer { bytes.task.cancel() }
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-                throw EngineError.invalidResponse("无法下载种子文件，服务器响应异常")
+                throw EngineError.invalidResponse(String(localized: "无法下载种子文件，服务器响应异常", bundle: .module))
             }
             guard response.expectedContentLength <= Int64(Self.maximumSize) else { throw Self.tooLarge() }
             var data = Data()
             for try await byte in bytes {
                 try Task.checkCancellation()
                 guard data.count < Self.maximumSize else { throw Self.tooLarge() }
-                if data.isEmpty, byte != 100 { throw EngineError.invalidResponse("下载的内容不是有效的种子文件") }
+                if data.isEmpty, byte != 100 { throw EngineError.invalidResponse(String(localized: "下载的内容不是有效的种子文件", bundle: .module)) }
                 data.append(byte)
             }
-            guard data.first == 100 else { throw EngineError.invalidResponse("下载的种子文件为空") }
+            guard data.first == 100 else { throw EngineError.invalidResponse(String(localized: "下载的种子文件为空", bundle: .module)) }
             try FileManager.default.createDirectory(
                 at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]
             )
@@ -35,11 +35,11 @@ struct TorrentFileDownloader: Sendable {
         } catch let error as EngineError {
             throw error
         } catch {
-            throw EngineError.rpc(code: 6, message: "无法下载或保存种子文件，请检查网络和保存目录的访问权限")
+            throw EngineError.rpc(code: 6, message: String(localized: "无法下载或保存种子文件，请检查网络和保存目录的访问权限", bundle: .module))
         }
     }
 
     private static func tooLarge() -> EngineError {
-        .invalidResponse("种子文件超过大小上限（20 MB）")
+        .invalidResponse(String(localized: "种子文件超过大小上限（20 MB）", bundle: .module))
     }
 }

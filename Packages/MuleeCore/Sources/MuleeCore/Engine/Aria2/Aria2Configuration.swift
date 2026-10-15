@@ -60,7 +60,7 @@ struct Aria2Configuration: Sendable {
             values["input-file"] = sessionURL.path
         }
         guard values.values.allSatisfy({ !$0.contains("\n") && !$0.contains("\r") }) else {
-            throw EngineError.invalidResponse("aria2 配置不能包含换行符")
+            throw EngineError.invalidResponse(String(localized: "aria2 配置不能包含换行符", bundle: .module))
         }
         return values.keys.sorted().map { "\($0)=\(values[$0, default: ""])" }.joined(separator: "\n") + "\n"
     }

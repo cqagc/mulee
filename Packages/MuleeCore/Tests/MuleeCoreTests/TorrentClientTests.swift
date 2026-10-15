@@ -46,7 +46,7 @@ import Testing
         let client = TorrentdClient(transport: fake, requestTimeout: .milliseconds(20))
         try await client.start()
         try await client.waitUntilReady()
-        await #expect(throws: EngineError.rpc(code: -1, message: "BT 引擎响应超时")) {
+        await #expect(throws: EngineError.rpc(code: -1, message: String(localized: "BT 引擎响应超时", bundle: .module))) {
             let _: String = try await client.call("timeout", TorrentdEmpty())
         }
         let request = try #require(await fake.sent.first)
@@ -104,7 +104,10 @@ import Testing
         let request = try #require(await requests.next())
         let response = TorrentdResponse(id: request.id, result: nil, error: TorrentdError(code: "invalid_torrent", message: "bad data"))
         await fake.emit(try JSONEncoder().encode(response) + Data([10]))
-        await #expect(throws: EngineError.rpc(code: 5, message: "种子文件或磁力链接无效（torrentd 错误码 invalid_torrent）")) {
+        let reason = String(localized: "种子文件或磁力链接无效", bundle: .module)
+        let code = "invalid_torrent"
+        let expectedError = String(localized: "\(reason)（torrentd 错误码 \(code)）", bundle: .module)
+        await #expect(throws: EngineError.rpc(code: 5, message: expectedError)) {
             try await task.value
         }
         await client.finish(grace: .zero)

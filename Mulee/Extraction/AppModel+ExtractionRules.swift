@@ -9,7 +9,7 @@ extension AppModel {
             unzipRules = rules
             unzipRuleIssue = nil
         } catch {
-            unzipRuleIssue = "暂时无法读取解压规则：\(error.localizedDescription)"
+            unzipRuleIssue = String(localized: "暂时无法读取解压规则：\(error.localizedDescription)")
         }
     }
 
@@ -17,7 +17,7 @@ extension AppModel {
         do {
             try unzipRuleStore?.save(unzipRules)
         } catch {
-            unzipRuleIssue = "暂时无法保存解压规则：\(error.localizedDescription)"
+            unzipRuleIssue = String(localized: "暂时无法保存解压规则：\(error.localizedDescription)")
         }
     }
 
@@ -42,7 +42,7 @@ extension AppModel {
         try await extractionPasswords.setPasswordBook(passwords)
         if !passwords.isEmpty, !unzipRules.contains(where: { $0.matchKind == .passwordBook }) {
             unzipRules.append(UnzipRule(
-                matchKind: .passwordBook, pattern: "以上都没命中时，依次尝试密码本",
+                matchKind: .passwordBook, pattern: String(localized: "以上都没命中时，依次尝试密码本"),
                 keychainItemID: nil, maskedLength: 0, hitCount: 0
             ))
         }

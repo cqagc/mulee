@@ -1,3 +1,5 @@
+import Foundation
+
 import MuleeCore
 
 /// 主窗口分类；筛选不依赖界面状态，便于独立验证。
@@ -12,19 +14,19 @@ enum SidebarItem: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .all: "全部"
-        case .downloading: "下载中"
-        case .waitingForSources: "等待来源"
-        case .seeding: "做种中"
-        case .completed: "已完成"
-        case .http: "网页 HTTP"
-        case .bittorrent: "BT / 磁力"
-        case .ed2k: "电驴 ed2k"
-        case .video: "视频"
+        case .all: String(localized: "全部")
+        case .downloading: String(localized: "下载中")
+        case .waitingForSources: String(localized: "等待来源")
+        case .seeding: String(localized: "做种中")
+        case .completed: String(localized: "已完成")
+        case .http: String(localized: "网页 HTTP")
+        case .bittorrent: String(localized: "BT / 磁力")
+        case .ed2k: String(localized: "电驴 ed2k")
+        case .video: String(localized: "视频")
         }
     }
 
-    var navigationTitle: String { self == .all ? "全部任务" : title }
+    var navigationTitle: String { self == .all ? String(localized: "全部任务") : title }
 
     var symbol: MuleeSymbol {
         switch self {
@@ -59,6 +61,6 @@ enum SidebarItem: String, CaseIterable, Identifiable {
     }
 
     static func subtitle(for tasks: [DownloadTask]) -> String {
-        "\(tasks.count.formatted()) 个任务 · \(downloading.filter(tasks).count.formatted()) 个进行中"
+        String(localized: "\(tasks.count) 个任务 · \(downloading.filter(tasks).count) 个进行中")
     }
 }

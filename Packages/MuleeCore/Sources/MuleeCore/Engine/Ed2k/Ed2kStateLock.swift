@@ -9,10 +9,10 @@ struct Ed2kStateLock: Sendable {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
         descriptor = open(directory.appendingPathComponent("mulee.lock").path, O_CREAT | O_RDWR | O_CLOEXEC, 0o600)
-        guard descriptor >= 0 else { throw EngineError.launchFailed("无法锁定电驴状态目录") }
+        guard descriptor >= 0 else { throw EngineError.launchFailed(String(localized: "无法锁定电驴状态目录", bundle: .module)) }
         guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else {
             close(descriptor)
-            throw EngineError.launchFailed("该电驴状态目录已被另一个引擎使用")
+            throw EngineError.launchFailed(String(localized: "该电驴状态目录已被另一个引擎使用", bundle: .module))
         }
     }
 

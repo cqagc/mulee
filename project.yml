@@ -5,9 +5,12 @@ options:
     macOS: "26.0"
   createIntermediateGroups: true
   developmentLanguage: zh-Hans
+  knownRegions: [zh-Hans, en, zh-Hant]
 settings:
   base:
     SWIFT_VERSION: "6.0"
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     MARKETING_VERSION: "0.1.2"
     CURRENT_PROJECT_VERSION: "3"
     ARCHS: arm64

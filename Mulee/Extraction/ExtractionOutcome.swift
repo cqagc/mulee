@@ -33,7 +33,7 @@ nonisolated struct ExtractionOutcome: Sendable {
         encoding = result.encoding
         items = result.topLevelItems
         warnings = result.warnings + result.nestedResults.flatMap { child in
-            child.warnings + (child.failure.map { ["嵌套压缩包：\($0.localizedDescription)"] } ?? [])
+            child.warnings + (child.failure.map { [String(localized: "嵌套压缩包：\($0.localizedDescription)")] } ?? [])
         }
     }
 }

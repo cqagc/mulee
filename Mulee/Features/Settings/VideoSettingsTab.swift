@@ -13,8 +13,8 @@ struct VideoSettingsTab: View {
                     Text("画质优先").tag(SettingsModel.VideoQuality.best)
                 }
                 Text(model.videoQuality == .compatible
-                    ? "H.264/HEVC MP4，系统播放器和 iPhone 都能播"
-                    : "最高画质 MKV")
+                    ? String(localized: "H.264/HEVC MP4，系统播放器和 iPhone 都能播")
+                    : String(localized: "最高画质 MKV"))
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }

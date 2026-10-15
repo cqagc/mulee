@@ -23,7 +23,7 @@ struct Ed2kProcess: Sendable {
         try child.run()
         guard let identity = Ed2kProcessIdentity.read(child.processIdentifier) else {
             if child.isRunning { child.terminate() }
-            throw EngineError.launchFailed("无法核验电驴子进程身份")
+            throw EngineError.launchFailed(String(localized: "无法核验电驴子进程身份", bundle: .module))
         }
         process = child
         self.identity = identity
@@ -51,7 +51,7 @@ struct Ed2kProcess: Sendable {
         do {
             identity = try JSONDecoder().decode(Ed2kProcessIdentity.self, from: Data(contentsOf: url))
         } catch {
-            throw EngineError.launchFailed("电驴进程记录损坏，无法安全核验旧进程")
+            throw EngineError.launchFailed(String(localized: "电驴进程记录损坏，无法安全核验旧进程", bundle: .module))
         }
         if identity.matches(binary: binary) {
             // 调用方已持有状态目录的 flock；其他活跃引擎不能进入恢复过程。
@@ -65,7 +65,7 @@ struct Ed2kProcess: Sendable {
             while identity.matches(binary: binary) && ContinuousClock.now < forcedDeadline {
                 try await Task.sleep(for: .milliseconds(10))
             }
-            guard !identity.matches(binary: binary) else { throw EngineError.launchFailed("旧电驴进程无法退出") }
+            guard !identity.matches(binary: binary) else { throw EngineError.launchFailed(String(localized: "旧电驴进程无法退出", bundle: .module)) }
         }
         try FileManager.default.removeItem(at: url)
     }

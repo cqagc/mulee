@@ -16,7 +16,7 @@ final class OpenURLRouter {
     func open(_ urls: [URL]) -> Bool {
         let requests = urls.compactMap { OpenURLRequest.parse($0, detectPagePassword: settings.detectPagePassword) }
         guard !requests.isEmpty else {
-            model.openURLIssue = "链接无效、超出限制，或包含不允许的本地文件。"
+            model.openURLIssue = String(localized: "链接无效、超出限制，或包含不允许的本地文件。")
             return false
         }
         for request in requests {

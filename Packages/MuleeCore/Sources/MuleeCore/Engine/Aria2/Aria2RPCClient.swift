@@ -7,7 +7,7 @@ struct Aria2RPCClient: Sendable {
 
     init(port: UInt16, secret: String) throws {
         guard let endpoint = URL(string: "http://127.0.0.1:\(port)/jsonrpc") else {
-            throw EngineError.invalidResponse("RPC 地址无效")
+            throw EngineError.invalidResponse(String(localized: "RPC 地址无效", bundle: .module))
         }
         self.endpoint = endpoint
         self.secret = secret
@@ -39,12 +39,12 @@ struct Aria2RPCClient: Sendable {
         do {
             decoded = try JSONDecoder().decode(Aria2RPCModels.Response<Result>.self, from: data)
         } catch {
-            throw EngineError.invalidResponse("无法解析 aria2 RPC 响应：\(error.localizedDescription)")
+            throw EngineError.invalidResponse(String(localized: "无法解析 aria2 RPC 响应：\(error.localizedDescription)", bundle: .module))
         }
         if let error = decoded.error { throw EngineError.rpc(code: error.code, message: error.message) }
         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
               decoded.id == id, decoded.jsonrpc == "2.0", let result = decoded.result else {
-            throw EngineError.invalidResponse("aria2 RPC 响应不完整")
+            throw EngineError.invalidResponse(String(localized: "aria2 RPC 响应不完整", bundle: .module))
         }
         return result
     }

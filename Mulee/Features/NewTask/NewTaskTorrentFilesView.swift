@@ -22,7 +22,7 @@ struct NewTaskTorrentFilesView: View {
                     }
                 }
             } else {
-                Text(item.metadataError ?? "开始后可在详情里选择要下载的文件")
+                Text(item.metadataError ?? String(localized: "开始后可在详情里选择要下载的文件"))
                     .foregroundStyle(.secondary)
             }
         }

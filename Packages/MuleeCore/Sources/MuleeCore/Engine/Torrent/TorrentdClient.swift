@@ -48,7 +48,7 @@ actor TorrentdClient {
             try await withCheckedThrowingContinuation { continuation in
                 let timer = Task { [weak self] in
                     do { try await Task.sleep(for: timeout) } catch { return }
-                    await self?.failReady(id, error: EngineError.launchFailed("等待 BT 引擎就绪超时"))
+                    await self?.failReady(id, error: EngineError.launchFailed(String(localized: "等待 BT 引擎就绪超时", bundle: .module)))
                 }
                 readyWaiters[id] = TorrentdPending(continuation: continuation, timeout: timer)
             }
@@ -75,7 +75,7 @@ actor TorrentdClient {
             return try await withCheckedThrowingContinuation { continuation in
                 let timer = Task { [weak self, requestTimeout] in
                     do { try await Task.sleep(for: requestTimeout) } catch { return }
-                    await self?.fail(id, error: EngineError.rpc(code: -1, message: "BT 引擎响应超时"))
+                    await self?.fail(id, error: EngineError.rpc(code: -1, message: String(localized: "BT 引擎响应超时", bundle: .module)))
                 }
                 pending[id] = TorrentdPending(continuation: continuation, timeout: timer)
                 Task { [weak self, transport] in
@@ -90,7 +90,7 @@ actor TorrentdClient {
         do {
             return try Self.decoder().decode(type, from: JSONEncoder().encode(value))
         } catch {
-            throw EngineError.invalidResponse("BT 引擎返回的数据不完整")
+            throw EngineError.invalidResponse(String(localized: "BT 引擎返回的数据不完整", bundle: .module))
         }
     }
 
@@ -107,7 +107,7 @@ actor TorrentdClient {
         while let newline = buffer.firstIndex(of: 10) {
             let line = buffer[..<newline]
             guard line.count <= Self.maximumLineLength else {
-                didExit(error: EngineError.invalidResponse("BT 引擎返回的消息过长"))
+                didExit(error: EngineError.invalidResponse(String(localized: "BT 引擎返回的消息过长", bundle: .module)))
                 return
             }
             buffer.removeSubrange(...newline)
@@ -115,7 +115,7 @@ actor TorrentdClient {
             do {
                 let value = try Self.decoder().decode(TorrentdValue.self, from: Data(line))
                 guard case .object(let object) = value else {
-                    throw EngineError.invalidResponse("BT 引擎消息格式有误")
+                    throw EngineError.invalidResponse(String(localized: "BT 引擎消息格式有误", bundle: .module))
                 }
                 if object["event"] != nil {
                     let event = try Self.decoder().decode(TorrentdEvent.self, from: Data(line))
@@ -129,7 +129,7 @@ actor TorrentdClient {
                     }
                     eventContinuation.yield(event)
                     if event.event == "fatal" {
-                        didExit(error: EngineError.launchFailed("BT 引擎无法启动，请检查状态目录是否被占用及访问权限"))
+                        didExit(error: EngineError.launchFailed(String(localized: "BT 引擎无法启动，请检查状态目录是否被占用及访问权限", bundle: .module)))
                     }
                 } else {
                     let response = try Self.decoder().decode(TorrentdResponse.self, from: Data(line))
@@ -140,16 +140,16 @@ actor TorrentdClient {
                     } else if let result = response.result {
                         request.continuation.resume(returning: result)
                     } else {
-                        request.continuation.resume(throwing: EngineError.invalidResponse("BT 引擎响应缺少结果"))
+                        request.continuation.resume(throwing: EngineError.invalidResponse(String(localized: "BT 引擎响应缺少结果", bundle: .module)))
                     }
                 }
             } catch {
-                didExit(error: EngineError.invalidResponse("无法解析 BT 引擎消息"))
+                didExit(error: EngineError.invalidResponse(String(localized: "无法解析 BT 引擎消息", bundle: .module)))
                 return
             }
         }
         if buffer.count > Self.maximumLineLength {
-            didExit(error: EngineError.invalidResponse("BT 引擎返回的消息过长"))
+            didExit(error: EngineError.invalidResponse(String(localized: "BT 引擎返回的消息过长", bundle: .module)))
         }
     }
 

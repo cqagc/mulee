@@ -59,7 +59,12 @@ Design/                     品牌、图标规范、原型
 
 ## 文案
 
-- 界面文案用简体中文，写成 `Text("全部任务")` 这样的字面量，后续统一抽取到 String Catalog 做多语言。
+- 简体中文（`zh-Hans`）是源语言，支持英文（`en`）与台湾繁体中文（`zh-Hant`）。用词以 [GLOSSARY.md](GLOSSARY.md) 为准，繁体中文使用台湾地区用语。品牌 Mulee 不翻译。
+- SwiftUI 文案写成 `Text("全部任务")`、`Button("暂停", ...)` 等字面量，交给编译器抽取；自定义控件的固定标题使用 `LocalizedStringKey`。返回 `String` 的展示文案、弹窗与错误说明使用 `String(localized:)`；MuleeCore 中加 `bundle: .module`。
+- App 与 MuleeCore 分别维护自己的 `Resources/Localizable.xcstrings`；Info.plist 的用户可见字符串放在 `InfoPlist.xcstrings`。新增文案必须同时补齐 en / zh-Hant，状态为 `translated`。
+- 参数使用插值，句子不要拼接。需要复数变化的数量直接插入整数，在 String Catalog 中提供英文 one / other；数字、日期和大小继续使用系统语言的 FormatStyle。
+- 不翻译示例任务名、日志、调试输出和开发注释，不本地化用于解析、持久化或协议的标识。修改工程结构后运行 `xcodegen generate`。
+- 运行 MuleeTests/LocalizationTests 校验翻译完整性、占位符及术语；中文文案测试在 zh-Hans 环境运行。
 - 语气：冷门资源下不动不叫失败。规范见 `Design/BRAND.md`。
 
 ## 版本号

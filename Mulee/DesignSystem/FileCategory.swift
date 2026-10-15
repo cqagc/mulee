@@ -73,19 +73,19 @@ enum FileCategory: String, CaseIterable, Sendable {
     var title: String {
         switch self {
         case .pdf: "PDF"
-        case .presentation: "演示文稿"
-        case .ebook: "电子书"
-        case .spreadsheet: "表格"
-        case .image: "图片"
-        case .archive: "压缩包"
-        case .folder: "文件夹"
-        case .document: "文字文档"
-        case .diskImage: "光盘镜像"
-        case .video: "视频"
-        case .audio: "音频"
-        case .code: "文本与代码"
-        case .installer: "安装包"
-        case .other: "其他"
+        case .presentation: String(localized: "演示文稿")
+        case .ebook: String(localized: "电子书")
+        case .spreadsheet: String(localized: "表格")
+        case .image: String(localized: "图片")
+        case .archive: String(localized: "压缩包")
+        case .folder: String(localized: "文件夹")
+        case .document: String(localized: "文字文档")
+        case .diskImage: String(localized: "光盘镜像")
+        case .video: String(localized: "视频")
+        case .audio: String(localized: "音频")
+        case .code: String(localized: "文本与代码")
+        case .installer: String(localized: "安装包")
+        case .other: String(localized: "其他")
         }
     }
 

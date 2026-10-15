@@ -8,8 +8,8 @@ struct SpeedHistoryChart: View {
     var body: some View {
         Chart(Array(samples.enumerated()), id: \.offset) { index, rate in
             BarMark(
-                x: .value("采样", index),
-                y: .value("速度", rate)
+                x: .value(String(localized: "采样"), index),
+                y: .value(String(localized: "速度"), rate)
             )
             .foregroundStyle(Color.accentColor.opacity(0.55))
         }

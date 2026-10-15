@@ -1,3 +1,5 @@
+import Foundation
+
 /// 有下载在进行时阻止系统空闲睡眠，全部完成后释放。
 final class SleepPreventer {
     private let provider: any PowerAssertionProviding
@@ -19,7 +21,7 @@ final class SleepPreventer {
     func update(isActive: Bool) {
         if isActive {
             guard assertionID == nil else { return }
-            assertionID = provider.createAssertion(reason: "Mulee 正在下载")
+            assertionID = provider.createAssertion(reason: String(localized: "Mulee 正在下载"))
         } else {
             release()
         }

@@ -29,7 +29,7 @@ struct ExtractionEncodingTests {
         #expect(ArchiveExtractor.classify("Unexpected end of archive", multipart: true) == .missingVolumes([]))
         #expect(ArchiveExtractor.classify("Unexpected end of archive", multipart: false) == .damagedArchive)
         #expect(ArchiveExtractor.classify("No space left on device", multipart: false) == .insufficientSpace)
-        #expect(ExtractionFailure.wrongPasswords.localizedDescription == "密码都不对")
+        #expect(ExtractionFailure.wrongPasswords.localizedDescription == String(localized: "密码都不对", bundle: .module))
         #expect(ExtractionOptions().postAction == .trash)
         #expect(!ExtractionOptions().recursivelyExtract)
     }

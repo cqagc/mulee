@@ -16,7 +16,7 @@ struct ExtractionPasswordBookSheet: View {
             Text("密码本")
                 .font(.headline)
             List(passwords.indices, id: \.self, selection: $selection) { index in
-                Text("密码 \((index + 1).formatted()) · " + String(repeating: "•", count: passwords[index].count))
+                Text("密码 \(index + 1) · \(String(repeating: "•", count: passwords[index].count))")
             }
             .frame(minHeight: 160)
             HStack {
@@ -52,7 +52,7 @@ struct ExtractionPasswordBookSheet: View {
             passwords = try await model.extractionPasswords.passwordBook()
             isLoading = false
         } catch {
-            issue = "暂时无法读取密码本，已有密码已保留"
+            issue = String(localized: "暂时无法读取密码本，已有密码已保留")
         }
     }
 
@@ -82,7 +82,7 @@ struct ExtractionPasswordBookSheet: View {
                 passwords = []
                 dismiss()
             } catch {
-                issue = "暂时无法保存密码本，请稍后再试"
+                issue = String(localized: "暂时无法保存密码本，请稍后再试")
             }
         }
     }

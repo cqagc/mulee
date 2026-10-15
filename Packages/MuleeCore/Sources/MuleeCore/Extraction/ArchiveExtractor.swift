@@ -113,7 +113,7 @@ public actor ArchiveExtractor {
             if main.pathExtension.lowercased() == "zip" && !set.isMultipart {
                 let (directory, repaired) = try ZipFilenameRepair.repair(archive: main, rawRoot: rawRoot, listing: listing.text, encoding: encoding)
                 ready = directory
-                if !repaired { warnings.append("文件名编码未能修复") }
+                if !repaired { warnings.append(String(localized: "文件名编码未能修复", bundle: .module)) }
             }
             try ArchivePathSafety.validateTree(ready)
             try Task.checkCancellation()
@@ -141,14 +141,14 @@ public actor ArchiveExtractor {
                                           passwordSource: usedSource, encoding: encoding, topLevelItems: items,
                                           originalVolumes: originals, warnings: warnings, nestedResults: nested)
             do { try options.postAction.apply(to: result) }
-            catch { warnings.append("解压成功，但原压缩包处理失败：\(error.localizedDescription)") }
+            catch { warnings.append(String(localized: "解压成功，但原压缩包处理失败：\(error.localizedDescription)", bundle: .module)) }
             return ExtractionResult(status: .succeeded, failure: nil, matchedRule: result.matchedRule, passwordSource: usedSource,
                                     encoding: encoding, topLevelItems: items, originalVolumes: originals,
                                     warnings: warnings, nestedResults: nested)
         } catch {
             if let temporary {
                 do { try FileManager.default.removeItem(at: temporary) }
-                catch { warnings.append("临时目录清理失败：\(error.localizedDescription)") }
+                catch { warnings.append(String(localized: "临时目录清理失败：\(error.localizedDescription)", bundle: .module)) }
             }
             let failure: ExtractionFailure
             if error is CancellationError { failure = .cancelled }
@@ -198,7 +198,7 @@ public actor ArchiveExtractor {
         } catch {
             for (original, target) in moved.reversed() {
                 do { try FileManager.default.moveItem(at: target, to: original) }
-                catch { throw ExtractionFailure.fileOperation("恢复已移动文件失败：\(error.localizedDescription)") }
+                catch { throw ExtractionFailure.fileOperation(String(localized: "恢复已移动文件失败：\(error.localizedDescription)", bundle: .module)) }
             }
             throw error
         }

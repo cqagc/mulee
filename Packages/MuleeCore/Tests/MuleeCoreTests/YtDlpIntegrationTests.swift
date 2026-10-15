@@ -90,7 +90,7 @@ struct YtDlpIntegrationTests {
             }
             let id = try await engine.add(link: .video(url: url, site: .other, original: url.absoluteString))
             let failed = try await YtDlpIntegrationFixture.waitFor(engine, id: id) { $0.status == .failed }
-            #expect(failed.errorMessage?.contains("不存在或已删除") == true)
+            #expect(failed.errorMessage?.contains(String(localized: "视频不存在或已删除。", bundle: .module)) == true)
             await engine.stop()
             let recovered = fixture.makeEngine()
             do {

@@ -19,9 +19,9 @@ struct Ed2kConfiguration: Sendable {
     }
 
     static func limitInKiB(_ bytes: Int64) throws -> UInt64 {
-        guard bytes >= 0 else { throw ECError.rejected("限速不能小于 0") }
+        guard bytes >= 0 else { throw ECError.rejected(String(localized: "限速不能小于 0", bundle: .module)) }
         let value = UInt64(bytes) / 1024 + (bytes % 1024 == 0 ? 0 : 1)
-        guard value <= UInt32.max else { throw ECError.rejected("限速超出电驴引擎范围") }
+        guard value <= UInt32.max else { throw ECError.rejected(String(localized: "限速超出电驴引擎范围", bundle: .module)) }
         return value
     }
 
@@ -30,7 +30,7 @@ struct Ed2kConfiguration: Sendable {
         for path in [stateDirectory, options.downloadDirectory] {
             guard path.isFileURL, path.path.hasPrefix("/"),
                   !path.path.contains(where: { $0.isNewline || $0 == "\0" }) else {
-                throw ECError.rejected("下载目录或状态目录无效")
+                throw ECError.rejected(String(localized: "下载目录或状态目录无效", bundle: .module))
             }
         }
         return [

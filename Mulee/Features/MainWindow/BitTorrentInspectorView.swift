@@ -13,7 +13,7 @@ struct BitTorrentInspectorView: View {
                     LabeledContent("已连接节点", value: info.numPeers.formatted())
                     LabeledContent("做种者", value: info.numSeeds.formatted())
                     LabeledContent("分享率", value: info.ratio.formatted(.number.precision(.fractionLength(2))))
-                    LabeledContent("私有种子", value: info.isPrivate ? "是" : "否")
+                    LabeledContent("私有种子", value: info.isPrivate ? String(localized: "是") : String(localized: "否"))
                 }
             }
             Text("下载文件")

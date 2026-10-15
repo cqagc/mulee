@@ -26,7 +26,7 @@ enum OpenURLDropHandler {
                     let links = LinkParser.parse(text)
                     texts += links.map(\.original)
                 } catch {
-                    model.openURLIssue = "无法读取拖入的链接：\(error.localizedDescription)"
+                    model.openURLIssue = String(localized: "无法读取拖入的链接：\(error.localizedDescription)")
                 }
             }
             if !texts.isEmpty { model.showNewTask(prefill: texts.joined(separator: "\n")) }

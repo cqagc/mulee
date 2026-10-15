@@ -1,3 +1,5 @@
+import Foundation
+
 /// 重点支持的视频站。其他站点交给 yt-dlp 尽力支持。
 public enum VideoSite: String, Sendable, Hashable, Codable {
     case bilibili
@@ -9,7 +11,7 @@ public enum VideoSite: String, Sendable, Hashable, Codable {
         switch self {
         case .bilibili: "Bilibili"
         case .youtube: "YouTube"
-        case .other: "视频网站"
+        case .other: String(localized: "视频网站", bundle: .module)
         }
     }
 }
