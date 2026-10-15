@@ -3898,29 +3898,6 @@
         }
       }
     },
-    "安装浏览器扩展后可自动同步 B 站登录状态，下载高码率画质。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "安装浏览器扩展后可自动同步 B 站登录状态，下载高码率画质。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Install the browser extension to sync your Bilibili sign-in and download high-bitrate video."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "安裝瀏覽器擴充功能後可自動同步 B 站登入狀態，下載高位元率影片。"
-          }
-        }
-      }
-    },
     "完成后": {
       "extractionState": "manual",
       "localizations": {
@@ -9319,6 +9296,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "需要注意"
+          }
+        }
+      }
+    },
+    "需要登录才能看的画质（例如 B 站大会员画质）暂不支持。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要登录才能看的画质（例如 B 站大会员画质）暂不支持。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quality levels that need a signed-in account (such as Bilibili premium quality) aren't supported yet."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "需要登入才能觀看的畫質（例如 B 站大會員畫質）暫不支援。"
           }
         }
       }

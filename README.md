@@ -20,12 +20,15 @@
 ![主窗口](docs/screenshots/main-light.png)
 
 <details>
-<summary>更多截图：暗色模式、新建下载、菜单栏、设置</summary>
+<summary>更多截图：暗色模式、新建下载、菜单栏、设置、English、繁體中文</summary>
 
 ![暗色模式](docs/screenshots/main-dark.png)
 ![新建下载](docs/screenshots/new-task.png)
 <img src="docs/screenshots/menu-bar.png" width="340" alt="菜单栏面板">
 <img src="docs/screenshots/settings-network.png" width="720" alt="设置 · 网络">
+
+![English](docs/screenshots/main-en.png)
+![繁體中文](docs/screenshots/main-zh-hant.png)
 
 </details>
 

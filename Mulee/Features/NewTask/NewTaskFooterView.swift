@@ -41,7 +41,7 @@ struct NewTaskFooterView: View {
             }
 
             if draft.hasVideoLinks {
-                Text("安装浏览器扩展后可自动同步 B 站登录状态，下载高码率画质。")
+                Text("需要登录才能看的画质（例如 B 站大会员画质）暂不支持。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

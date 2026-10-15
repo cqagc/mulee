@@ -141,7 +141,7 @@ public enum MockData {
         portMappingSucceeded: true
     )
 
-    /// 设置·网络页用的「P2P 走了代理」状态（来自 2026-10-15 技术验证的真实情况）。
+    /// 设置·网络页用的「P2P 走了代理」状态（出口地址用文档保留段 203.0.113.0/24）。
     public static let proxiedNetwork = NetworkStatus(
         ed2kID: .low,
         kad: .firewalled,

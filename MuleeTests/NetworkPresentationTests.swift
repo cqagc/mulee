@@ -4,7 +4,7 @@ import Testing
 
 @Suite struct NetworkPresentationTests {
     @Test func masksIPv4() {
-        #expect(NetworkPresentation.maskedIP("203.0.113.71") == "118.166.x.x")
+        #expect(NetworkPresentation.maskedIP("203.0.113.71") == "203.0.x.x")
     }
 
     @Test func masksIPv6() {

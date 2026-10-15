@@ -25,6 +25,10 @@ struct MuleeApp: App {
             unzipRules: usesSampleData ? MockData.unzipRules : [],
             preventsSleepWhileDownloading: settings.preventSleep
         )
+        if usesSampleData {
+            // 示例数据模式不启动引擎；截图和预览里按「都已就绪」展示。
+            for kind in TaskKind.allCases { model.engineStates[kind] = .running }
+        }
         _model = State(initialValue: model)
         appDelegate.configure(model: model, settings: settings, usesSampleData: usesSampleData)
     }
