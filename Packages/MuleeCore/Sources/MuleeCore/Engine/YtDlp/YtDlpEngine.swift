@@ -236,6 +236,7 @@ public actor YtDlpEngine: DownloadEngine {
 
     private func run(_ id: String, token: UUID) async {
         let selectedQuality = quality
+        let selectedSubtitles = subtitles
         let selectedChannel = channel
         let shouldUpdate = updatesEnabled
         do {
@@ -256,7 +257,9 @@ public actor YtDlpEngine: DownloadEngine {
             guard tokens[id] == token, let current = jobs.first(where: { $0.id == id }),
                   let binary = resolvedBinary else { return }
             let child = try YtDlpProcess(
-                binary: binary, arguments: arguments(for: current, deno: deno, quality: selectedQuality)
+                binary: binary, arguments: arguments(
+                    for: current, deno: deno, quality: selectedQuality, subtitles: selectedSubtitles
+                )
             )
             children[id] = child
             var pending = Data()
@@ -290,6 +293,10 @@ public actor YtDlpEngine: DownloadEngine {
                 url, job: jobs[index], token: token, quality: selectedQuality,
                 codec: progress[id]?.videoCodec
             )
+            guard tokens[id] == token, let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+            if jobs[index].site == .bilibili, selectedSubtitles.danmaku {
+                try await convertDanmaku(url, job: jobs[index], token: token, videoSize: progress[id]?.videoSize)
+            }
             guard tokens[id] == token, let index = jobs.firstIndex(where: { $0.id == id }) else { return }
             captureProgress(id)
             jobs[index].savePath = url
@@ -364,7 +371,9 @@ public actor YtDlpEngine: DownloadEngine {
         }
     }
 
-    private func arguments(for job: YtDlpJob, deno: URL?, quality: YtDlpQuality) -> [String] {
+    private func arguments(
+        for job: YtDlpJob, deno: URL?, quality: YtDlpQuality, subtitles: YtDlpSubtitles
+    ) -> [String] {
         var result = [
             "--ignore-config", "--no-playlist", "--no-simulate", "--newline", "--progress",
             "--no-colors", "--continue", "--no-overwrites", "--no-cache-dir",
@@ -416,6 +425,33 @@ public actor YtDlpEngine: DownloadEngine {
             throw EngineError.launchFailed("ffmpeg：" + String(decoding: output, as: UTF8.self))
         }
         guard rename(temporary.path, file.path) == 0 else { throw POSIXError(.init(rawValue: errno) ?? .EIO) }
+    }
+
+    private func convertDanmaku(_ video: URL, job: YtDlpJob, token: UUID, videoSize: CGSize?) async throws {
+        let base = video.deletingPathExtension()
+        let xml = base.appendingPathExtension("danmaku.xml")
+        guard FileManager.default.fileExists(atPath: xml.path) else { return }
+        do {
+            let values = try xml.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            guard YtDlpFileSafety.belongs(xml, to: job), values.isRegularFile == true,
+                  values.isSymbolicLink != true else {
+                throw EngineError.invalidResponse("弹幕 XML 不属于此任务")
+            }
+            guard let index = jobs.firstIndex(where: { $0.id == job.id }) else { throw CancellationError() }
+            jobs[index].status = .postProcessing
+            try persist()
+            let result = try await DanmakuConverter().convertInBackground(
+                xml: xml, to: base.appendingPathExtension("danmaku.ass"), videoSize: videoSize
+            )
+            try Task.checkCancellation()
+            guard tokens[job.id] == token else { throw CancellationError() }
+            try FileManager.default.removeItem(at: xml)
+            Self.logger.info("弹幕 ASS 转换完成：总数 \(result.total)，写入 \(result.written)，丢弃 \(result.dropped)")
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            Self.logger.error("弹幕 ASS 转换失败，保留 XML：\(error.localizedDescription, privacy: .public)")
+        }
     }
 
     private func captureProgress(_ id: String) {
