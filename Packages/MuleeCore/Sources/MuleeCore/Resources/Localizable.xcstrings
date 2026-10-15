@@ -21,6 +21,12 @@
             "state": "translated",
             "value": "%@\n原始資訊：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@\n元の情報：%@"
+          }
         }
       }
     },
@@ -43,6 +49,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@\n更新 yt-dlp 失敗：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@\nyt-dlpを更新できませんでした：%@"
           }
         }
       }
@@ -67,6 +79,12 @@
             "state": "translated",
             "value": "%@（aria2 錯誤碼 %lld）"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（aria2エラーコード %lld）"
+          }
         }
       }
     },
@@ -89,6 +107,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@（torrentd 錯誤碼 %@）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（torrentdエラーコード %@）"
           }
         }
       }
@@ -113,6 +137,12 @@
             "state": "translated",
             "value": "BT 下載出錯，請檢查儲存目錄和網路連線"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTのダウンロードに問題があります。保存先とネットワーク接続を確認してください"
+          }
         }
       }
     },
@@ -135,6 +165,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BT 下載參數有誤"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTのダウンロード設定が正しくありません"
           }
         }
       }
@@ -159,6 +195,12 @@
             "state": "translated",
             "value": "BT 任務不存在"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTタスクがありません"
+          }
         }
       }
     },
@@ -181,6 +223,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BT 引擎不支援此操作"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンはこの操作に対応していません"
           }
         }
       }
@@ -205,6 +253,12 @@
             "state": "translated",
             "value": "BT 引擎出錯"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンに問題があります"
+          }
         }
       }
     },
@@ -227,6 +281,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BT 引擎無法啟動，請檢查輔助程式的執行權限"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンを起動できません。補助プログラムの実行権限を確認してください"
           }
         }
       }
@@ -251,6 +311,12 @@
             "state": "translated",
             "value": "BT 引擎回應缺少結果"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンの応答に結果が含まれていません"
+          }
         }
       }
     },
@@ -273,6 +339,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BT 引擎回應逾時"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンの応答がタイムアウトしました"
           }
         }
       }
@@ -297,6 +369,12 @@
             "state": "translated",
             "value": "BT 引擎已啟動"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンは起動済みです"
+          }
         }
       }
     },
@@ -319,6 +397,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BT 引擎無法啟動，請檢查狀態目錄是否被占用及存取權限"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンを起動できません。状態フォルダの使用状況とアクセス権を確認してください"
           }
         }
       }
@@ -343,6 +427,12 @@
             "state": "translated",
             "value": "BT 引擎訊息格式有誤"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンのメッセージ形式が正しくありません"
+          }
         }
       }
     },
@@ -365,6 +455,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BT 引擎請求格式有誤"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンのリクエスト形式が正しくありません"
           }
         }
       }
@@ -389,6 +485,12 @@
             "state": "translated",
             "value": "BT 引擎傳回的資料不完整"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンから受信したデータが不完全です"
+          }
         }
       }
     },
@@ -411,6 +513,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BT 引擎傳回的訊息過長"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンからのメッセージが長すぎます"
           }
         }
       }
@@ -435,6 +543,12 @@
             "state": "translated",
             "value": "RPC 位址無效"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RPCアドレスが無効です"
+          }
         }
       }
     },
@@ -457,6 +571,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "RPC 尚未就緒"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RPCの準備ができていません"
           }
         }
       }
@@ -481,6 +601,12 @@
             "state": "translated",
             "value": "SHA256 驗證失敗，未安裝工具"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SHA256の検証に失敗したため、ツールはインストールされていません"
+          }
         }
       }
     },
@@ -503,6 +629,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "TCP／UDP 連接埠須為 1–65535，上傳速度限制不能小於 0"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TCP / UDPポートは1〜65535、アップロード速度制限は0以上にしてください"
           }
         }
       }
@@ -527,6 +659,12 @@
             "state": "translated",
             "value": "UTF-8 數字無效"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UTF-8の数値が無効です"
+          }
         }
       }
     },
@@ -549,6 +687,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "UTF-8 數字超出範圍"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UTF-8の数値が範囲外です"
           }
         }
       }
@@ -573,6 +717,12 @@
             "state": "translated",
             "value": "aria2 RPC 回應不完整"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2 RPCの応答が不完全です"
+          }
         }
       }
     },
@@ -595,6 +745,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "aria2 行程提前結束"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2のプロセスが途中で終了しました"
           }
         }
       }
@@ -619,6 +775,12 @@
             "state": "translated",
             "value": "aria2 行程提前結束：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2のプロセスが途中で終了しました：%@"
+          }
         }
       }
     },
@@ -641,6 +803,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "aria2 設定不能包含換行符號"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2の設定に改行は使用できません"
           }
         }
       }
@@ -665,6 +833,12 @@
             "state": "translated",
             "value": "標籤名稱超出範圍"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tag名が範囲外です"
+          }
         }
       }
     },
@@ -687,6 +861,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "標籤巢狀層級過深"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tagの入れ子が深すぎます"
           }
         }
       }
@@ -711,6 +891,12 @@
             "state": "translated",
             "value": "標籤數量或深度超出上限"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tagの数または深さが上限を超えています"
+          }
         }
       }
     },
@@ -733,6 +919,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "標籤數量無效"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tagの数が無効です"
           }
         }
       }
@@ -757,6 +949,12 @@
             "state": "translated",
             "value": "標籤過長"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tagが長すぎます"
+          }
         }
       }
     },
@@ -779,6 +977,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "標籤長度小於子項目"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tagの長さが子要素より短くなっています"
           }
         }
       }
@@ -803,6 +1007,12 @@
             "state": "translated",
             "value": "yt-dlp 未傳回最終檔案路徑"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "yt-dlpから最終ファイルのパスが返されませんでした"
+          }
         }
       }
     },
@@ -825,6 +1035,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "yt-dlp 傳回的檔案不屬於此任務"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "yt-dlpが返したファイルは、このタスクのものではありません"
           }
         }
       }
@@ -849,6 +1065,12 @@
             "state": "translated",
             "value": "yt-dlp 結束碼 %d"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "yt-dlpの終了コード %d"
+          }
         }
       }
     },
@@ -871,6 +1093,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載出錯"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードに問題があります"
           }
         }
       }
@@ -895,6 +1123,12 @@
             "state": "translated",
             "value": "下載檔案"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルをダウンロード"
+          }
         }
       }
     },
@@ -917,6 +1151,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載檔案不存在"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードファイルがありません"
           }
         }
       }
@@ -941,6 +1181,12 @@
             "state": "translated",
             "value": "下載的內容不是有效的種子檔"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードした内容は有効なTorrentファイルではありません"
+          }
         }
       }
     },
@@ -963,6 +1209,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載的種子檔為空白"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードしたTorrentファイルは空です"
           }
         }
       }
@@ -987,6 +1239,12 @@
             "state": "translated",
             "value": "下載目錄或狀態目錄無效"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード先または状態フォルダが無効です"
+          }
         }
       }
     },
@@ -1009,6 +1267,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載佇列缺少檔案資訊"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードキューにファイル情報がありません"
           }
         }
       }
@@ -1033,6 +1297,12 @@
             "state": "translated",
             "value": "不支援的 EC 旗標"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未対応のECフラグです"
+          }
         }
       }
     },
@@ -1055,6 +1325,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "暫存目錄清理失敗：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時フォルダを消去できませんでした：%@"
           }
         }
       }
@@ -1079,6 +1355,12 @@
             "state": "translated",
             "value": "分卷不完整，等待其餘分卷下載完成"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分割ファイルが不足しています。残りのダウンロード完了を待っています"
+          }
         }
       }
     },
@@ -1101,6 +1383,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "建立分類後無法確認儲存目錄"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カテゴリ作成後に保存先を確認できません"
           }
         }
       }
@@ -1125,6 +1413,12 @@
             "state": "translated",
             "value": "壓縮檔項目無效"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブの指定が無効です"
+          }
         }
       }
     },
@@ -1147,6 +1441,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "壓縮檔包含不安全的路徑或連結"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブに安全でないパスまたはリンクが含まれています"
           }
         }
       }
@@ -1171,6 +1471,12 @@
             "state": "translated",
             "value": "壓縮檔損壞"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブが破損しています"
+          }
         }
       }
     },
@@ -1193,6 +1499,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "壓縮封包無效或解壓縮後過長"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "圧縮メッセージが無効か、展開後の長さが上限を超えています"
           }
         }
       }
@@ -1217,6 +1529,12 @@
             "state": "translated",
             "value": "網域解析失敗"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドメイン名を解決できません"
+          }
         }
       }
     },
@@ -1239,6 +1557,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "密碼包含不支援的換行符號或長度過長"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワードに未対応の改行が含まれているか、長すぎます"
           }
         }
       }
@@ -1263,6 +1587,12 @@
             "state": "translated",
             "value": "密碼規則「%@」的規則運算式無效"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワードルール「%@」の正規表現が無効です"
+          }
         }
       }
     },
@@ -1285,6 +1615,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "密碼皆不正確"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一致するパスワードがありません"
           }
         }
       }
@@ -1309,6 +1645,12 @@
             "state": "translated",
             "value": "對應的電驢網路尚未啟用"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対応するeD2kネットワークが有効になっていません"
+          }
         }
       }
     },
@@ -1331,6 +1673,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "工具下載失敗：伺服器回應異常"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ツールをダウンロードできません。サーバの応答に問題があります"
           }
         }
       }
@@ -1355,6 +1703,12 @@
             "state": "translated",
             "value": "工具名稱無效"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ツール名が無効です"
+          }
         }
       }
     },
@@ -1377,6 +1731,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "工具版本檢查失敗：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ツールのバージョンを確認できませんでした：%@"
           }
         }
       }
@@ -1401,6 +1761,12 @@
             "state": "translated",
             "value": "工具解壓縮失敗"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ツールを展開できませんでした"
+          }
         }
       }
     },
@@ -1423,6 +1789,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "並行任務數必須大於零，速度限制不能為負數"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同時実行数は1以上、速度制限は0以上にしてください"
           }
         }
       }
@@ -1447,6 +1819,12 @@
             "state": "translated",
             "value": "彈幕 XML 不屬於此任務"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "弾幕XMLは、このタスクのものではありません"
+          }
         }
       }
     },
@@ -1469,6 +1847,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法繼續下載"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "復元できませんでした"
           }
         }
       }
@@ -1493,6 +1877,12 @@
             "state": "translated",
             "value": "還原已移動檔案失敗：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移動したファイルを復元できませんでした：%@"
+          }
         }
       }
     },
@@ -1515,6 +1905,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mulee 缺少內建的 7-Zip 解壓縮工具，請重新安裝 Mulee"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muleeに内蔵の7-Zip展開ツールがありません。Muleeを再インストールしてください"
           }
         }
       }
@@ -1539,6 +1935,12 @@
             "state": "translated",
             "value": "找不到影片任務：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画タスクが見つかりません：%@"
+          }
         }
       }
     },
@@ -1561,6 +1963,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "找不到該電驢任務"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kタスクが見つかりません"
           }
         }
       }
@@ -1585,6 +1993,12 @@
             "state": "translated",
             "value": "封包含有多餘資料"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メッセージに余分なデータがあります"
+          }
         }
       }
     },
@@ -1607,6 +2021,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "封包遭到截斷"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メッセージが途中で切れています"
           }
         }
       }
@@ -1631,6 +2051,12 @@
             "state": "translated",
             "value": "封包過長"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メッセージが長すぎます"
+          }
         }
       }
     },
@@ -1653,6 +2079,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "封包長度超出上限"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メッセージの長さが上限を超えています"
           }
         }
       }
@@ -1677,6 +2109,12 @@
             "state": "translated",
             "value": "操作回應類型不符（%u）"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作の応答の種類が一致しません（%u）"
+          }
         }
       }
     },
@@ -1699,6 +2137,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "操作遭到拒絕"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作が拒否されました"
           }
         }
       }
@@ -1723,6 +2167,12 @@
             "state": "translated",
             "value": "操作遭到拒絕（%@）"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作が拒否されました（%@）"
+          }
         }
       }
     },
@@ -1745,6 +2195,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法建立檔案"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを作成できませんでした"
           }
         }
       }
@@ -1769,6 +2225,12 @@
             "state": "translated",
             "value": "檔名或儲存目錄無效"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル名または保存先が無効です"
+          }
         }
       }
     },
@@ -1791,6 +2253,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法修復檔名編碼"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル名の文字コードを修正できませんでした"
           }
         }
       }
@@ -1815,6 +2283,12 @@
             "state": "translated",
             "value": "檔案雜湊無效"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルのハッシュが無効です"
+          }
         }
       }
     },
@@ -1837,6 +2311,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "檔案處理失敗：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを処理できませんでした：%@"
           }
         }
       }
@@ -1861,6 +2341,12 @@
             "state": "translated",
             "value": "檔案已存在"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルはすでに存在します"
+          }
         }
       }
     },
@@ -1883,6 +2369,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法下載或儲存種子檔，請檢查網路和儲存目錄的存取權限"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrentファイルをダウンロードまたは保存できません。ネットワークと保存先のアクセス権を確認してください"
           }
         }
       }
@@ -1907,6 +2399,12 @@
             "state": "translated",
             "value": "無法下載種子檔，伺服器回應異常"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrentファイルをダウンロードできません。サーバの応答に問題があります"
+          }
         }
       }
     },
@@ -1929,6 +2427,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法儲存影片任務：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画タスクを保存できません：%@"
           }
         }
       }
@@ -1953,6 +2457,12 @@
             "state": "translated",
             "value": "無法建立 BT 引擎通訊管道"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンの通信パイプを作成できません"
+          }
         }
       }
     },
@@ -1975,6 +2485,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法建立 BT 狀態目錄，請檢查存取權限"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT状態フォルダを作成できません。アクセス権を確認してください"
           }
         }
       }
@@ -1999,6 +2515,12 @@
             "state": "translated",
             "value": "無法建立工具暫存檔案"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ツールの一時ファイルを作成できません"
+          }
         }
       }
     },
@@ -2021,6 +2543,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法確認電驢子行程身分"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kの子プロセスを確認できません"
           }
         }
       }
@@ -2045,6 +2573,12 @@
             "state": "translated",
             "value": "無法解析 BT 引擎訊息"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンのメッセージを解析できません"
+          }
         }
       }
     },
@@ -2067,6 +2601,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法解析 aria2 RPC 回應：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2 RPCの応答を解析できません：%@"
           }
         }
       }
@@ -2091,6 +2631,12 @@
             "state": "translated",
             "value": "無法設定下載分類，請檢查儲存目錄"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードのカテゴリを設定できません。保存先を確認してください"
+          }
         }
       }
     },
@@ -2113,6 +2659,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法讀寫下載檔案，請檢查磁碟空間和存取權限"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードファイルを読み書きできません。ディスクの空き容量とアクセス権を確認してください"
           }
         }
       }
@@ -2137,6 +2689,12 @@
             "state": "translated",
             "value": "無法讀取 aria2.log：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2.logを読み込めません：%@"
+          }
         }
       }
     },
@@ -2159,6 +2717,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法讀取或儲存解壓縮密碼"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開パスワードを読み込みまたは保存できません"
           }
         }
       }
@@ -2183,6 +2747,12 @@
             "state": "translated",
             "value": "無法鎖定電驢狀態目錄"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k状態フォルダをロックできません"
+          }
         }
       }
     },
@@ -2205,6 +2775,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "舊電驢行程無法結束"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以前のeD2kプロセスを終了できません"
           }
         }
       }
@@ -2229,6 +2805,12 @@
             "state": "translated",
             "value": "伺服器回應異常"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバの応答に問題があります"
+          }
         }
       }
     },
@@ -2251,6 +2833,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "總和檢查碼檔案中找不到 %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チェックサムファイルに%@が見つかりません"
           }
         }
       }
@@ -2275,6 +2863,12 @@
             "state": "translated",
             "value": "此影片受地區限制。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この動画には地域制限があります。"
+          }
         }
       }
     },
@@ -2297,6 +2891,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "此影片需要登入，請提供有效的 cookies 檔案。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この動画にはログインが必要です。有効なcookiesファイルを指定してください。"
           }
         }
       }
@@ -2321,6 +2921,12 @@
             "state": "translated",
             "value": "沒有檔案存取權限"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルへのアクセス権がありません"
+          }
         }
       }
     },
@@ -2343,6 +2949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "電驢引擎回應異常：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kエンジンの応答に問題があります：%@"
           }
         }
       }
@@ -2367,6 +2979,12 @@
             "state": "translated",
             "value": "電驢引擎無法執行操作：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kエンジンで操作できません：%@"
+          }
         }
       }
     },
@@ -2389,6 +3007,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "電驢引擎驗證失敗，請檢查本機設定"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kエンジンの認証に失敗しました。このMacの設定を確認してください"
           }
         }
       }
@@ -2413,6 +3037,12 @@
             "state": "translated",
             "value": "電驢引擎請求逾時"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kエンジンのリクエストがタイムアウトしました"
+          }
         }
       }
     },
@@ -2435,6 +3065,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "電驢引擎連線已中斷"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kエンジンとの接続が切れました"
           }
         }
       }
@@ -2459,6 +3095,12 @@
             "state": "translated",
             "value": "電驢檔案狀態異常（aMule 狀態碼 %llu）"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kファイルの状態に問題があります（aMule状態コード %llu）"
+          }
         }
       }
     },
@@ -2481,6 +3123,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "電驢檔案狀態異常（aMule 狀態碼 6）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kファイルの状態に問題があります（aMule状態コード 6）"
           }
         }
       }
@@ -2505,6 +3153,12 @@
             "state": "translated",
             "value": "電驢檔案讀寫失敗，請檢查下載目錄權限（aMule 狀態碼 4）"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kファイルを読み書きできません。ダウンロード先のアクセス権を確認してください（aMule状態コード 4）"
+          }
         }
       }
     },
@@ -2527,6 +3181,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "電驢行程記錄損壞，無法安全確認舊行程"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kのプロセス記録が破損しているため、以前のプロセスを安全に確認できません"
           }
         }
       }
@@ -2551,6 +3211,12 @@
             "state": "translated",
             "value": "磁碟空間不足"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスクの空き容量が不足しています"
+          }
         }
       }
     },
@@ -2573,6 +3239,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "磁碟空間不足（aMule 狀態碼 5）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスクの空き容量が不足しています（aMule状態コード 5）"
           }
         }
       }
@@ -2597,6 +3269,12 @@
             "state": "translated",
             "value": "種子檔或磁力連結無效"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrentファイルまたはマグネットリンクが無効です"
+          }
         }
       }
     },
@@ -2619,6 +3297,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "種子檔無效或已損壞"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrentファイルが無効か、破損しています"
           }
         }
       }
@@ -2643,6 +3327,12 @@
             "state": "translated",
             "value": "種子檔超過大小上限（20 MB）"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrentファイルがサイズ上限（20 MB）を超えています"
+          }
         }
       }
     },
@@ -2665,6 +3355,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "等待 BT 引擎就緒逾時"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジンの準備待ちがタイムアウトしました"
           }
         }
       }
@@ -2689,6 +3385,12 @@
             "state": "translated",
             "value": "等待 aria2 RPC 就緒逾時（5 秒）"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2 RPCの準備待ちがタイムアウトしました（5秒）"
+          }
         }
       }
     },
@@ -2711,6 +3413,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "等待 aria2 移除任務逾時"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2でのタスク削除待ちがタイムアウトしました"
           }
         }
       }
@@ -2735,6 +3443,12 @@
             "state": "translated",
             "value": "等待電驢 EC 就緒逾時或行程提前結束（30 秒）"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k ECの準備待ちがタイムアウトしたか、プロセスが途中で終了しました（30秒）"
+          }
         }
       }
     },
@@ -2757,6 +3471,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "缺少任務狀態"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスクの状態がありません"
           }
         }
       }
@@ -2781,6 +3501,12 @@
             "state": "translated",
             "value": "缺少可用的 ffmpeg，無法合併音訊與影片。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "利用可能なffmpegがないため、映像と音声を結合できません。"
+          }
         }
       }
     },
@@ -2803,6 +3529,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "缺少電驢 ID"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k IDがありません"
           }
         }
       }
@@ -2827,6 +3559,12 @@
             "state": "translated",
             "value": "缺少網路狀態"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネットワークの状態がありません"
+          }
         }
       }
     },
@@ -2849,6 +3587,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "缺少網路連線狀態"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネットワーク接続の状態がありません"
           }
         }
       }
@@ -2873,6 +3617,12 @@
             "state": "translated",
             "value": "網路連線失敗，請檢查網路與代理。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネットワークに接続できません。ネットワークとプロキシを確認してください。"
+          }
         }
       }
     },
@@ -2895,6 +3645,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "網路錯誤"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネットワークエラー"
           }
         }
       }
@@ -2919,6 +3675,12 @@
             "state": "translated",
             "value": "影片下載失敗。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画をダウンロードできませんでした。"
+          }
         }
       }
     },
@@ -2941,6 +3703,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "影片不存在或已刪除。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画が存在しないか、削除されています。"
           }
         }
       }
@@ -2965,6 +3733,12 @@
             "state": "translated",
             "value": "影片任務記錄無效"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画タスクの記録が無効です"
+          }
         }
       }
     },
@@ -2987,6 +3761,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "影片網站"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画サイト"
           }
         }
       }
@@ -3011,6 +3791,12 @@
             "state": "translated",
             "value": "影片網站規則已變更，需要更新 yt-dlp。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画サイトの仕様が変更されています。yt-dlpの更新が必要です。"
+          }
         }
       }
     },
@@ -3033,6 +3819,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "解壓縮工具回應逾時"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開ツールの応答がタイムアウトしました"
           }
         }
       }
@@ -3057,6 +3849,12 @@
             "state": "translated",
             "value": "解壓縮已取消"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開をキャンセルしました"
+          }
         }
       }
     },
@@ -3079,6 +3877,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "解壓縮成功，但原始壓縮檔處理失敗：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開は完了しましたが、元のアーカイブを処理できませんでした：%@"
           }
         }
       }
@@ -3103,6 +3907,12 @@
             "state": "translated",
             "value": "該電驢狀態目錄已由另一個引擎使用"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k状態フォルダは、別のエンジンが使用中です"
+          }
         }
       }
     },
@@ -3125,6 +3935,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "資源不存在"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルが存在しません"
           }
         }
       }
@@ -3149,6 +3965,12 @@
             "state": "translated",
             "value": "連結無效或任務已存在"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクが無効か、タスクがすでに存在します"
+          }
         }
       }
     },
@@ -3171,6 +3993,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "速度限制不能小於 0"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "速度制限は0以上にしてください"
           }
         }
       }
@@ -3195,6 +4023,12 @@
             "state": "translated",
             "value": "速度限制超出電驢引擎範圍"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "速度制限がeD2kエンジンの範囲を超えています"
+          }
         }
       }
     },
@@ -3218,6 +4052,12 @@
             "state": "translated",
             "value": "需要登入驗證"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログイン認証が必要です"
+          }
         }
       }
     },
@@ -3240,6 +4080,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "音訊與影片處理失敗，請檢查 ffmpeg。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "映像と音声を処理できませんでした。ffmpegを確認してください。"
           }
         }
       }

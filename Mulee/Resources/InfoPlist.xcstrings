@@ -21,6 +21,12 @@
             "state": "translated",
             "value": "Mulee"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulee"
+          }
         }
       }
     },
@@ -40,6 +46,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "© 2026 CQAGC. GPL-3.0."
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "© 2026 CQAGC. GPL-3.0."
@@ -67,6 +79,12 @@
             "state": "translated",
             "value": "BitTorrent 種子檔"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BitTorrent Torrentファイル"
+          }
         }
       }
     },
@@ -89,6 +107,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BitTorrent 種子檔"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BitTorrent Torrentファイル"
           }
         }
       }

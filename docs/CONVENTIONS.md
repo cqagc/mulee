@@ -59,13 +59,22 @@ Design/                     品牌、图标规范、原型
 
 ## 文案
 
-- 简体中文（`zh-Hans`）是源语言，支持英文（`en`）与台湾繁体中文（`zh-Hant`）。用词以 [GLOSSARY.md](GLOSSARY.md) 为准，繁体中文使用台湾地区用语。品牌 Mulee 不翻译。
+- 简体中文（`zh-Hans`）是源语言，支持英文（`en`）、台湾繁体中文（`zh-Hant`）与日语（`ja`）。用词以 [GLOSSARY.md](GLOSSARY.md) 为准，繁体中文使用台湾地区用语。品牌 Mulee 不翻译。
 - SwiftUI 文案写成 `Text("全部任务")`、`Button("暂停", ...)` 等字面量，交给编译器抽取；自定义控件的固定标题使用 `LocalizedStringKey`。返回 `String` 的展示文案、弹窗与错误说明使用 `String(localized:)`；MuleeCore 中加 `bundle: .module`。
-- App 与 MuleeCore 分别维护自己的 `Resources/Localizable.xcstrings`；Info.plist 的用户可见字符串放在 `InfoPlist.xcstrings`。新增文案必须同时补齐 en / zh-Hant，状态为 `translated`。
-- 参数使用插值，句子不要拼接。需要复数变化的数量直接插入整数，在 String Catalog 中提供英文 one / other；数字、日期和大小继续使用系统语言的 FormatStyle。
+- App 与 MuleeCore 分别维护自己的 `Resources/Localizable.xcstrings`；Info.plist 的用户可见字符串放在 `InfoPlist.xcstrings`。新增文案必须同时补齐 en / zh-Hant / ja，状态为 `translated`。
+- 参数使用插值，句子不要拼接。需要复数变化的数量直接插入整数，在 String Catalog 中提供英文 one / other，日语与繁体中文使用 other；数字、日期和大小继续使用系统语言的 FormatStyle。
 - 不翻译示例任务名、日志、调试输出和开发注释，不本地化用于解析、持久化或协议的标识。修改工程结构后运行 `xcodegen generate`。
-- 运行 MuleeTests/LocalizationTests 校验翻译完整性、占位符及术语；中文文案测试在 zh-Hans 环境运行。
+- 运行 MuleeTests/LocalizationTests 校验四语翻译完整性、translated 状态、占位符及术语，日语不得混入简体专用字；中文文案测试在 zh-Hans 环境运行。
 - 语气：冷门资源下不动不叫失败。规范见 `Design/BRAND.md`。
+
+### 新增文案自动补译
+
+- 先构建 Debug 版，保留 `.stringsdata`：`xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' -derivedDataPath build/DerivedData build`。
+- 只列出三个目录的缺译项及 App / MuleeCore 编译新提取的文案：`python3 scripts/l10n-fill.py build/DerivedData --dry-run`。此模式不需要接口配置，不联网、不写目录；缺少编译产物时会报错。
+- 实际补译前，在当前 shell 设置 `MULEE_L10N_BASE_URL`（OpenAI 兼容 API 根地址，包含服务要求的 `/v1`）、`MULEE_L10N_API_KEY`、`MULEE_L10N_MODEL`，然后运行 `python3 scripts/l10n-fill.py build/DerivedData`。任一变量缺失会报错退出；密钥、内部地址只通过环境变量传入，不写入仓库。使用 Release 产物时，在目录参数后加 `Release`。
+- 工具读取 `docs/GLOSSARY.md` 与 `Design/BRAND.md`，通过 `/chat/completions` 补齐 en / zh-Hant / ja；接口需支持 JSON 对象输出。已确认译文不会被覆盖，已有 `needs_review` 译文留给人工审核。所有新译文状态为 `needs_review`，全部响应校验成功后才写回；占位符不一致或日语含简体专用字时不写入。
+- 人工核对术语、语气、复数与界面布局，再把对应 `stringUnit.state` 改为 `translated`。运行 `python3 scripts/check-l10n.py build/DerivedData` 和 MuleeTests/LocalizationTests；`needs_review` 不算通过完整性检查。工具不自动翻译浏览器扩展。
+- 本地假接口自测：`python3 scripts/l10n-fill.py --self-test`。测试只连接回环地址，不使用真实服务或密钥，临时数据在 `build/` 下并自动清理。不配置 CI。
 
 ## 版本号
 
