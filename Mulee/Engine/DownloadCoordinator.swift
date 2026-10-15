@@ -7,6 +7,10 @@ final class DownloadCoordinator {
     private let model: AppModel
     private var engines: [any DownloadEngine]
     private let videoBootstrap: VideoEngineBootstrap?
+    private let videoEngineFactory: (@MainActor (VideoEngineConfiguration) async throws -> any DownloadEngine)?
+    private var waitingVideoLinks: [DownloadTask.ID: (link: ParsedLink, directory: URL?)] = [:]
+    private var submittingVideoIDs: Set<DownloadTask.ID> = []
+    private var videoFFmpegURL: URL?
     private var videoStartupTask: Task<Void, Never>?
     private var videoConfigurationTask: Task<Void, Never>?
     private var videoConfiguration = VideoEngineConfiguration()
@@ -20,10 +24,14 @@ final class DownloadCoordinator {
     private var excludedTaskIDs: [TaskKind: Set<String>] = [:]
     private var isPolling = false
 
-    init(model: AppModel, engines: [any DownloadEngine], videoBootstrap: VideoEngineBootstrap? = nil) {
+    init(
+        model: AppModel, engines: [any DownloadEngine], videoBootstrap: VideoEngineBootstrap? = nil,
+        videoEngineFactory: (@MainActor (VideoEngineConfiguration) async throws -> any DownloadEngine)? = nil
+    ) {
         self.model = model
         self.engines = engines
         self.videoBootstrap = videoBootstrap
+        self.videoEngineFactory = videoEngineFactory
         model.coordinator = self
     }
 
@@ -33,15 +41,38 @@ final class DownloadCoordinator {
         generation = token
         latestOptions = options
         self.videoConfiguration = videoConfiguration
-        if let videoBootstrap {
+        // 尚未交给引擎的任务没有会话及可靠的目录记录，重启后明确提示重新下载。
+        for index in model.tasks.indices where model.tasks[index].kind == .video
+            && model.tasks[index].engineTaskID == nil
+            && [.queued, .paused].contains(model.tasks[index].status) {
+            model.tasks[index].status = .failed
+            model.tasks[index].errorMessage = "上次退出时视频工具尚未准备好，可以重新下载"
+        }
+        if videoBootstrap != nil || videoEngineFactory != nil {
             model.engineStates[.video] = .preparing
             videoStartupTask = Task { [weak self] in
                 guard let self else { return }
                 do {
-                    let engine = try await videoBootstrap.makeEngine(configuration: videoConfiguration)
+                    let engine: any DownloadEngine
+                    if let factory = self.videoEngineFactory {
+                        engine = try await factory(videoConfiguration)
+                    } else if let videoBootstrap = self.videoBootstrap {
+                        engine = try await videoBootstrap.makeEngine(configuration: videoConfiguration)
+                        self.videoFFmpegURL = await videoBootstrap.ffmpegURL
+                        if let reason = await videoBootstrap.ffmpegPreparationError {
+                            guard self.generation == token, !Task.isCancelled else { return }
+                            self.model.engineStates[.video] = .missingFFmpeg
+                            self.failWaitingVideos(reason: reason)
+                            return
+                        }
+                    } else {
+                        return
+                    }
                     guard self.generation == token, !Task.isCancelled else { return }
                     // 准备期间设置可能变化；启动前下发最新值。
-                    try await self.videoConfiguration.apply(to: engine)
+                    if let video = engine as? YtDlpEngine {
+                        try await self.videoConfiguration.apply(to: video)
+                    }
                     try await engine.start(options: self.latestOptions ?? options)
                     guard self.generation == token, !Task.isCancelled else {
                         await engine.stop()
@@ -49,11 +80,14 @@ final class DownloadCoordinator {
                     }
                     self.engines.append(engine)
                     self.started.insert(.video)
-                    self.model.engineStates[.video] = EngineStatusPresentation.videoReadyState(ffmpegURL: videoBootstrap.ffmpegURL)
+                    self.model.engineStates[.video] = self.videoBootstrap == nil ? .running : EngineStatusPresentation.videoReadyState(ffmpegURL: self.videoFFmpegURL)
                     self.configureVideo(self.videoConfiguration)
+                    await self.submitWaitingVideos()
                 } catch {
                     guard self.generation == token, !Task.isCancelled else { return }
-                    self.model.engineStates[.video] = .failed(EngineStatusPresentation.errorMessage(error))
+                    let reason = EngineStatusPresentation.errorMessage(error)
+                    self.model.engineStates[.video] = .failed(reason)
+                    self.failWaitingVideos(reason: reason)
                 }
             }
         }
@@ -105,6 +139,7 @@ final class DownloadCoordinator {
 
     func stop() async {
         generation = nil
+        waitingVideoLinks.removeAll()
         pollingTask?.cancel()
         pollingTask = nil
         applyTask?.cancel()
@@ -161,14 +196,24 @@ final class DownloadCoordinator {
     func add(links: [ParsedLink], autoExtract: Bool, directory: URL? = nil) async {
         var insertionIndex = 0
         for link in links {
-            if link.kind == .video {
-                await videoStartupTask?.value
-                await videoConfigurationTask?.value
-                guard generation != nil, !Task.isCancelled else { return }
-            }
             var task = DownloadTask(link: link, autoExtract: autoExtract)
             if let detail = videoConfiguration.detail(for: link) {
                 task.detail = detail
+            }
+            if link.kind == .video, videoBootstrap != nil || videoEngineFactory != nil || engine(for: .video) != nil {
+                task.status = .queued
+                model.tasks.insert(task, at: min(insertionIndex, model.tasks.count))
+                if insertionIndex == 0 { model.selectedTaskID = task.id }
+                insertionIndex += 1
+                waitingVideoLinks[task.id] = (link, directory)
+                if case .failed(let reason) = model.engineStates[.video] {
+                    failWaitingVideos(reason: reason)
+                } else if model.engineStates[.video] == .missingFFmpeg {
+                    failWaitingVideos(reason: "视频工具未能准备好，可以稍后重新下载")
+                } else if engine(for: .video) != nil {
+                    await submitWaitingVideos()
+                }
+                continue
             }
             task.status = .engineUnavailable
             if let engine = engine(for: link.kind) {
@@ -212,6 +257,7 @@ final class DownloadCoordinator {
     func remove(_ id: DownloadTask.ID) async {
         guard let index = model.tasks.firstIndex(where: { $0.id == id }) else { return }
         let task = model.tasks[index]
+        waitingVideoLinks[id] = nil
         if task.status == .completed || task.engineTaskID == nil {
             excludeFromSnapshots(task)
             model.removeRecord(id)
@@ -277,7 +323,7 @@ final class DownloadCoordinator {
             do {
                 try await configuration.apply(to: engine)
                 guard self.generation == token, !Task.isCancelled else { return }
-                self.model.engineStates[.video] = EngineStatusPresentation.videoReadyState(ffmpegURL: self.videoBootstrap?.ffmpegURL)
+                self.model.engineStates[.video] = EngineStatusPresentation.videoReadyState(ffmpegURL: self.videoFFmpegURL)
             } catch {
                 guard self.generation == token, !Task.isCancelled else { return }
                 self.model.engineStates[.video] = .failed(EngineStatusPresentation.errorMessage(error))
@@ -318,8 +364,53 @@ final class DownloadCoordinator {
             model.tasks[index].estimatedTimeRemaining = nil
             model.tasks[index].errorMessage = nil
         case .resume:
-            model.tasks[index].status = task.engineTaskID == nil ? (task.kind == .ed2k ? .waitingForSources : .downloading) : .queued
+            model.tasks[index].status = waitingVideoLinks[id] != nil ? .queued
+                : task.engineTaskID == nil ? (task.kind == .ed2k ? .waitingForSources : .downloading) : .queued
             model.tasks[index].errorMessage = nil
+            if waitingVideoLinks[id] != nil { await submitWaitingVideos() }
+        }
+    }
+
+    private func failWaitingVideos(reason: String) {
+        for index in model.tasks.indices where waitingVideoLinks[model.tasks[index].id] != nil {
+            model.tasks[index].status = .failed
+            model.tasks[index].errorMessage = reason
+        }
+        waitingVideoLinks.removeAll()
+    }
+
+    private func submitWaitingVideos() async {
+        await videoConfigurationTask?.value
+        guard let token = generation, !Task.isCancelled, let engine = engine(for: .video) else { return }
+        for id in model.tasks.map(\.id) {
+            guard generation == token, !Task.isCancelled else { return }
+            guard let pending = waitingVideoLinks[id], !submittingVideoIDs.contains(id),
+                  model.tasks.contains(where: { $0.id == id && $0.status == .queued }) else { continue }
+            submittingVideoIDs.insert(id)
+            pendingAdds[.video, default: 0] += 1
+            defer {
+                submittingVideoIDs.remove(id)
+                pendingAdds[.video, default: 0] -= 1
+                revisions[.video, default: 0] += 1
+            }
+            do {
+                let engineID = try await engine.add(link: pending.link, directory: pending.directory)
+                guard generation == token, let index = model.tasks.firstIndex(where: { $0.id == id }) else {
+                    excludedTaskIDs[.video, default: []].insert(engineID)
+                    try await engine.remove(engineID, deleteFiles: false)
+                    continue
+                }
+                model.tasks[index].engineTaskID = engineID
+                waitingVideoLinks[id] = nil
+                if model.tasks[index].status == .paused {
+                    try await engine.pause(engineID)
+                }
+            } catch {
+                waitingVideoLinks[id] = nil
+                guard generation == token, let index = model.tasks.firstIndex(where: { $0.id == id }) else { continue }
+                model.tasks[index].status = .failed
+                model.tasks[index].errorMessage = EngineStatusPresentation.errorMessage(error)
+            }
         }
     }
 

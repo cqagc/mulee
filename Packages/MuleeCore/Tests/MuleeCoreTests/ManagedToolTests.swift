@@ -99,6 +99,64 @@ struct ManagedToolTests {
         #expect(try await installer.record(for: tool)?.version == "deno-test-version")
     }
 
+    @Test func ffmpegDefinitionsPinArm64ReleaseAndArchiveDigests() {
+        for tool in [ManagedTool.ffmpeg, .ffprobe] {
+            #expect(tool.downloadURL.host == "ffmpeg.martin-riedl.de")
+            #expect(tool.downloadURL.path.contains("/macos/arm64/1789931890_9.0.2/"))
+            #expect(tool.downloadURL.lastPathComponent == tool.name + ".zip")
+            #expect(tool.checksumURL.lastPathComponent == tool.name + ".zip.sha256")
+            #expect(tool.extraction == .zip(entry: tool.name))
+            #expect(tool.versionArguments == ["-version"])
+        }
+        #expect(ManagedTool.ffmpeg.sha256 == "c8ed4c4e6978a03c485edbfe4e0a5dc2380f8a30bba5150531b31b094492d924")
+        #expect(ManagedTool.ffprobe.sha256 == "fcbe839537485eaee7a7a8bc5cbc0f90d53617e80943e8a5b2e31cb851197ea6")
+    }
+
+    @Test func pinnedVideoToolsExtractTogetherAndRejectTamperedArchive() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("ManagedTool-video-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let bin = root.appendingPathComponent("bin")
+        for definition in [ManagedTool.ffmpeg, .ffprobe] {
+            let executable = root.appendingPathComponent(definition.name)
+            let payload = Data("#!/bin/sh\necho fixture-\(definition.name)-$1\n".utf8)
+            try payload.write(to: executable)
+            let archive = root.appendingPathComponent(definition.name + ".zip")
+            let zip = Process()
+            zip.executableURL = URL(fileURLWithPath: "/usr/bin/zip")
+            zip.arguments = ["-j", archive.path, executable.path]
+            zip.standardOutput = FileHandle.nullDevice
+            zip.standardError = FileHandle.nullDevice
+            try zip.run()
+            while zip.isRunning { try await Task.sleep(for: .milliseconds(10)) }
+            try #require(zip.terminationStatus == 0)
+            let bytes = try Data(contentsOf: archive)
+            let digest = try ManagedToolInstaller.checksum(
+                in: String(decoding: Self.sums(bytes), as: UTF8.self), filename: "tool"
+            )
+            let tool = ManagedTool(
+                name: definition.name, downloadURL: definition.downloadURL, checksumURL: definition.checksumURL,
+                extraction: definition.extraction, versionArguments: definition.versionArguments, sha256: digest
+            )
+            let installer = ManagedToolInstaller(directory: bin) { url, destination in
+                // 固定摘要不下载远程校验文件。
+                guard url == tool.downloadURL else { throw EngineError.invalidResponse("unexpected checksum download") }
+                try bytes.write(to: destination)
+            }
+            let installed = try await installer.install(tool)
+            #expect(installed.deletingLastPathComponent().path == bin.path)
+            #expect(try Data(contentsOf: installed) == payload)
+            #expect(try await installer.record(for: tool)?.version == "fixture-\(tool.name)--version")
+            let bad = ManagedToolInstaller(directory: bin) { _, destination in
+                try Data("tampered archive".utf8).write(to: destination)
+            }
+            await #expect(throws: EngineError.self) { try await bad.install(tool, force: true) }
+            #expect(try Data(contentsOf: installed) == payload)
+        }
+        #expect(FileManager.default.isExecutableFile(atPath: bin.appendingPathComponent("ffmpeg").path))
+        #expect(FileManager.default.isExecutableFile(atPath: bin.appendingPathComponent("ffprobe").path))
+    }
+
     private static func sums(_ data: Data, filename: String = "tool") -> Data {
         let hex = SHA256.hash(data: data).map { byte in
             let hex = String(byte, radix: 16)
