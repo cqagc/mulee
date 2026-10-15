@@ -21,10 +21,12 @@ struct NetworkStatusView: View {
                     .lineLimit(2)
                     .help(issue)
             }
-            NetworkStatusRow(title: "电驴", value: EngineStatusPresentation.ed2k(status.ed2kID), isHealthy: status.ed2kID == .disconnected ? nil : status.ed2kID == .high)
-            NetworkStatusRow(title: "Kad", value: EngineStatusPresentation.kad(status.kad), isHealthy: status.kad == .disconnected ? nil : status.kad == .open)
+            NetworkStatusRow(title: "电驴", value: NetworkPresentation.ed2kID(status.ed2kID).text, isHealthy: status.ed2kID == .disconnected ? nil : status.ed2kID == .high)
+            NetworkStatusRow(title: "电驴来源网络", value: NetworkPresentation.kadBadge(status.kad).text, isHealthy: status.kad == .disconnected ? nil : status.kad == .open)
             NetworkStatusRow(title: "BT 端口", value: NetworkPresentation.bittorrentPort(reachable: status.bittorrentPortReachable).text, isHealthy: status.bittorrentPortReachable)
-            NetworkStatusRow(title: "P2P 出口", value: EngineStatusPresentation.exit(status), isHealthy: status.p2pExitIP == nil ? nil : !status.p2pRoutedThroughProxy)
+            if status.p2pRoutedThroughProxy {
+                NetworkProxyWarningButton()
+            }
         }
         .font(.caption)
         .padding(.horizontal, 20)

@@ -27,6 +27,9 @@ struct MenuBarPanelView: View {
                 MenuBarWaitingNotice(count: presentation.waitingSourceCount)
             }
             MenuBarPasteField()
+            if model.networkStatus.p2pRoutedThroughProxy {
+                NetworkProxyWarningButton()
+            }
             Divider()
             MenuBarFooter(pauseResumeAction: presentation.pauseResumeAction)
         }

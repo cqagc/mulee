@@ -18,6 +18,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 示例数据模式和单元测试宿主都不启动真实引擎。
         guard !usesSampleData, !AppEnvironment.isRunningUnitTests, coordinator == nil else { return }
         self.model = model
+        NetworkDiagnosticsService.shared.start(model: model)
         model.loadTaskHistory(from: TaskHistoryStore())
         model.loadUnzipRules(from: UnzipRuleStore())
         self.settings = settings
@@ -58,6 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let coordinator else { return .terminateNow }
         guard !isTerminating else { return .terminateLater }
         isTerminating = true
+        NetworkDiagnosticsService.shared.stop()
         startupTask?.cancel()
         extractionCoordinator?.cancel()
         model?.flushTaskHistory()
