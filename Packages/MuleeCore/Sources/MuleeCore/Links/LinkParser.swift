@@ -11,7 +11,92 @@ import Foundation
 /// - ftp 链接识别为 HTTP 直链。
 public enum LinkParser {
     public static func parse(_ text: String) -> [ParsedLink] {
-        // TODO: 由 MuleeCore 工人实现
-        []
+        // 先提取完整的 ed2k，避免文件名里的空格被切开。
+        let ed2kMatches = text.matches(
+            of: #/(?i)ed2k://\|file\|(?:(?!ed2k://)[^\r\n])*?\|//#
+        )
+        var links: [ParsedLink] = []
+        var seen: Set<ParsedLink> = []
+        var start = text.startIndex
+
+        for match in ed2kMatches {
+            appendLinks(in: text[start..<match.range.lowerBound], to: &links, seen: &seen)
+            if let link = Ed2kLinkParser.parse(String(match.output)), seen.insert(link).inserted {
+                links.append(link)
+            }
+            start = match.range.upperBound
+        }
+        appendLinks(in: text[start...], to: &links, seen: &seen)
+        return links
+    }
+
+    private static func appendLinks(
+        in text: Substring,
+        to links: inout [ParsedLink],
+        seen: inout Set<ParsedLink>
+    ) {
+        for part in text.split(whereSeparator: \.isWhitespace) {
+            // 允许链接出现在中文句子中；句读、引号与括号作为边界。
+            let matches = part.matches(
+                of: #/(?i)(?:https?://|ftp://|thunder://|magnet:\?)[^\s，。；：！？、…“”‘’（）《》〈〉【】「」『』<>"']+/#
+            )
+            for match in matches {
+                let candidate = trimmingPunctuation(String(match.output))
+                if let link = parseCandidate(candidate), seen.insert(link).inserted {
+                    links.append(link)
+                }
+            }
+        }
+    }
+
+    private static func trimmingPunctuation(_ text: String) -> String {
+        var text = text
+        let openingCharacters: [Character: Character] = [")": "(", "]": "[", "}": "{"]
+        while let last = text.last {
+            if ".,;!".contains(last) {
+                text.removeLast()
+            } else if let opening = openingCharacters[last],
+                      text.filter({ $0 == last }).count > text.filter({ $0 == opening }).count {
+                text.removeLast()
+            } else {
+                break
+            }
+        }
+        return text
+    }
+
+    private static func parseCandidate(
+        _ candidate: String,
+        original: String? = nil,
+        decodedFromThunder: Bool = false
+    ) -> ParsedLink? {
+        let original = original ?? candidate
+        let lowercased = candidate.lowercased()
+
+        if lowercased.hasPrefix("thunder://") {
+            guard let decoded = ThunderLinkDecoder.decode(candidate) else { return nil }
+            return parseCandidate(decoded, original: original, decodedFromThunder: true)
+        }
+        if lowercased.hasPrefix("magnet:?") {
+            return MagnetLinkParser.parse(candidate, original: original)
+        }
+        if lowercased.hasPrefix("ed2k://") {
+            return Ed2kLinkParser.parse(candidate, original: original)
+        }
+
+        guard let url = URL(string: candidate),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https", "ftp"].contains(scheme),
+              let host = url.host?.lowercased(), !host.isEmpty else { return nil }
+
+        if scheme != "ftp" {
+            if host == "bilibili.com" || host.hasSuffix(".bilibili.com") || host == "b23.tv" {
+                return .video(url: url, site: .bilibili, original: original)
+            }
+            if host == "youtube.com" || host.hasSuffix(".youtube.com") || host == "youtu.be" {
+                return .video(url: url, site: .youtube, original: original)
+            }
+        }
+        return .http(url: url, decodedFromThunder: decodedFromThunder, original: original)
     }
 }
