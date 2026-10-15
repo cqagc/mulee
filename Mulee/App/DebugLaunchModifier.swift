@@ -4,6 +4,7 @@ import SwiftUI
 /// 在 Debug 构建里执行 DebugLaunchOptions 指定的启动动作；Release 构建里什么都不做。
 struct DebugLaunchModifier: ViewModifier {
     @Environment(AppModel.self) private var model
+    @Environment(SettingsModel.self) private var settings
     @Environment(\.openSettings) private var openSettings
     @Environment(\.openWindow) private var openWindow
 
@@ -37,7 +38,7 @@ struct DebugLaunchModifier: ViewModifier {
         if let text = DebugLaunchOptions.linksToAdd {
             // 给引擎留出启动时间，再走和「新建下载」完全相同的入口。
             try? await Task.sleep(for: .seconds(3))
-            model.addTasks(from: LinkParser.parse(text), autoExtract: false)
+            model.addTasks(from: LinkParser.parse(text), autoExtract: settings.autoExtract)
         }
     }
     #endif
