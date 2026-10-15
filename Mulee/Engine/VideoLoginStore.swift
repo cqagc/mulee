@@ -13,6 +13,7 @@ actor VideoLoginStore {
     }
 
     func save(_ request: VideoCookieRequest) throws {
+        try request.validateForSaving()
         let data = try JSONEncoder().encode(request)
         _ = try VideoCookieRequest.parse(data)
         let base = query(request.site)
@@ -93,6 +94,7 @@ actor VideoLoginStore {
     /// 无描述文件签名可能没有 data protection keychain 访问组；仅此错误回退。
     /// 使用与 Safari 交接相同的原子写入，文件创建时即为 0600。
     func saveFallback(_ request: VideoCookieRequest) throws {
+        try request.validateForSaving()
         try FileManager.default.createDirectory(
             at: fallbackDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]
         )

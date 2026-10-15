@@ -13,6 +13,14 @@ public struct VideoCookieRequest: Codable, Sendable {
         self.cookies = cookies
     }
 
+    /// 保存时要求登录凭据；读取历史空记录仍使用 parse。
+    public func validateForSaving() throws {
+        guard !cookies.isEmpty,
+              site != .bilibili || cookies.contains(where: { $0.name == "SESSDATA" }) else {
+            throw EngineError.invalidResponse(String(localized: "浏览器登录状态无效或超出限制", bundle: .module))
+        }
+    }
+
     public static func parse(_ data: Data) throws -> Self {
         guard data.count <= maximumBytes,
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

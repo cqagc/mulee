@@ -5,7 +5,7 @@ import Testing
 
 @Suite @MainActor struct VideoLoginTests {
     private func payload(domain: String = ".bilibili.com", value: String = "synthetic") throws -> Data {
-        let cookie = VideoCookie(domain: domain, path: "/", name: "test", value: value,
+        let cookie = VideoCookie(domain: domain, path: "/", name: "SESSDATA", value: value,
                                  secure: true, httpOnly: true, hostOnly: false)
         return try JSONEncoder().encode(VideoCookieRequest(site: .bilibili, cookies: [cookie]))
     }
@@ -44,6 +44,56 @@ import Testing
         #expect(VideoNativeMessaging.acceptsOrigin(["Mulee", VideoNativeMessaging.origin]))
         #expect(!VideoNativeMessaging.acceptsOrigin(["Mulee", "chrome-extension://other/"]))
         #expect(!VideoNativeMessaging.acceptsOrigin(["Mulee", VideoNativeMessaging.origin, "extra"]))
+    }
+
+    @Test func chromeManifestReadinessChecksCurrentExecutableAndOrigin() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let executable = URL(filePath: "/usr/bin/true")
+        #expect(!VideoNativeMessaging.isInstalled(executable: executable, home: root))
+        try VideoNativeMessaging.install(executable: executable, home: root)
+        #expect(VideoNativeMessaging.isInstalled(executable: executable, home: root))
+        #expect(!VideoNativeMessaging.isInstalled(executable: URL(filePath: "/usr/bin/false"), home: root))
+        let file = root.appendingPathComponent("Library/Application Support/Google/Chrome/NativeMessagingHosts/" + VideoNativeMessaging.host + ".json")
+        let manifest = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any])
+        for origins in [[], ["chrome-extension://other/"], [VideoNativeMessaging.origin, "chrome-extension://other/"]] {
+            var changed = manifest
+            changed["allowed_origins"] = origins
+            try JSONSerialization.data(withJSONObject: changed).write(to: file)
+            #expect(!VideoNativeMessaging.isInstalled(executable: executable, home: root))
+        }
+        try Data("invalid".utf8).write(to: file)
+        #expect(!VideoNativeMessaging.isInstalled(executable: executable, home: root))
+    }
+
+    @Test func rejectsInvalidLoginWithoutReplacingSavedFallback() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = VideoLoginStore(fallbackDirectory: root)
+        let saved = try VideoCookieRequest.parse(payload())
+        try await store.saveFallback(saved)
+        let cookie = VideoCookie(domain: ".bilibili.com", path: "/", name: "test", value: "synthetic",
+                                 secure: true, httpOnly: true, hostOnly: false)
+        let requests = [VideoCookieRequest(site: .bilibili, cookies: []),
+                        VideoCookieRequest(site: .youtube, cookies: []),
+                        VideoCookieRequest(site: .bilibili, cookies: [cookie])]
+        for request in requests {
+            await #expect(throws: EngineError.self) { try await store.save(request) }
+            await #expect(throws: EngineError.self) { try await store.saveFallback(request) }
+        }
+        #expect(try await store.loadFallback(.bilibili)?.cookies == saved.cookies)
+        #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("youtube.json").path))
+    }
+
+    @Test func legacyEmptyFallbackRemainsReadable() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("bilibili.json")
+        try JSONEncoder().encode(VideoCookieRequest(site: .bilibili, cookies: [])).write(to: file)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+        let store = VideoLoginStore(fallbackDirectory: root)
+        #expect(try await store.loadFallback(.bilibili)?.cookies.isEmpty == true)
     }
 
     @Test func rejectsTruncatedAndOversizedFrames() throws {

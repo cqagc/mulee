@@ -138,10 +138,10 @@ struct NewTaskSheet: View {
     .environment(AppModel(tasks: MockData.tasks))
     .environment(SettingsModel())
 }
-#endif
 
 #Preview("等待粘贴") {
     NewTaskSheet()
         .environment(AppModel(tasks: MockData.tasks))
         .environment(SettingsModel())
 }
+#endif

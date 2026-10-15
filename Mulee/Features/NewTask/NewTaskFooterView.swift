@@ -1,13 +1,17 @@
+import MuleeCore
 import SwiftUI
 import UniformTypeIdentifiers
 
 struct NewTaskFooterView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Bindable var draft: NewTaskModel
     let cancel: () -> Void
     let startDownload: () -> Void
 
     @State private var isChoosingDirectory = false
     @State private var directoryError: String?
+    @State private var loggedInSites: Set<VideoSite> = []
+    @State private var checkedLoginSites: Set<VideoSite> = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -19,8 +23,10 @@ struct NewTaskFooterView: View {
                     .truncationMode(.middle)
                     .help(draft.saveDirectory.path)
                 Spacer(minLength: 12)
-                Toggle("完成后自动解压", isOn: $draft.autoExtract)
-                    .toggleStyle(.checkbox)
+                if draft.showsAutoExtract {
+                    Toggle("完成后自动解压", isOn: $draft.autoExtract)
+                        .toggleStyle(.checkbox)
+                }
             }
             .font(.caption)
 
@@ -40,19 +46,42 @@ struct NewTaskFooterView: View {
                     .disabled(!draft.canStartDownload)
             }
 
-            if draft.hasVideoLinks {
-                Text("需要登录才能看的画质（例如 B 站大会员画质）暂不支持。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            ForEach(draft.videoLoginHintSites(loggedInSites: loggedInSites), id: \.self) { site in
+                if checkedLoginSites.contains(site) {
+                    Text(site == .bilibili
+                         ? String(localized: "下载 B 站大会员画质需要登录状态，可在浏览器扩展里开启『视频登录状态』")
+                         : String(localized: "下载 YouTube 年龄限制或会员视频需要登录状态，可在浏览器扩展里开启『视频登录状态』"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .padding(.horizontal, 22)
         .padding(.vertical, 14)
+        .task(id: draft.videoLoginSites) {
+            await refreshLoginStates()
+        }
+        .task(id: scenePhase) {
+            if scenePhase == .active { await refreshLoginStates() }
+        }
         .fileImporter(
             isPresented: $isChoosingDirectory,
             allowedContentTypes: [.folder],
             onCompletion: selectDirectory
         )
+    }
+
+    private func refreshLoginStates() async {
+        for site in draft.videoLoginSites {
+            let updatedAt = try? await VideoLoginStore.shared.updatedAt(for: site)
+            guard !Task.isCancelled else { return }
+            if updatedAt != nil {
+                loggedInSites.insert(site)
+            } else {
+                loggedInSites.remove(site)
+            }
+            checkedLoginSites.insert(site)
+        }
     }
 
     private func chooseDirectory() {

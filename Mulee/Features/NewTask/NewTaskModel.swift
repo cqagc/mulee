@@ -40,6 +40,19 @@ final class NewTaskModel {
         })
     }
     var hasVideoLinks: Bool { links.contains { $0.link.kind == .video } }
+    var showsAutoExtract: Bool { links.isEmpty || links.contains { $0.link.kind != .video } }
+
+    var videoLoginSites: [VideoSite] {
+        let sites = Set(parsedLinks.compactMap { link -> VideoSite? in
+            guard case .video(_, let site, _) = link, site != .other else { return nil }
+            return site
+        })
+        return [VideoSite.bilibili, .youtube].filter { sites.contains($0) }
+    }
+
+    func videoLoginHintSites(loggedInSites: Set<VideoSite>) -> [VideoSite] {
+        videoLoginSites.filter { !loggedInSites.contains($0) }
+    }
 
     var saveDirectoryLabel: String {
         let homePath = URL.homeDirectory.path

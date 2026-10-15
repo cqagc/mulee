@@ -4,7 +4,7 @@ import Testing
 
 struct VideoCookieTests {
     private func cookie(domain: String = ".bilibili.com", value: String = "synthetic") -> VideoCookie {
-        VideoCookie(domain: domain, path: "/", name: "test", value: value, secure: true, httpOnly: true, hostOnly: false)
+        VideoCookie(domain: domain, path: "/", name: "SESSDATA", value: value, secure: true, httpOnly: true, hostOnly: false)
     }
 
     @Test func netscapeFileIsPrivateAndRemoved() throws {
@@ -12,7 +12,7 @@ struct VideoCookieTests {
         let url = file.url
         defer { try? FileManager.default.removeItem(at: url) }
         let data = try String(contentsOf: url, encoding: .utf8)
-        #expect(data == "# Netscape HTTP Cookie File\n#HttpOnly_.bilibili.com\tTRUE\t/\tTRUE\t0\ttest\tsynthetic\n")
+        #expect(data == "# Netscape HTTP Cookie File\n#HttpOnly_.bilibili.com\tTRUE\t/\tTRUE\t0\tSESSDATA\tsynthetic\n")
         let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
         #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
         try file.remove()

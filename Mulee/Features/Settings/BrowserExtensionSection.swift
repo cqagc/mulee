@@ -33,7 +33,7 @@ struct BrowserExtensionSection: View {
         .alert("安装 Chrome 扩展", isPresented: $showsChromeInstructions) {
             Button("好", role: .cancel) {}
         } message: {
-            Text("已在访达中显示扩展目录。请先把 chrome 文件夹复制到固定位置，再打开 chrome://extensions，启用「开发者模式」，点「加载已解压的扩展程序」，选择复制后的 chrome 文件夹。首次交接时选择「打开 Mulee」，可勾选「始终允许」。")
+            Text("已在访达中显示扩展目录。请先把 chrome 文件夹复制到固定位置，再打开 chrome://extensions，启用「开发者模式」，点「加载已解压的扩展程序」，选择复制后的 chrome 文件夹。首次交接时选择「打开 Mulee」，可勾选「始终允许」。要传递 B 站 / YouTube 登录状态，还需在 设置·视频 里允许。")
         }
     }
 

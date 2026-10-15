@@ -54,17 +54,33 @@ nonisolated enum VideoNativeMessaging {
         exit(accepted ? 0 : 1)
     }
 
+    static func isInstalled(executable: URL, home: URL = .homeDirectory) -> Bool {
+        guard executable.isFileURL, FileManager.default.isExecutableFile(atPath: executable.path),
+              let data = try? Data(contentsOf: manifestFile(home: home)),
+              let manifest = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+        return manifest["name"] as? String == host
+            && manifest["type"] as? String == "stdio"
+            && manifest["path"] as? String == executable.path
+            && manifest["allowed_origins"] as? [String] == [origin]
+    }
+
+    private static func manifestFile(home: URL) -> URL {
+        home.appendingPathComponent("Library/Application Support/Google/Chrome/NativeMessagingHosts", isDirectory: true)
+            .appendingPathComponent(host + ".json")
+    }
+
     static func install(executable: URL, home: URL = .homeDirectory) throws {
         guard executable.isFileURL, FileManager.default.isExecutableFile(atPath: executable.path) else {
             throw EngineError.binaryNotFound
         }
-        let directory = home.appendingPathComponent("Library/Application Support/Google/Chrome/NativeMessagingHosts", isDirectory: true)
+        let file = manifestFile(home: home)
+        let directory = file.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let manifest: [String: Any] = [
             "name": host, "description": "Mulee video login", "path": executable.path,
             "type": "stdio", "allowed_origins": [origin]
         ]
         let data = try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
-        try data.write(to: directory.appendingPathComponent(host + ".json"), options: .atomic)
+        try data.write(to: file, options: .atomic)
     }
 }

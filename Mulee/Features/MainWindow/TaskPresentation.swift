@@ -188,7 +188,15 @@ struct TaskPresentation {
 
     var waitingDuration: String { longTail.map { String(localized: "\(days(since: $0.waitingSince)) 天") } ?? "" }
     var transferDuration: String { longTail.map { Self.duration($0.activeTransferDuration) } ?? "" }
-    var extractionSetting: String { task.postDownload.autoExtract ? String(localized: "开") : String(localized: "关") }
+    var extractionSetting: String? {
+        guard task.kind != .video else { return nil }
+        return task.postDownload.autoExtract ? String(localized: "开") : String(localized: "关")
+    }
+    var showsPostDownload: Bool {
+        extractionSetting != nil || extractionStatus != nil || task.status == .extracting
+            || task.postDownload.matchedRuleName != nil || task.postDownload.extractionFailure != nil
+            || !extractedItems.isEmpty || !(task.postDownload.extractionWarnings ?? []).isEmpty || hash != nil
+    }
     var filenameEncoding: String {
         guard let encoding = task.postDownload.filenameEncoding else { return String(localized: "自动检测") }
         return task.postDownload.extractionState == nil ? String(localized: "自动检测（\(encoding)）") : encoding

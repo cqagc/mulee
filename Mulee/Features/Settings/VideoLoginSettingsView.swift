@@ -15,11 +15,12 @@ struct VideoLoginSettingsView: View {
             Text("在浏览器扩展中开启登录状态传递后，Mulee 才会接收。登录状态优先保存在钥匙串，不支持时保存在仅你可读的本机文件。")
                 .font(.callout)
                 .foregroundStyle(.secondary)
-            Button("安装 Chrome 登录状态连接", action: install)
-                .disabled(busy)
             if installed {
-                Text("Chrome 连接已安装")
+                Text("已允许 Chrome 扩展传递登录状态。还没装 Chrome 扩展的话，先到 设置·通用 安装。")
                     .foregroundStyle(.secondary)
+            } else {
+                Button("允许 Chrome 扩展传递登录状态", action: install)
+                    .disabled(busy)
             }
             if let issue { Text(issue).foregroundStyle(.secondary) }
         }
@@ -32,6 +33,7 @@ struct VideoLoginSettingsView: View {
     }
 
     private func refresh() async {
+        installed = Bundle.main.executableURL.map { VideoNativeMessaging.isInstalled(executable: $0) } ?? false
         do {
             bilibiliUpdatedAt = try await VideoLoginStore.shared.updatedAt(for: .bilibili)
             youtubeUpdatedAt = try await VideoLoginStore.shared.updatedAt(for: .youtube)
@@ -64,7 +66,7 @@ struct VideoLoginSettingsView: View {
             installed = true
             issue = nil
         } catch {
-            issue = String(localized: "无法安装 Chrome 登录状态连接")
+            issue = String(localized: "无法允许 Chrome 扩展传递登录状态")
         }
     }
 }

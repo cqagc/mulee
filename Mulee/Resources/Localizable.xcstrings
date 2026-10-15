@@ -5994,35 +5994,6 @@
         }
       }
     },
-    "已在访达中显示扩展目录。请先把 chrome 文件夹复制到固定位置，再打开 chrome://extensions，启用「开发者模式」，点「加载已解压的扩展程序」，选择复制后的 chrome 文件夹。首次交接时选择「打开 Mulee」，可勾选「始终允许」。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已在访达中显示扩展目录。请先把 chrome 文件夹复制到固定位置，再打开 chrome://extensions，启用「开发者模式」，点「加载已解压的扩展程序」，选择复制后的 chrome 文件夹。首次交接时选择「打开 Mulee」，可勾选「始终允许」。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The extension folder is shown in Finder. Copy the chrome folder to a permanent location, open chrome://extensions, turn on Developer mode, click \"Load unpacked\" and choose the copied chrome folder. The first time links are handed over, choose \"Open Mulee\" and you can tick \"Always allow\"."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已在 Finder 中顯示延伸功能資料夾。請先把 chrome 資料夾複製到固定位置，再開啟 chrome://extensions，啟用「開發人員模式」，點「載入未封裝項目」，選擇複製後的 chrome 資料夾。第一次交接時選擇「開啟 Mulee」，可勾選「一律允許」。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拡張機能のフォルダをFinderに表示しました。chromeフォルダを固定の場所にコピーし、chrome://extensionsを開いて「デベロッパーモード」を有効にします。「パッケージ化されていない拡張機能を読み込む」でコピー先のchromeフォルダを選択してください。初回は「Muleeを開く」を選びます。「常に許可」も選択できます。"
-          }
-        }
-      }
-    },
     "已完成": {
       "extractionState": "manual",
       "localizations": {
@@ -13140,35 +13111,6 @@
         }
       }
     },
-    "需要登录才能看的画质（例如 B 站大会员画质）暂不支持。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要登录才能看的画质（例如 B 站大会员画质）暂不支持。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quality levels that need a signed-in account (such as Bilibili premium quality) aren't supported yet."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要登入才能觀看的畫質（例如 B 站大會員畫質）暫不支援。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ログインが必要な画質（Bilibiliの有料会員向け画質など）には、現在対応していません。"
-          }
-        }
-      }
-    },
     "音频": {
       "extractionState": "manual",
       "localizations": {
@@ -13401,35 +13343,6 @@
         }
       }
     },
-    "Chrome 连接已安装": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chrome 连接已安装"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chrome connection installed"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chrome 連線已安裝"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chrome接続機能をインストール済み"
-          }
-        }
-      }
-    },
     "P%lld %@": {
       "extractionState": "manual",
       "localizations": {
@@ -13575,35 +13488,6 @@
         }
       }
     },
-    "安装 Chrome 登录状态连接": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "安装 Chrome 登录状态连接"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Install Chrome sign-in connection"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "安裝 Chrome 登入狀態連線"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chromeのログイン状態接続機能をインストール"
-          }
-        }
-      }
-    },
     "尚未接收登录状态": {
       "extractionState": "manual",
       "localizations": {
@@ -13687,35 +13571,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "YouTubeのログイン状態を受信済み"
-          }
-        }
-      }
-    },
-    "无法安装 Chrome 登录状态连接": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法安装 Chrome 登录状态连接"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unable to install Chrome sign-in connection"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無法安裝 Chrome 登入狀態連線"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chromeのログイン状態接続機能をインストールできません"
           }
         }
       }
@@ -14035,6 +13890,180 @@
           "stringUnit": {
             "state": "translated",
             "value": "ブラウザ拡張機能でログイン状態の共有をオンにすると、Muleeが受信します。ログイン状態はキーチェーンに優先して保存し、対応していない場合は自分だけが読み取れるこのMac上のファイルに保存します。"
+          }
+        }
+      }
+    },
+    "下载 B 站大会员画质需要登录状态，可在浏览器扩展里开启『视频登录状态』": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载 B 站大会员画质需要登录状态，可在浏览器扩展里开启『视频登录状态』"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilibili premium quality needs your sign-in. Turn on “Video sign-in” in the browser extension."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載 B 站大會員畫質需要登入狀態，可在瀏覽器擴充功能裡開啟『影片登入狀態』"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilibiliの有料会員向け画質をダウンロードするにはログイン状態が必要です。ブラウザ拡張機能で「動画のログイン状態」をオンにしてください。"
+          }
+        }
+      }
+    },
+    "下载 YouTube 年龄限制或会员视频需要登录状态，可在浏览器扩展里开启『视频登录状态』": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载 YouTube 年龄限制或会员视频需要登录状态，可在浏览器扩展里开启『视频登录状态』"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Age-restricted and members-only YouTube videos need your sign-in. Turn on “Video sign-in” in the browser extension."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載 YouTube 年齡限制或會員影片需要登入狀態，可在瀏覽器擴充功能裡開啟『影片登入狀態』"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YouTubeの年齢制限付き動画やメンバー限定動画をダウンロードするにはログイン状態が必要です。ブラウザ拡張機能で「動画のログイン状態」をオンにしてください。"
+          }
+        }
+      }
+    },
+    "允许 Chrome 扩展传递登录状态": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许 Chrome 扩展传递登录状态"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow the Chrome extension to share sign-in"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允許 Chrome 擴充功能傳遞登入狀態"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chrome拡張機能にログイン状態の受け渡しを許可"
+          }
+        }
+      }
+    },
+    "已允许 Chrome 扩展传递登录状态。还没装 Chrome 扩展的话，先到 设置·通用 安装。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已允许 Chrome 扩展传递登录状态。还没装 Chrome 扩展的话，先到 设置·通用 安装。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Chrome extension can share sign-in. If you haven't installed it yet, do so in Settings › General."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已允許 Chrome 擴充功能傳遞登入狀態。還沒裝 Chrome 擴充功能的話，先到 設定·一般 安裝。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chrome拡張機能によるログイン状態の受け渡しを許可しました。拡張機能をまだインストールしていない場合は、「設定」＞「一般」でインストールしてください。"
+          }
+        }
+      }
+    },
+    "已在访达中显示扩展目录。请先把 chrome 文件夹复制到固定位置，再打开 chrome://extensions，启用「开发者模式」，点「加载已解压的扩展程序」，选择复制后的 chrome 文件夹。首次交接时选择「打开 Mulee」，可勾选「始终允许」。要传递 B 站 / YouTube 登录状态，还需在 设置·视频 里允许。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已在访达中显示扩展目录。请先把 chrome 文件夹复制到固定位置，再打开 chrome://extensions，启用「开发者模式」，点「加载已解压的扩展程序」，选择复制后的 chrome 文件夹。首次交接时选择「打开 Mulee」，可勾选「始终允许」。要传递 B 站 / YouTube 登录状态，还需在 设置·视频 里允许。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The extension folder is shown in Finder. Copy the chrome folder to a permanent location, open chrome://extensions, turn on Developer mode, click \"Load unpacked\" and choose the copied chrome folder. The first time links are handed over, choose \"Open Mulee\" and you can tick \"Always allow\". To share Bilibili / YouTube sign-in, also allow it in Settings › Video."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已在 Finder 中顯示延伸功能資料夾。請先把 chrome 資料夾複製到固定位置，再開啟 chrome://extensions，啟用「開發人員模式」，點「載入未封裝項目」，選擇複製後的 chrome 資料夾。第一次交接時選擇「開啟 Mulee」，可勾選「一律允許」。要傳遞 B 站 / YouTube 登入狀態，還需在 設定·影片 裡允許。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拡張機能のフォルダをFinderに表示しました。chromeフォルダを固定の場所にコピーし、chrome://extensionsを開いて「デベロッパーモード」を有効にします。「パッケージ化されていない拡張機能を読み込む」でコピー先のchromeフォルダを選択してください。初回は「Muleeを開く」を選びます。「常に許可」も選択できます。Bilibili / YouTubeのログイン状態を渡すには、「設定」＞「動画」でも許可してください。"
+          }
+        }
+      }
+    },
+    "无法允许 Chrome 扩展传递登录状态": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法允许 Chrome 扩展传递登录状态"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't allow the Chrome extension to share sign-in"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法允許 Chrome 擴充功能傳遞登入狀態"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chrome拡張機能にログイン状態の受け渡しを許可できませんでした"
           }
         }
       }
