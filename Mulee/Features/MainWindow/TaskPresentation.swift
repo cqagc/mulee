@@ -127,7 +127,7 @@ struct TaskPresentation {
             }
         case .paused: ""
         case .failed: task.errorMessage ?? "可稍后重试"
-        case .queued: "等待空位"
+        case .queued: task.kind == .video && task.engineTaskID == nil ? "正在准备视频工具" : "等待空位"
         case .engineUnavailable: "暂时只记录链接"
         }
     }

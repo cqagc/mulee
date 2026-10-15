@@ -80,10 +80,15 @@ public actor ManagedToolInstaller {
         let archive = staging.appendingPathComponent("download")
         let sums = staging.appendingPathComponent("checksums")
         try await download(tool.downloadURL, archive)
-        try await download(tool.checksumURL, sums)
-        let expected = try Self.checksum(
-            in: String(contentsOf: sums, encoding: .utf8), filename: tool.downloadURL.lastPathComponent
-        )
+        let expected: String
+        if let pinned = tool.sha256 {
+            expected = try Self.checksum(in: pinned, filename: tool.downloadURL.lastPathComponent)
+        } else {
+            try await download(tool.checksumURL, sums)
+            expected = try Self.checksum(
+                in: String(contentsOf: sums, encoding: .utf8), filename: tool.downloadURL.lastPathComponent
+            )
+        }
         guard try Self.digest(archive) == expected else {
             throw EngineError.invalidResponse("SHA256 校验失败，未安装工具")
         }

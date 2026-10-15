@@ -75,3 +75,54 @@ codesign --verify --deep --strict --verbose=2 build/dd/Build/Products/Debug/Mule
 - **只有 arm64**：和 App 一致，不做 universal。
 - **体积**：约增加 11 MB（aria2c 约 3 MB、dylib 约 7.5 MB、证书和许可证约 0.3 MB）。
 - 构建机上的 aria2 / openssl 若带有额外的 provider 模块，目前只打包 `ossl-modules` 下已有的文件。
+
+## 视频工具
+
+Mulee 自行下载并校验 yt-dlp、Deno、ffmpeg 和 ffprobe，安装在 `~/Library/Application Support/Mulee/bin/`。ffmpeg 与 ffprobe 放在同一目录；传入 YtDlpEngine 的是 ffmpeg 文件路径，yt-dlp 的 `--ffmpeg-location` 会据此查找同目录的 ffprobe，HEVC 后处理也可直接执行该路径。解析顺序为已校验的托管版、仅 Debug 可用的 Homebrew、后台下载托管版。不会在下载尚未结束时显示缺少 ffmpeg。
+
+### arm64 来源比较
+
+2026-10-15 在 Apple Silicon macOS 上下载实测：
+
+| 来源 | 架构、签名与公证 | 下载与 SHA256 | 许可证及更新 |
+|---|---|---|---|
+| [Martin Riedl](https://ffmpeg.martin-riedl.de/)（选用） | ffmpeg、ffprobe ZIP 内均为原生 arm64，Developer ID Application 签名；PKG 为 Developer ID Installer 签名且通过公证评估。ZIP 内命令行程序的 execute 评估未被接受，不能把 PKG 公证结论套用到 ZIP | 官方提供稳定 latest 重定向及每个构建的 `.zip.sha256`；实测 latest 的 `.zip.sha256` 地址返回 HTTP 404，因此固定版本和摘要 | `-L` 实测 GPL-3.0-or-later，`-version` 有 `--enable-gpl --enable-version3`；有[公开构建脚本](https://git.martin-riedl.de/ffmpeg/build-script)和[发布历史](https://ffmpeg.martin-riedl.de/info/history/macos/arm64/release)。当前 release 9.0.2 构建于 2026-09-20，snapshot 更新至 2026-10-10；不保证固定更新周期 |
+| [OSXExperts](https://www.osxexperts.net/) | 9.0 ffmpeg、ffprobe 实测原生 arm64，只有 linker ad-hoc 签名，未设 Team ID；execute 评估均 rejected，没有 Developer ID 或通过公证的证据 | `ffmpeg9arm.zip`、`ffprobe9arm.zip` 按大版本命名，页面公布的是解压后可执行文件 SHA256；没有找到跨版本 latest 地址或独立 SHA256 文件 | `-L` 实测 GPL-2.0-or-later；页面保留多个大版本，当前 arm64 9.0，未找到固定更新周期承诺 |
+| [evermeet.cx](https://evermeet.cx/ffmpeg/) | 9.0.2 ffmpeg 实测 x86_64、完全未签名，execute rejected / no usable signature；[官网明确不提供 Apple Silicon 原生构建](https://evermeet.cx/ffmpeg/#remarks)，不适用本项目 | 有版本 ZIP/7z 和 GPG 签名；官网说明下载 API 已移除，Info API 可发现版本，未找到适用 arm64 的 latest + SHA256 文件 | 官网构建参数为 GPL 构建（包含 `--enable-gpl --enable-version3`）；有 release 与 snapshot 更新，仍不满足 arm64 要求 |
+
+### 固定版本与校验
+
+固定 Riedl `1789931890_9.0.2`，不跟随 latest 漂移：
+
+| 文件 | 上游 SHA256 文件 | 代码内固定的压缩包 SHA256 |
+|---|---|---|
+| ffmpeg.zip | [ffmpeg.zip.sha256](https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/ffmpeg.zip.sha256) | `c8ed4c4e6978a03c485edbfe4e0a5dc2380f8a30bba5150531b31b094492d924` |
+| ffprobe.zip | [ffprobe.zip.sha256](https://ffmpeg.martin-riedl.de/download/macos/arm64/1789931890_9.0.2/ffprobe.zip.sha256) | `fcbe839537485eaee7a7a8bc5cbc0f90d53617e80943e8a5b2e31cb851197ea6` |
+
+`ManagedTool` 内固定下载目录和两份摘要。安装器先验证整个 ZIP 的 SHA256，只提取指定入口，再执行 `-version`；已安装文件另以本机安装记录的 SHA256 复核。更新时从发布历史选择新的固定构建，下载两份 ZIP 和对应校验文件，核对摘要、架构、签名、许可证与运行结果，再同时更新代码及本节；不能只修改下载 URL。
+
+签名与公证实测摘要（未安装 PKG，未进行重新签名）：
+
+```text
+file ffmpeg / ffprobe
+  Mach-O 64-bit executable arm64
+codesign -dv --verbose=4 ffmpeg / ffprobe
+  Authority=Developer ID Application: Martin Riedl (KU3N25YGLU)
+  TeamIdentifier=KU3N25YGLU
+  flags=0x10000(runtime)
+spctl -a -t execute -vv ffmpeg / ffprobe
+  rejected (the code is valid but does not seem to be an app), exit 3
+spctl -a -t install -vv ffmpeg.pkg
+  accepted, source=Notarized Developer ID, exit 0
+  origin=Developer ID Installer: Martin Riedl (KU3N25YGLU)
+ffmpeg -version / ffprobe -version
+  9.0.2-https://www.martin-riedl.de, exit 0
+```
+
+Riedl 静态构建的 `otool -L` 实测只引用系统库及系统 Framework，不依赖 Homebrew。Mulee 使用 ZIP，不运行系统级 PKG 安装；沿用安装器在 SHA256 验证后移除隔离属性的流程，保留上游签名。安装记录中的摘要用于检测本机文件损坏，信任锚是代码内固定的上游 ZIP 摘要。
+
+2026-10-15 另使用 MuleeCore 的 `ManagedToolInstaller` 默认网络下载器，在临时目录完成两份工具的真实下载、固定 SHA256 校验、解包、安装记录回读及 `-version` 运行；两者均退出 0。对安装结果执行 `codesign --verify --strict --verbose=2` 均返回 `valid on disk` 和 `satisfies its Designated Requirement`。本地 fixture 测试不访问网络；核心包 107 项、App 142 项测试通过，无新增 Swift 编译警告。
+
+### 首次准备与退出恢复
+
+添加视频链接时立刻插入排队任务，副标题显示「正在准备视频工具」，就绪后再交给引擎。等待时删除不会再提交；暂停则保留至用户继续。准备失败会把等待任务标记为失败并显示原因。等待记录沿用现有任务历史保存，重启后标记为「上次退出时视频工具尚未准备好，可以重新下载」；选择明确失败而不自动重交，是因为尚未交给引擎的记录没有可靠的自定义保存目录，不能静默改用默认目录。
