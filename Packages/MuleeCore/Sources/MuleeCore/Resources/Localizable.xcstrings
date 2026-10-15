@@ -4110,6 +4110,12 @@
             "state": "translated",
             "value": "使用登入狀態下載失敗，請重新傳遞登入狀態後重試"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存されたログイン状態でダウンロードできませんでした。ログイン状態を再度共有してから、やり直してください。"
+          }
         }
       }
     },
@@ -4132,6 +4138,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法取得影片清單，請稍後重試"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画リストを取得できません。しばらくしてからやり直してください。"
           }
         }
       }
@@ -4156,6 +4168,12 @@
             "state": "translated",
             "value": "無法存取瀏覽器登入狀態共享容器"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザのログイン状態の共有コンテナにアクセスできません"
+          }
         }
       }
     },
@@ -4178,6 +4196,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "瀏覽器登入狀態無效或超出限制"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザのログイン状態が無効か、上限を超えています"
           }
         }
       }
@@ -4202,6 +4226,12 @@
             "state": "translated",
             "value": "取得影片清單逾時"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画リストの取得がタイムアウトしました"
+          }
         }
       }
     },
@@ -4225,6 +4255,12 @@
             "state": "translated",
             "value": "影片清單格式無效"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画リストの形式が無効です"
+          }
         }
       }
     },
@@ -4247,6 +4283,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "影片清單超出限制"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画リストが上限を超えています"
           }
         }
       }
