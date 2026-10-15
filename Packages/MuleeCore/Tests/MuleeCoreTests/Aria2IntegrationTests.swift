@@ -96,7 +96,8 @@ struct Aria2IntegrationTests {
             try await fixture.engine.start(options: fixture.options)
             let id = try await fixture.engine.add(link: fixture.link("missing.bin"), directory: nil)
             let failed = try await fixture.waitFor(id) { $0.status == .failed }
-            #expect(failed.errorMessage == "资源不存在（aria2 错误码 3）")
+            // 文案随系统语言变化，期望值用同一个函数生成。
+            #expect(failed.errorMessage == Aria2ErrorDescriptions.message(for: "3"))
             await #expect(throws: EngineError.unsupportedLink) {
                 try await fixture.engine.add(
                     link: .magnet(infoHash: "abc", displayName: nil, original: "magnet:?abc"), directory: nil
