@@ -6,7 +6,7 @@ struct LinkParserTests {
     @Test("原型中的四种链接一次粘贴，补全原型省略的 ed2k 哈希")
     func prototypeLinks() throws {
         let magnet = "magnet:?xt=urn:btih:dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c&dn=Big+Buck+Bunny"
-        let ed2k = "ed2k://|file|超魔法大戰 繁中版.rar|641728512|9F3A0C5E1234567890ABCDEFB71DC21B|/"
+        let ed2k = "ed2k://|file|雾港奇谭 繁中版.rar|641728512|9F3A0C5E1234567890ABCDEFB71DC21B|/"
         let thunder = "thunder://QUFodHRwczovL2V4YW1wbGUuY29tL3NpbnRlbC1vc3QuemlwWlo="
         let video = "https://www.bilibili.com/video/BV1xx411c7XX"
         let archiveURL = try #require(URL(string: "https://example.com/sintel-ost.zip"))
@@ -14,14 +14,14 @@ struct LinkParserTests {
 
         #expect(LinkParser.parse([magnet, ed2k, thunder, video].joined(separator: "\n")) == [
             .magnet(infoHash: "dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c", displayName: "Big Buck Bunny", original: magnet),
-            .ed2k(fileName: "超魔法大戰 繁中版.rar", size: 641728512, hash: "9F3A0C5E1234567890ABCDEFB71DC21B", original: ed2k),
+            .ed2k(fileName: "雾港奇谭 繁中版.rar", size: 641728512, hash: "9F3A0C5E1234567890ABCDEFB71DC21B", original: ed2k),
             .http(url: archiveURL, decodedFromThunder: true, original: thunder),
             .video(url: videoURL, site: .bilibili, original: video)
         ])
     }
 
     @Test("ed2k 名称解码、空格与附加字段", arguments: [
-        ("超魔法大戰 繁中版.rar", "超魔法大戰 繁中版.rar", ""),
+        ("雾港奇谭 繁中版.rar", "雾港奇谭 繁中版.rar", ""),
         ("%E4%B8%AD%E6%96%87%20%E6%96%87%E4%BB%B6.rar", "中文 文件.rar", ""),
         ("a+b%2Bc%7Cd%25.rar", "a+b+c|d%.rar", "h=ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"),
         ("name\twith space.rar", "name\twith space.rar", "p=part-hash|sources,127.0.0.1:4662")
@@ -58,7 +58,7 @@ struct LinkParserTests {
         "ed2k://|file|file.rar|1|0123456789abcdef0123456789abcdeg|/",
         "ed2k://|file|file.rar|1|0123456789abcdef0123456789abcde|/",
         "ed2k://|file|file.rar|1|0123456789abcdef0123456789abcdef0|/",
-        "ed2k://|file|超魔法大戰 繁中版.rar|641728512|9F3A0C5E…B71DC21B|/",
+        "ed2k://|file|雾港奇谭 繁中版.rar|641728512|9F3A0C5E…B71DC21B|/",
         "ed2k://|file|file.rar|1|0123456789abcdef0123456789abcdef|"
     ])
     func invalidEd2k(_ text: String) {

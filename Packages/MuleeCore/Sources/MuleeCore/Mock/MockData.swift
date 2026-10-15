@@ -10,7 +10,7 @@ public enum MockData {
 
     /// 原型里选中的那个电驴长尾任务。
     public static let longTailTask = DownloadTask(
-        name: "超魔法大戰 繁中版.rar",
+        name: "雾港奇谭 繁中版.rar",
         fileExtension: "rar",
         kind: .ed2k,
         status: .waitingForSources,
@@ -29,7 +29,7 @@ public enum MockData {
             )
         ),
         postDownload: PostDownloadInfo(autoExtract: true, filenameEncoding: "Big5"),
-        sourceLink: "ed2k://|file|%E8%B6%85%E9%AD%94%E6%B3%95%E5%A4%A7%E6%88%B0%20%E7%B9%81%E4%B8%AD%E7%89%88.rar|612000000|9F3A0C5E7D21B84A6C0E93F15B71DC21|/"
+        sourceLink: "ed2k://|file|%E9%9B%BE%E6%B8%AF%E5%A5%87%E8%B0%AD%20%E7%B9%81%E4%B8%AD%E7%89%88.rar|612000000|9F3A0C5E7D21B84A6C0E93F15B71DC21|/"
     )
 
     public static let tasks: [DownloadTask] = [

@@ -24,9 +24,9 @@ struct ThunderLinkDecoderTests {
 
     @Test("迅雷包裹含空格的中文 ed2k")
     func ed2k() {
-        let text = "thunder://QUFlZDJrOi8vfGZpbGV86LaF6a2U5rOV5aSn5oiwIOe5geS4reeJiC5yYXJ8NjQxNzI4NTEyfDlGM0EwQzVFMTIzNDU2Nzg5MEFCQ0RFRkI3MURDMjFCfC9aWg=="
+        let text = "thunder://QUFlZDJrOi8vfGZpbGV86Zu+5riv5aWH6LCtIOe5geS4reeJiC5yYXJ8NjQxNzI4NTEyfDlGM0EwQzVFMTIzNDU2Nzg5MEFCQ0RFRkI3MURDMjFCfC9aWg=="
         #expect(LinkParser.parse(text) == [
-            .ed2k(fileName: "超魔法大戰 繁中版.rar", size: 641728512, hash: "9F3A0C5E1234567890ABCDEFB71DC21B", original: text)
+            .ed2k(fileName: "雾港奇谭 繁中版.rar", size: 641728512, hash: "9F3A0C5E1234567890ABCDEFB71DC21B", original: text)
         ])
     }
 

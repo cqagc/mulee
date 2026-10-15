@@ -25,7 +25,8 @@ Design/                     品牌、图标规范、原型
 
 ## 设计对齐
 
-- 设计以 Claude Design 原型为准：`Design/Prototype/` 下有原型源码（.dc.html）和截图。颜色、间距、文案、信息层级要和原型一致；原型里的占位方块，换成 `Design/ICONS.md` 规定的 SF Symbols。
+- 设计以 Claude Design 原型为准：`Design/Prototype/` 下是原型源码（.dc.html），已实现界面的截图在 `docs/screenshots/`。颜色、间距、文案、信息层级要和原型一致；原型里的占位方块，换成 `Design/ICONS.md` 规定的 SF Symbols。
+- 示例数据、截图、测试里**不使用真实的影视、游戏、书籍等版权作品名**，用虚构名称或开源内容（例如 Big Buck Bunny、Sintel、Ubuntu）。
 - 图标只能通过 `MuleeSymbol` 枚举使用，不准在视图里写符号名字符串。
 - 颜色只能用资源目录里的 `AccentColor`、`WaitColor`、`SuccessColor` 和系统语义色（`.primary`、`.secondary`、`.tertiary` 等）。不准自己写十六进制颜色。
 - 字号用系统文字样式（`.body`、`.callout`、`.subheadline`、`.caption` 等），不写死字号；`.caption2` 尽量不用。

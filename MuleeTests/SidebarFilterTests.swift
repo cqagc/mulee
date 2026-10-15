@@ -35,7 +35,7 @@ import Testing
         #expect(SidebarItem.all.filter(tasks, search: "UBUNTU").count == 1)
         #expect(SidebarItem.http.filter(tasks, search: "ubuntu").count == 1)
         #expect(SidebarItem.ed2k.filter(tasks, search: "ubuntu").isEmpty)
-        #expect(SidebarItem.all.filter(tasks, search: "超魔法").map(\.id) == [MockData.longTailTask.id])
+        #expect(SidebarItem.all.filter(tasks, search: "雾港").map(\.id) == [MockData.longTailTask.id])
         #expect(SidebarItem.all.filter(tasks, search: "https://").isEmpty)
         #expect(SidebarItem.all.filter(tasks, search: "不存在的任务").isEmpty)
     }
