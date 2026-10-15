@@ -23,13 +23,20 @@ for tool in cmake git make xcrun codesign otool shasum; do
 done
 BOOST=/opt/homebrew/opt/boost
 [ -f "$BOOST/include/boost/asio.hpp" ] || error "缺少 Boost 头文件：请运行 brew install boost（需要 ${BOOST}）。"
-for module in amule wxWidgets cryptopp; do
-  [ -f "$SRCROOT/ThirdParty/$module/.git" ] || [ -d "$SRCROOT/ThirdParty/$module/.git" ] \
-    || error "子模块 ThirdParty/$module 未初始化；请由主控运行 git submodule update --init --recursive。"
-done
-AMULE_REV="$(git -C "$SRCROOT/ThirdParty/amule" rev-parse HEAD)"
-WX_REV="$(git -C "$SRCROOT/ThirdParty/wxWidgets" rev-parse HEAD)"
-CRYPTO_REV="$(git -C "$SRCROOT/ThirdParty/cryptopp" rev-parse HEAD)"
+# 空子模块目录中的 git 会向上找到父仓库，因此先检查模块自身的 .git。
+submodule_revision() {
+  local module="$1" revision
+  if [ -e "$SRCROOT/ThirdParty/$module/.git" ]; then
+    git -C "$SRCROOT/ThirdParty/$module" rev-parse HEAD
+  else
+    revision="$(git -C "$SRCROOT" ls-files -s -- "ThirdParty/$module" | awk '$1 == "160000" && $3 == "0" { print $2 }')"
+    [ -n "$revision" ] || error "找不到子模块 ThirdParty/$module 的 gitlink"
+    printf '%s\n' "$revision"
+  fi
+}
+AMULE_REV="$(submodule_revision amule)"
+WX_REV="$(submodule_revision wxWidgets)"
+CRYPTO_REV="$(submodule_revision cryptopp)"
 SDK="$(xcrun --sdk macosx --show-sdk-path)"
 CC="$(xcrun -f clang)"
 CXX="$(xcrun -f clang++)"
@@ -64,6 +71,9 @@ WX_KEY="$(printf '%s\n' "$WX_REV" "$FLAGS" "$WX_CPPFLAGS" "$WX_OBJCXXFLAGS" "$TO
 CRYPTO_KEY="$(printf '%s\n' "$CRYPTO_REV" "$FLAGS -std=c++17" "$TOOLCHAIN" | hash)"
 KEY="$(printf '%s\n' "$AMULE_REV" "$WX_KEY" "$CRYPTO_KEY" "$STANDALONE" \
   "${AMULE_ARGS[@]}" "$(hash < "$BOOST/include/boost/version.hpp")" "$(hash < "$0")" | hash)"
+# wx-config / CMake 内的绝对路径仅在编译时使用；命中后复制已链接二进制，键无需缓存路径。
+mkdir -p "$CACHE"
+CACHE="$(cd "$CACHE" && pwd -P)"
 WX="$CACHE/amuled/wx-$WX_KEY"
 CRYPTO="$CACHE/amuled/cryptopp-$CRYPTO_KEY"
 BUILD="$CACHE/amuled/$KEY"
@@ -71,6 +81,8 @@ mkdir -p "$CACHE/bin" "$BUILD"
 # git archive 只读导出精确提交；不带 .git，不会修改子模块或 Git 状态。
 export_source() {
   local module="$1" dest="$2"
+  [ -e "$SRCROOT/ThirdParty/$module/.git" ] \
+    || error "子模块 ThirdParty/$module 未初始化；请由主控运行 git submodule update --init --recursive。"
   mkdir -p "$dest"
   git -C "$SRCROOT/ThirdParty/$module" archive HEAD | tar -x -C "$dest"
   if [ "$module" = wxWidgets ]; then
@@ -135,7 +147,21 @@ if [ ! -f "$BUILD/complete" ]; then
     strip -x "$BUILD/bin/$name"
     codesign --force --sign - --options runtime "$BUILD/bin/$name"
   done
+  mkdir -p "$BUILD/licenses/"{amule,picojson}
+  cp "$BUILD/source/LICENSE.md" "$BUILD/licenses/amule/"
+  cp "$BUILD/source/src/libwebcommon/picojson.LICENSE" "$BUILD/licenses/picojson/"
+  mkdir -p "$BUILD/licenses/"{wxWidgets,pcre2,expat}
+  cp "$WX/source/docs/"{licence,lgpl,gpl}.txt "$BUILD/licenses/wxWidgets/"
+  cp "$WX/source/3rdparty/pcre/LICENCE" "$BUILD/licenses/pcre2/"
+  cp "$WX/source/src/expat/expat/COPYING" "$BUILD/licenses/expat/"
+  mkdir -p "$BUILD/licenses/"{cryptopp,boost}
+  cp "$CRYPTO/source/License.txt" "$BUILD/licenses/cryptopp/"
+  # Homebrew Boost 没有附许可证；Crypto++ 附带同一份 BSL-1.0 原文。
+  sed -n '/^Boost Software License - Version 1.0/,/^CRYPTOGAMS License/{ /^CRYPTOGAMS License/d; p; }' \
+    "$CRYPTO/source/License.txt" | tr -d '\r' > "$BUILD/licenses/boost/LICENSE_1_0.txt"
   touch "$BUILD/complete"
+else
+  echo "build-amuled: 缓存命中 $KEY"
 fi
 verify_binary() {
   local binary="$1" ref
@@ -185,15 +211,7 @@ verify_binary "$BIN_DEST"
 for component in amule wxWidgets cryptopp boost pcre2 expat picojson; do
   mkdir -p "$LICENSES/$component"
 done
-cp "$BUILD/source/LICENSE.md" "$LICENSES/amule/"
-cp "$WX/source/docs/"{licence,lgpl,gpl}.txt "$LICENSES/wxWidgets/"
-cp "$CRYPTO/source/License.txt" "$LICENSES/cryptopp/"
-# Homebrew Boost 没有附 LICENSE_1_0.txt；Crypto++ 附带的是同一份 BSL-1.0 原文。
-sed -n '/^Boost Software License - Version 1.0/,/^CRYPTOGAMS License/{ /^CRYPTOGAMS License/d; p; }' \
-  "$CRYPTO/source/License.txt" | tr -d '\r' > "$LICENSES/boost/LICENSE_1_0.txt"
-cp "$WX/source/3rdparty/pcre/LICENCE" "$LICENSES/pcre2/"
-cp "$WX/source/src/expat/expat/COPYING" "$LICENSES/expat/"
-cp "$BUILD/source/src/libwebcommon/picojson.LICENSE" "$LICENSES/picojson/"
+cp -R "$BUILD/licenses/" "$LICENSES/"
 cat > "$LICENSES/amule/README.txt" <<NOTICE
 amuled 3.1.0 — GPL-2.0-or-later
 Source: https://github.com/amule-org/amule/tree/$AMULE_REV

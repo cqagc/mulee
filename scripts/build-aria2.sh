@@ -23,9 +23,18 @@ for tool in autoreconf automake glibtoolize autopoint pkg-config git make xcrun 
   command -v "$tool" >/dev/null || error "缺少 $tool；请安装 Xcode 命令行工具及 autoconf automake libtool gettext pkgconf。"
 done
 SOURCE="$SRCROOT/ThirdParty/aria2"
-[ -e "$SOURCE/.git" ] && [ -f "$SOURCE/configure.ac" ] \
-  || error "ThirdParty/aria2 未初始化；请运行 git submodule update --init --recursive。"
-REV="$(git -C "$SOURCE" rev-parse HEAD)"
+# 空子模块目录中的 git 会向上找到父仓库，因此先检查模块自身的 .git。
+submodule_revision() {
+  local module="$1" revision
+  if [ -e "$SRCROOT/ThirdParty/$module/.git" ]; then
+    git -C "$SRCROOT/ThirdParty/$module" rev-parse HEAD
+  else
+    revision="$(git -C "$SRCROOT" ls-files -s -- "ThirdParty/$module" | awk '$1 == "160000" && $3 == "0" { print $2 }')"
+    [ -n "$revision" ] || error "找不到子模块 ThirdParty/$module 的 gitlink"
+    printf '%s\n' "$revision"
+  fi
+}
+REV="$(submodule_revision aria2)"
 SDK="$(xcrun --sdk macosx --show-sdk-path)"
 CC="$(xcrun -f clang)"
 CXX="$(xcrun -f clang++)"
@@ -39,7 +48,8 @@ ARGS=(--with-appletls --without-openssl --without-gnutls
   --disable-nls --with-libz --without-libuv --without-libnettle
   --without-libgmp --without-libgcrypt --disable-shared --disable-libaria2)
 mkdir -p "$CACHE"
-CACHE="$(cd "$CACHE" && pwd)"
+CACHE="$(cd "$CACHE" && pwd -P)"
+# configure 的绝对路径只供源码构建使用；命中后只复制已链接二进制，键无需缓存路径。
 KEY="$( {
   printf '%s\n' "$REV" "$FLAGS" '-stdlib=libc++' "${ARGS[@]}" "$SDK"
   "$CXX" --version
@@ -54,6 +64,8 @@ BUILD="$CACHE/aria2/$KEY"
 BIN="$BUILD/bin/aria2c"
 mkdir -p "$BUILD" "$CACHE/bin"
 if [ ! -f "$BUILD/complete" ] || [ ! -x "$BIN" ]; then
+  [ -e "$SOURCE/.git" ] && [ -f "$SOURCE/configure.ac" ] \
+    || error "ThirdParty/aria2 未初始化；请运行 git submodule update --init --recursive。"
   echo "build-aria2: 编译 AppleTLS aria2c（${REV}），日志：$BUILD/build.log"
   rm -rf "$BUILD/source" "$BUILD/obj" "$BUILD/bin"
   mkdir -p "$BUILD/source" "$BUILD/obj" "$BUILD/bin"
@@ -78,6 +90,8 @@ if [ ! -f "$BUILD/complete" ] || [ ! -x "$BIN" ]; then
   status=$?
   set -e
   [ "$status" = 0 ] || error "构建失败，见 $BUILD/build.log"
+  mkdir -p "$BUILD/licenses"
+  cp "$BUILD/source/COPYING" "$BUILD/source/LICENSE.OpenSSL" "$BUILD/licenses/"
 else
   echo "build-aria2: 缓存命中 $KEY"
 fi
@@ -129,7 +143,7 @@ SIGN_ARGS=(--force --sign "$IDENTITY" --options runtime)
 [ "$IDENTITY" = - ] || SIGN_ARGS+=(--timestamp)
 codesign "${SIGN_ARGS[@]}" "$DEST"
 verify_binary "$DEST"
-cp "$BUILD/source/COPYING" "$BUILD/source/LICENSE.OpenSSL" "$LICENSES/aria2/"
+cp "$BUILD/licenses/COPYING" "$BUILD/licenses/LICENSE.OpenSSL" "$LICENSES/aria2/"
 cat > "$LICENSES/aria2/README.txt" <<NOTICE
 aria2 1.37.0 — GPL-2.0-or-later with OpenSSL linking exception (LICENSE.OpenSSL).
 Source: https://github.com/aria2/aria2/tree/$REV

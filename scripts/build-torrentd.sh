@@ -19,25 +19,36 @@ for tool in cmake clang++; do
 done
 BOOST=/opt/homebrew/opt/boost
 [ -f "$BOOST/include/boost/json/src.hpp" ] || error "缺少 Boost；请运行 brew install cmake boost"
-for sub in openssl libtorrent; do
-  [ -f "$SRCROOT/ThirdParty/$sub/.git" ] && [ -d "$SRCROOT/ThirdParty/$sub/include" ] \
-    || error "子模块 $sub 未初始化；请运行 git submodule update --init --recursive"
-done
+# 空子模块目录中的 git 会向上找到父仓库，因此先检查模块自身的 .git。
+submodule_revision() {
+  local module="$1" revision
+  if [ -e "$SRCROOT/ThirdParty/$module/.git" ]; then
+    git -C "$SRCROOT/ThirdParty/$module" rev-parse HEAD
+  else
+    revision="$(git -C "$SRCROOT" ls-files -s -- "ThirdParty/$module" | awk '$1 == "160000" && $3 == "0" { print $2 }')"
+    [ -n "$revision" ] || error "找不到子模块 ThirdParty/$module 的 gitlink"
+    printf '%s\n' "$revision"
+  fi
+}
+OPENSSL_REV="$(submodule_revision openssl)"
+LT_REV="$(submodule_revision libtorrent)"
 
 mkdir -p "$CACHE"
-CACHE="$(cd "$CACHE" && pwd)"
+CACHE="$(cd "$CACHE" && pwd -P)"
 JOBS="$(sysctl -n hw.logicalcpu)"
 OPENSSL_FLAGS=(darwin64-arm64-cc no-shared no-tests no-docs no-apps -mmacosx-version-min=26.0 --openssldir=/private/etc/ssl)
 LT_FLAGS=(-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_OSX_ARCHITECTURES=arm64
   -DCMAKE_OSX_DEPLOYMENT_TARGET=26.0 -DOPENSSL_USE_STATIC_LIBS=TRUE
   -Ddeprecated-functions=OFF -Dpython-bindings=OFF -Dbuild_tools=OFF
   "-DBoost_ROOT=$BOOST" -DCMAKE_CXX_STANDARD=17)
+# CMake 的绝对路径只用于构建/安装；命中后直接链接头文件和静态库，键无需缓存路径。
 KEY="$( {
-  git -C "$SRCROOT/ThirdParty/openssl" rev-parse HEAD
-  git -C "$SRCROOT/ThirdParty/libtorrent" rev-parse HEAD
-  printf '%s\n' "${OPENSSL_FLAGS[@]}" "${LT_FLAGS[@]}" "$CACHE"
+  printf '%s\n' "$OPENSSL_REV"
+  printf '%s\n' "$LT_REV"
+  printf '%s\n' "${OPENSSL_FLAGS[@]}" "${LT_FLAGS[@]}"
   clang++ --version
-  xcrun --show-sdk-path
+  # 显式选择 SDK，避免 Xcode 的 SDKROOT 与 standalone 返回不同的 SDK 路径别名。
+  xcrun --sdk macosx --show-sdk-path
   cat "$BOOST/include/boost/version.hpp"
 } | shasum -a 256 | awk '{print $1}')"
 DEPS="$CACHE/$KEY"
@@ -45,6 +56,10 @@ SSL="$DEPS/openssl"
 LT="$DEPS/libtorrent"
 mkdir -p "$DEPS" "$CACHE/bin"
 if [ ! -f "$DEPS/complete" ] || [ ! -f "$SSL/lib/libcrypto.a" ] || [ ! -f "$LT/lib/libtorrent-rasterbar.a" ]; then
+  for sub in openssl libtorrent; do
+    [ -f "$SRCROOT/ThirdParty/$sub/.git" ] && [ -d "$SRCROOT/ThirdParty/$sub/include" ] \
+      || error "子模块 $sub 未初始化；请运行 git submodule update --init --recursive"
+  done
   echo "mulee-torrentd: 首次构建静态依赖（约 8 分钟），日志：$DEPS"
   rm -rf "$DEPS/openssl-src" "$DEPS/libtorrent-build" "$SSL" "$LT"
   mkdir -p "$DEPS/openssl-src"
@@ -62,6 +77,14 @@ if [ ! -f "$DEPS/complete" ] || [ ! -f "$SSL/lib/libcrypto.a" ] || [ ! -f "$LT/l
     && cmake --build "$DEPS/libtorrent-build" -j"$JOBS" >> "$DEPS/libtorrent.log" 2>&1 \
     && cmake --install "$DEPS/libtorrent-build" >> "$DEPS/libtorrent.log" 2>&1 \
     || error "libtorrent 构建失败，见 $DEPS/libtorrent.log"
+  mkdir -p "$DEPS/licenses/"{libtorrent,openssl,boost}
+  cp -f "$SRCROOT/ThirdParty/libtorrent/COPYING" "$DEPS/licenses/libtorrent/"
+  cp -f "$SRCROOT/ThirdParty/openssl/LICENSE.txt" "$DEPS/licenses/openssl/"
+  # Homebrew Boost does not ship the top-level license. libtorrent's aggregate
+  # LICENSE includes the unmodified BSL-1.0 text; extract that complete section.
+  awk '/^Boost Software License - Version 1.0/ { copy=1 } copy && /^---/ { exit } copy { print }' \
+    "$SRCROOT/ThirdParty/libtorrent/LICENSE" > "$DEPS/licenses/boost/LICENSE_1_0.txt"
+  [ -s "$DEPS/licenses/boost/LICENSE_1_0.txt" ] || error "找不到 Boost 许可证文本"
   touch "$DEPS/complete"
 else
   echo "mulee-torrentd: 静态依赖缓存命中 $KEY"
@@ -103,18 +126,14 @@ if [ "$IDENTITY" = - ]; then
 else
   codesign --force --sign "$IDENTITY" --options runtime --timestamp "$DEST"
 fi
-cp -f "$SRCROOT/ThirdParty/libtorrent/COPYING" "$LICENSES/libtorrent/"
-cp -f "$SRCROOT/ThirdParty/openssl/LICENSE.txt" "$LICENSES/openssl/"
-# Homebrew Boost does not ship the top-level license. libtorrent's aggregate
-# LICENSE includes the unmodified BSL-1.0 text; extract that complete section.
-awk '/^Boost Software License - Version 1.0/ { copy=1 } copy && /^---/ { exit } copy { print }' \
-  "$SRCROOT/ThirdParty/libtorrent/LICENSE" > "$LICENSES/boost/LICENSE_1_0.txt"
-[ -s "$LICENSES/boost/LICENSE_1_0.txt" ] || error "找不到 Boost 许可证文本"
+cp -f "$DEPS/licenses/libtorrent/COPYING" "$LICENSES/libtorrent/"
+cp -f "$DEPS/licenses/openssl/LICENSE.txt" "$LICENSES/openssl/"
+cp -f "$DEPS/licenses/boost/LICENSE_1_0.txt" "$LICENSES/boost/"
 cat >> "$LICENSES/README.txt" <<NOTICE
 libtorrent-rasterbar 2.0.15 (BSD-3-Clause): libtorrent/COPYING
-  Source: https://github.com/arvidn/libtorrent/tree/$(git -C "$SRCROOT/ThirdParty/libtorrent" rev-parse HEAD)
+  Source: https://github.com/arvidn/libtorrent/tree/$LT_REV
 OpenSSL 3.5.9 (Apache-2.0): openssl/LICENSE.txt
-  Source: https://github.com/openssl/openssl/tree/$(git -C "$SRCROOT/ThirdParty/openssl" rev-parse HEAD)
+  Source: https://github.com/openssl/openssl/tree/$OPENSSL_REV
 Boost (BSL-1.0): boost/LICENSE_1_0.txt
   Source: https://www.boost.org/
 NOTICE

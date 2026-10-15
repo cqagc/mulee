@@ -7,10 +7,59 @@
 
 ```sh
 brew install xcodegen cmake boost autoconf automake libtool gettext pkgconf
-git submodule update --init --recursive
+git submodule update --init --recursive  # 仅缓存未命中、需要编译源码时必需
 xcodegen generate
 xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' -derivedDataPath build/dd build
 ```
+
+## worktree 共享缓存
+
+三个脚本优先使用已初始化子模块自身的 HEAD；子模块为空时，读取父仓库索引中的
+`ThirdParty/<模块>` gitlink，不会误用父仓库 HEAD。仅缓存未命中、需要源码编译时
+才要求相应子模块初始化；wxWidgets 的 PCRE2 / Expat 嵌套模块也仅在编译 wx 时校验。
+因此新 worktree 可直接复用指向主仓库 `build/thirdparty` 的符号链接，无需初始化子模块。
+构建工具和 Boost 头文件仍需安装。
+
+缓存目录统一用 `pwd -P` 解析物理路径；缓存键不包含缓存目录路径。
+torrentd 显式用 `xcrun --sdk macosx --show-sdk-path`，统一 Xcode 与 standalone 的 SDK 路径别名。
+旧 torrentd 键包含该路径，CMake / configure 的确会在构建树和安装元数据中记录绝对路径，
+但命中缓存时 torrentd 直接使用安装后的头文件、静态库重新编译 `Helpers/mulee-torrentd/`，
+aria2 / aMule 则复制已链接的二进制，不重用构建树或 CMake 导出目标，所以可跨 worktree 复用。
+签名、系统动态库校验和 App 封印处理保持原样。
+
+编译成功时同时缓存许可证文本：torrentd 使用 `<键>/licenses/<组件>/`，
+aria2 使用 `aria2/<键>/licenses/`，aMule 使用 `amuled/<键>/licenses/<组件>/`。
+打包只读取这些缓存文本，不读取当前 worktree 的子模块源码。
+
+### 旧缓存一次性迁移（2026-10-15）
+
+先核对子模块提交、编译器、SDK、Boost、架构、部署目标及全部功能参数一致，
+再以 `cp -cR <旧键目录> <新键目录>` 克隆完整目录（不支持克隆时用普通复制），
+只在新目录中补齐 `licenses/`，保留旧目录不变。不运行旧 CMake / configure 构建树。
+本次核对为 AppleClang 21.0.0.21000334、SDK 27.0、Boost 1.92.0、arm64、macOS 26.0；
+OpenSSL `configdata.pm`、libtorrent / aMule `CMakeCache.txt`、aria2 `config.log` 中参数
+与脚本一致，主仓库子模块 HEAD 与本 worktree gitlink 一致。
+
+| 缓存 | 旧目录（相对缓存根） | 新目录（相对缓存根） |
+|---|---|---|
+| OpenSSL + libtorrent | `b679411f2c2888ebf113a077fa23d7eaabfd8dd997d508a6c5206d8496d9f147` | `972a95fb886e876494b981f77061e7edd4ec895735e0e44f449f5ceb95cb0611` |
+| aria2 | `aria2/930e68e0c7363ef921ebd7a477cca15f3810e7c930423d9548c6e5b39c0406aa` | `aria2/278a8c4a8c2671466614402705022d97478a422d6c6d6c4f947f32c6f87b193f` |
+| aMule（amulecmd=OFF） | `amuled/b661975accc4b13de090ae299064fa956412f789b16e3a48d78e2987da92afe1` | `amuled/f614d02fc5fd85303f1bb27e7d0019637560eda25345535b4fc393f3d65604a6` |
+
+wxWidgets 和 Crypto++ 的键未变，直接使用现有完整缓存。许可证分别从固定版本源码、
+旧缓存源码副本复制，并沿用原来的 Boost 文本提取规则。
+一次性迁移步骤和映射日志保存在 `build/cache-verification/migrate.py`、`migration.log`；
+脚本拒绝覆盖非空的新键目录。aMule standalone 的 ON 键没有完整旧缓存，不能把 OFF
+目录冒充 ON 目录；找到的 spike amulecmd 依赖 Homebrew 动态库且 minos 为 27.0，未迁移。
+
+本 worktree 空子模块验收：aria2 standalone 命中缓存约 2 秒，torrentd 静态依赖命中，
+自身 C++ 源码仍照常编译（约 17 秒）。aMule standalone 因没有 ON 缓存而在编译前报错，
+该项验收未通过，未重编 wx / aMule。Xcode 三个打包阶段全部命中，App 包含三个 Helpers，
+`codesign --verify --deep --strict` 通过，16 个许可证文件的相对路径与 SHA-256 均与原 App 一致。
+为限定生成文件范围，本次在 `build/cache-verification/` 使用临时 spec 运行
+`xcodegen generate`（只调整生成路径和原脚本的 SRCROOT），随后 `xcodebuild ... build` 成功；
+正式 `project.yml`、Info.plist 和工程文件未改动。
+
 
 ## aria2 源码构建与打包
 
@@ -70,7 +119,7 @@ aria2 的 GPL-2.0-or-later 文本 `COPYING` 和 OpenSSL 链接例外 `LICENSE.Op
 
 ## BT 辅助进程 mulee-torrentd
 
-构建机需要 Xcode 命令行工具，以及 `brew install cmake boost`。先初始化固定版本的源码子模块：
+构建机需要 Xcode 命令行工具，以及 `brew install cmake boost`。缓存未命中时先初始化固定版本的源码子模块：
 
 ```sh
 git submodule update --init --recursive
@@ -117,7 +166,7 @@ BSL-1.0 文本。`Licenses/README.txt` 追加对应组件和源码地址。
 
 `Mulee` 的最后一个 post-build 阶段 `Bundle amuled` 运行 `scripts/build-amuled.sh`，从已固定的 aMule 3.1.0、wxWidgets 3.2.12、Crypto++ 8.9.0 子模块编译 `Contents/Helpers/amuled`。必须保留进程名 **amuled**，供用户的代理规则匹配直连。App 不打包测试客户端 amulecmd。
 
-构建机需要 Apple Silicon、支持 macOS 26 SDK 的 Xcode / Command Line Tools、`cmake` 和 `/opt/homebrew/opt/boost` 的头文件（`brew install cmake boost`）。源码需由主控预先递归初始化，包含 wxWidgets 的 PCRE2 / Expat 嵌套子模块。脚本不会初始化、修改子模块，也不会下载构建依赖。所有子进程使用 `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`。
+构建机需要 Apple Silicon、支持 macOS 26 SDK 的 Xcode / Command Line Tools、`cmake` 和 `/opt/homebrew/opt/boost` 的头文件（`brew install cmake boost`）。缓存未命中时，所需源码由主控预先初始化；编译 wxWidgets 时还需要 PCRE2 / Expat 嵌套子模块。脚本不会初始化、修改子模块，也不会下载构建依赖。所有子进程使用 `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`。
 
 ```sh
 # 构建引擎和测试专用客户端；无需 Xcode 构建环境变量
@@ -125,7 +174,7 @@ scripts/build-amuled.sh --standalone
 scripts/test-amuled.sh                    # 内部使用 python3 -I，仅标准库
 ```
 
-缓存默认在 `${MULEE_THIRDPARTY_CACHE:-$SRCROOT/build/thirdparty}`；可用 `BUILD_JOBS` 控制并行度（默认 8）。wxWidgets、Crypto++ 分别按源码提交、编译参数及工具链缓存；aMule 的键额外包含全部子模块键、Boost 版本头、构建脚本内容和是否构建 amulecmd。精确提交用只读 `git archive` 导出到缓存副本；构建过程不会污染 `ThirdParty/`。`<cache>/bin/amuled` 是最近一次成功构建的 daemon，standalone 同时输出 `<cache>/bin/amulecmd`。首次要编译三套 C++ 源码，本机 8 并行约 3–4 分钟（随机器和 SDK 变化）；本次 standalone 缓存命中为 0.41 秒，只做校验和原子复制。App 阶段另做签名及许可证打包。
+缓存默认在 `${MULEE_THIRDPARTY_CACHE:-$SRCROOT/build/thirdparty}`；可用 `BUILD_JOBS` 控制并行度（默认 8）。wxWidgets、Crypto++ 分别按源码提交、编译参数及工具链缓存；aMule 的键额外包含全部子模块键、Boost 版本头、构建脚本内容和是否构建 amulecmd。精确提交用只读 `git archive` 导出到缓存副本；构建过程不会污染 `ThirdParty/`。`<cache>/bin/amuled` 是最近一次成功构建的 daemon，standalone 同时输出 `<cache>/bin/amulecmd`。首次要编译三套 C++ 源码，本机 8 并行约 3–4 分钟（随机器和 SDK 变化）；已有完整 standalone 缓存时只做校验和原子复制。App 阶段另做签名及许可证打包。
 
 ### 静态链接与关闭的功能
 
