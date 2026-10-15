@@ -305,13 +305,22 @@ NOTICE
 # 失效就用同一个身份重签 App 本身（保留 Xcode 签上的 entitlements / flags）；全量构建时 Xcode 随后会再签一遍。
 APP_BUNDLE="$TARGET_BUILD_DIR/${WRAPPER_NAME:-$(dirname "$CONTENTS_FOLDER_PATH")}"
 # 只处理 Xcode 已经签过（有资源封印）的 App；全量构建时此刻 App 还没签，Xcode 随后会签。
+# 只校验 App 自身的封印（不加 --deep）：跑测试时 PlugIns/ 下的 MuleeTests.xctest 由测试 target 另行签名，
+# 递归校验会把它算进来，导致误判并重签失败。
 if [ -d "$APP_BUNDLE" ] && codesign -dv "$APP_BUNDLE" 2>&1 | grep -q "Sealed Resources" \
-  && ! codesign --verify --deep --strict "$APP_BUNDLE" >/dev/null 2>&1; then
+  && ! codesign --verify --strict "$APP_BUNDLE" >/dev/null 2>&1; then
   if [ "$ADHOC" = 1 ]; then
-    codesign --force --sign - --preserve-metadata=entitlements,flags "$APP_BUNDLE"
+    resign_status=0
+    codesign --force --sign - --preserve-metadata=entitlements,flags "$APP_BUNDLE" || resign_status=$?
   else
-    codesign --force --sign "$IDENTITY" --timestamp --preserve-metadata=entitlements,flags "$APP_BUNDLE"
+    resign_status=0
+    codesign --force --sign "$IDENTITY" --timestamp --preserve-metadata=entitlements,flags "$APP_BUNDLE" || resign_status=$?
   fi
-  echo "bundle-aria2: 已重签 ${APP_BUNDLE}（封印已失效）"
+  if [ "$resign_status" = 0 ]; then
+    echo "bundle-aria2: 已重签 ${APP_BUNDLE}（封印已失效）"
+  else
+    # 不中断构建：Xcode 自己的 CodeSign 步骤会再签一次；发版构建另有 codesign --verify 把关。
+    echo "warning: bundle-aria2: 重签 ${APP_BUNDLE} 失败（退出码 ${resign_status}），交给 Xcode 的签名步骤处理"
+  fi
 fi
 echo "bundle-aria2: 完成"
