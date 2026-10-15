@@ -9,6 +9,8 @@
 #   MULEE_SIGN_IDENTITY   签名身份，默认 "Developer ID Application"（钥匙串里唯一一张时可以只写前缀）
 #   MULEE_TEAM_ID         开发团队，默认读 project.yml 的 DEVELOPMENT_TEAM
 #   MULEE_NOTARY_PROFILE  `xcrun notarytool store-credentials` 存的配置名
+#   或者直接用 App Store Connect API 密钥文件（不经过钥匙串，适合锁屏 / 无人值守）：
+#   MULEE_NOTARY_KEY=<AuthKey_XXXX.p8 路径> MULEE_NOTARY_KEY_ID=<Key ID> MULEE_NOTARY_ISSUER=<Issuer ID>
 #
 # 产物：build/release/Mulee-<版本>.dmg
 set -euo pipefail
@@ -25,6 +27,13 @@ VERSION="$(awk -F'"' '/MARKETING_VERSION/ {print $2; exit}' project.yml)"
 TEAM="${MULEE_TEAM_ID:-$(awk '/DEVELOPMENT_TEAM:/ {print $2; exit}' project.yml)}"
 IDENTITY="${MULEE_SIGN_IDENTITY:-Developer ID Application}"
 PROFILE="${MULEE_NOTARY_PROFILE:-}"
+NOTARY_AUTH=()
+if [ -n "${MULEE_NOTARY_KEY:-}" ]; then
+  [ -f "$MULEE_NOTARY_KEY" ] || error "找不到密钥文件 $MULEE_NOTARY_KEY"
+  NOTARY_AUTH=(--key "$MULEE_NOTARY_KEY" --key-id "${MULEE_NOTARY_KEY_ID:?需要 MULEE_NOTARY_KEY_ID}" --issuer "${MULEE_NOTARY_ISSUER:?需要 MULEE_NOTARY_ISSUER}")
+elif [ -n "$PROFILE" ]; then
+  NOTARY_AUTH=(--keychain-profile "$PROFILE")
+fi
 OUT="$ROOT/build/release"
 DERIVED="$OUT/dd"
 DMG="$OUT/Mulee-$VERSION.dmg"
@@ -65,26 +74,27 @@ echo "全部部件签名合格"
 
 notarize() {
   local file="$1"
-  xcrun notarytool submit "$file" --keychain-profile "$PROFILE" --wait --output-format json \
-    > "$OUT/notary-$(basename "$file").json" || true
+  xcrun notarytool submit "$file" "${NOTARY_AUTH[@]}" --wait --output-format json \
+    > "$OUT/notary-$(basename "$file").json" 2> "$OUT/notary-$(basename "$file").err" || true
+  [ -s "$OUT/notary-$(basename "$file").json" ] || { cat "$OUT/notary-$(basename "$file").err" >&2; error "提交公证失败"; }
   local status
   status="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("status",""))' "$OUT/notary-$(basename "$file").json")"
   if [ "$status" != "Accepted" ]; then
     local id
     id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("id",""))' "$OUT/notary-$(basename "$file").json")"
-    [ -n "$id" ] && xcrun notarytool log "$id" --keychain-profile "$PROFILE" "$OUT/notary-log.json" || true
+    [ -n "$id" ] && xcrun notarytool log "$id" "${NOTARY_AUTH[@]}" "$OUT/notary-log.json" || true
     error "公证未通过（${status}），见 $OUT/notary-log.json"
   fi
 }
 
-if [ -n "$PROFILE" ]; then
+if [ ${#NOTARY_AUTH[@]} -gt 0 ]; then
   step "公证 App"
   ditto -c -k --keepParent "$APP" "$OUT/Mulee.zip"
   notarize "$OUT/Mulee.zip"
   xcrun stapler staple "$APP"
   rm -f "$OUT/Mulee.zip"
 else
-  echo "未设置 MULEE_NOTARY_PROFILE，跳过公证"
+  echo "未设置公证凭据（MULEE_NOTARY_PROFILE 或 MULEE_NOTARY_KEY），跳过公证"
 fi
 
 step "打包 DMG"
@@ -96,7 +106,7 @@ hdiutil create -volname "Mulee $VERSION" -srcfolder "$STAGE" -fs HFS+ -format UD
 rm -rf "$STAGE"
 codesign --force --sign "$IDENTITY" --timestamp "$DMG"
 
-if [ -n "$PROFILE" ]; then
+if [ ${#NOTARY_AUTH[@]} -gt 0 ]; then
   step "公证 DMG"
   notarize "$DMG"
   xcrun stapler staple "$DMG"
