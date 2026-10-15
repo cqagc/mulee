@@ -36,6 +36,9 @@ targets:
       - name: Bundle mulee-torrentd
         script: '"$SRCROOT"/scripts/build-torrentd.sh'
         basedOnDependencyAnalysis: false
+      - name: Bundle amuled
+        script: '"$SRCROOT"/scripts/build-amuled.sh'
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cqagc.mulee
