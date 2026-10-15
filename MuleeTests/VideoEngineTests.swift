@@ -252,6 +252,7 @@ import Testing
         await engine.stop()
     }
 
+    /// ffmpeg 准备失败不拖垮视频引擎：照常启动并接收任务，只是状态提示不能合并音视频。
     @Test func missingFFmpegIsReportedOnlyAfterManagedInstallationFails() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("Mulee-video-missing-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
@@ -273,8 +274,8 @@ import Testing
         gate.release()
         try await waitUntil { model.engineStates[.video] == .missingFFmpeg }
 
-        #expect(model.tasks.first?.status == .failed)
-        #expect(model.tasks.first?.errorMessage?.contains("ffmpeg 下载失败") == true)
+        try await waitUntil { model.tasks.first?.engineTaskID != nil }
+        #expect(model.tasks.first?.errorMessage?.contains("ffmpeg") != true)
         await coordinator.stop()
     }
 

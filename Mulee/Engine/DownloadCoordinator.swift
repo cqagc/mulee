@@ -58,13 +58,8 @@ final class DownloadCoordinator {
                         engine = try await factory(videoConfiguration)
                     } else if let videoBootstrap = self.videoBootstrap {
                         engine = try await videoBootstrap.makeEngine(configuration: videoConfiguration)
+                        // 没有 ffmpeg 时引擎照常启动：单文件格式仍能下载，只是不能合并音视频。
                         self.videoFFmpegURL = await videoBootstrap.ffmpegURL
-                        if let reason = await videoBootstrap.ffmpegPreparationError {
-                            guard self.generation == token, !Task.isCancelled else { return }
-                            self.model.engineStates[.video] = .missingFFmpeg
-                            self.failWaitingVideos(reason: reason)
-                            return
-                        }
                     } else {
                         return
                     }
@@ -206,12 +201,10 @@ final class DownloadCoordinator {
                 if insertionIndex == 0 { model.selectedTaskID = task.id }
                 insertionIndex += 1
                 waitingVideoLinks[task.id] = (link, directory)
-                if case .failed(let reason) = model.engineStates[.video] {
-                    failWaitingVideos(reason: reason)
-                } else if model.engineStates[.video] == .missingFFmpeg {
-                    failWaitingVideos(reason: "视频工具未能准备好，可以稍后重新下载")
-                } else if engine(for: .video) != nil {
+                if engine(for: .video) != nil {
                     await submitWaitingVideos()
+                } else if case .failed(let reason) = model.engineStates[.video] {
+                    failWaitingVideos(reason: reason)
                 }
                 continue
             }
