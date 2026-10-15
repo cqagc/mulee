@@ -49,6 +49,9 @@ struct Ed2kConfiguration: Sendable {
                 "MaxDownload": String(try Self.limitInKiB(options.downloadLimit)),
                 "MaxUpload": String(try Self.limitInKiB(settings.uploadLimit)),
                 "ShareHiddenFiles": "0", "AutoRescanSharedDirs": "0",
+                "ExcludeSharePatterns": settings.shareCompletedFiles
+                    ? ".DS_Store|._*|.Spotlight-V100|.Trashes|.fseventsd|.DocumentRevisions-V100|.TemporaryItems|.apdisk|Thumbs.db|ehthumbs.db|desktop.ini|.directory" : "*",
+                "ExcludeSharePatternsUseRegex": "0",
                 "Ed2kServersUrl": Self.serverListURL, "KadNodesUrl": Self.kadNodesURL
             ],
             "ExternalConnect": [
@@ -58,7 +61,8 @@ struct Ed2kConfiguration: Sendable {
                 "UPnPECEnabled": "0", "TransmitOnlyUploadingClients": "0"
             ],
             "Obfuscation": [
-                "IsClientCryptLayerSupported": "1", "IsCryptLayerRequested": "1",
+                "IsClientCryptLayerSupported": settings.obfuscation ? "1" : "0",
+                "IsCryptLayerRequested": settings.obfuscation ? "1" : "0",
                 "IsClientCryptLayerRequired": "0"
             ],
             "WebServer": ["Enabled": "0"], "AmuleApi": ["Enabled": "0"],

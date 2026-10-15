@@ -105,6 +105,7 @@ final class DownloadCoordinator {
                     started.insert(kind)
                     model.engineStates[kind] = .running
                     if kind == .bittorrent { model.bitTorrent?.start() }
+                    if kind == .ed2k { model.ed2k?.start() }
                 }
             }
         }
@@ -136,6 +137,7 @@ final class DownloadCoordinator {
     func stop() async {
         generation = nil
         model.bitTorrent?.stop()
+        model.ed2k?.stop()
         waitingVideoLinks.removeAll()
         pollingTask?.cancel()
         pollingTask = nil
@@ -263,7 +265,7 @@ final class DownloadCoordinator {
         guard let index = model.tasks.firstIndex(where: { $0.id == id }) else { return }
         let task = model.tasks[index]
         waitingVideoLinks[id] = nil
-        if (task.status == .completed && task.kind != .bittorrent) || task.engineTaskID == nil {
+        if (task.status == .completed && ![.bittorrent, .ed2k].contains(task.kind)) || task.engineTaskID == nil {
             excludeFromSnapshots(task)
             model.removeRecord(id)
             return

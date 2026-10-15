@@ -122,8 +122,8 @@ import Testing
             p2pRoutedThroughProxy: false, p2pExitIP: nil, portMappingSucceeded: nil
         )
 
-        #expect(EngineStatusPresentation.ed2k(network.ed2kID) == "未启用")
-        #expect(EngineStatusPresentation.kad(network.kad) == "未启用")
+        #expect(EngineStatusPresentation.ed2k(network.ed2kID) == "未连接")
+        #expect(EngineStatusPresentation.kad(network.kad) == "未连接")
         #expect(EngineStatusPresentation.port(network.bittorrentPortReachable) == "未启用")
         #expect(EngineStatusPresentation.exit(network) == "未检测")
         #expect(EngineStatusPresentation.title(for: .running) == "HTTP 就绪")

@@ -8,6 +8,7 @@ struct NetworkStatusView: View {
     var body: some View {
         let engineState = model.engineStates[.http] ?? .unavailable
         let btState = model.engineStates[.bittorrent] ?? .unavailable
+        let ed2kState = model.engineStates[.ed2k] ?? .unavailable
         let videoState = model.engineStates[.video] ?? .unavailable
         VStack(spacing: 8) {
             Divider()
@@ -15,6 +16,13 @@ struct NetworkStatusView: View {
             NetworkStatusRow(title: "下载引擎", value: EngineStatusPresentation.title(for: engineState), isHealthy: engineState == .unavailable ? nil : engineState == .running)
             NetworkStatusRow(title: "视频引擎", value: EngineStatusPresentation.videoTitle(for: videoState), isHealthy: videoState == .unavailable ? nil : videoState == .running)
             NetworkStatusRow(title: "BT 引擎", value: EngineStatusPresentation.videoTitle(for: btState), isHealthy: btState == .unavailable ? nil : btState == .running)
+            NetworkStatusRow(title: "电驴引擎", value: EngineStatusPresentation.videoTitle(for: ed2kState), isHealthy: ed2kState == .unavailable ? nil : ed2kState == .running)
+            if let issue = model.ed2k?.issue {
+                Text(issue)
+                    .foregroundStyle(Theme.wait)
+                    .lineLimit(2)
+                    .help(issue)
+            }
             if let issue = model.bitTorrent?.issue {
                 Text(issue)
                     .foregroundStyle(Theme.wait)
