@@ -5,6 +5,8 @@
 **一个纯粹的 macOS 下载器。** HTTP、BT / 磁力、ed2k、视频，一个软件全搞定。
 开源，免费，永不加广告。
 
+Chrome / Safari 扩展可把你选择的网页下载链接交给本机 Mulee 确认，安装与权限见[浏览器扩展说明](docs/BROWSER-EXTENSION.md)。
+
 > 🚧 开发中。已经可用：
 > - **HTTP / HTTPS / FTP 下载**（aria2 引擎，多线程、断点续传、重启后自动恢复）
 > - **视频下载**（yt-dlp，已实测 Bilibili；yt-dlp 和 Deno 首次使用时自动下载并校验）。合并音视频暂时需要本机有 ffmpeg（`brew install ffmpeg`）
@@ -108,6 +110,8 @@ xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' 
 **Planned:** multi-connection HTTP/FTP, BitTorrent and magnet links, native ed2k, `thunder://` link decoding, video downloads powered by yt-dlp (YouTube and Bilibili first), and auto-extraction with password rules and filename encoding repair. Native Swift UI for Apple Silicon, a menu bar item, browser extensions, default handler for magnet / ed2k / thunder / .torrent, and sleep prevention while downloading.
 
 **Not planned:** ads, built-in resource search, Xunlei's P2SP acceleration network, Windows or Linux builds.
+
+Chrome and Safari extensions send selected download links to Mulee on this Mac for confirmation; see the [browser extension guide](docs/BROWSER-EXTENSION.md) for installation and permissions.
 
 Licensed under [GPL-3.0](LICENSE). Please only download content you have the right to access.
 

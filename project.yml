@@ -21,8 +21,11 @@ targets:
     platform: macOS
     sources:
       - path: Mulee
+      - path: MuleeSafariExtension/BrowserExtensionRequest.swift
     dependencies:
       - package: MuleeCore
+      - target: MuleeSafariExtension
+        embed: true
     info:
       path: Mulee/Resources/Info.plist
       properties:
@@ -46,6 +49,9 @@ targets:
         LSApplicationCategoryType: public.app-category.utilities
         NSHumanReadableCopyright: "© 2026 CQAGC. GPL-3.0."
     postBuildScripts:
+      - name: Bundle Chrome extension
+        script: '"$SRCROOT"/scripts/package-extensions.sh --chrome'
+        basedOnDependencyAnalysis: false
       - name: Bundle aria2
         script: '"$SRCROOT"/scripts/build-aria2.sh'
         basedOnDependencyAnalysis: false
@@ -68,6 +74,39 @@ targets:
         SWIFT_STRICT_CONCURRENCY: complete
         ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
         # 引擎脚本在 build/ 缓存中编译子模块源码，并打包签名辅助进程
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+  MuleeSafariExtension:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: MuleeSafariExtension
+        excludes: [Info.plist]
+      - path: Mulee/App/OpenURLRequest.swift
+    dependencies:
+      - package: MuleeCore
+    info:
+      path: MuleeSafariExtension/Info.plist
+      properties:
+        CFBundleDisplayName: Mulee
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.Safari.web-extension
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SafariWebExtensionHandler
+    preBuildScripts:
+      - name: Bundle Safari extension resources
+        script: '"$SRCROOT"/scripts/package-extensions.sh --safari'
+        basedOnDependencyAnalysis: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cqagc.mulee.safari-extension
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_APP_SANDBOX: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_STRICT_CONCURRENCY: complete
         ENABLE_USER_SCRIPT_SANDBOXING: NO
   MuleeTests:
     type: bundle.unit-test

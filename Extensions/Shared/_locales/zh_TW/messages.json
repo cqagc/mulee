@@ -1,0 +1,77 @@
+{
+    "name": {
+        "message": "Mulee 瀏覽器擴充功能"
+    },
+    "description": {
+        "message": "將你點選的下載連結交給本機 Mulee，確認後開始下載。"
+    },
+    "downloadLink": {
+        "message": "使用 Mulee 下載"
+    },
+    "downloadSelection": {
+        "message": "使用 Mulee 下載選取的連結"
+    },
+    "chooseLinks": {
+        "message": "選擇要交給 Mulee 的連結。"
+    },
+    "pageLinks": {
+        "message": "頁面中的下載連結"
+    },
+    "empty": {
+        "message": "此頁面尚未識別到可下載連結。也可以在連結上按右鍵，使用 Mulee 下載。"
+    },
+    "send": {
+        "message": "傳送至 Mulee"
+    },
+    "options": {
+        "message": "下載接管設定"
+    },
+    "takeover": {
+        "message": "接管瀏覽器下載"
+    },
+    "takeoverHint": {
+        "message": "預設關閉。依下列副檔名取消瀏覽器下載並交給 Mulee 確認。需要登入 cookie 的下載可能失敗，失敗時可暫時關閉接管；不讀取或傳遞 cookie。"
+    },
+    "takeoverUnavailable": {
+        "message": "此瀏覽器未提供下載接管 API。請使用右鍵選單或手動選取連結傳送至 Mulee。"
+    },
+    "extensions": {
+        "message": "接管的副檔名（以空格或逗號分隔）"
+    },
+    "save": {
+        "message": "儲存副檔名"
+    },
+    "saved": {
+        "message": "副檔名已儲存。"
+    },
+    "confirmHint": {
+        "message": "連結將交給本機 Mulee，在新增下載面板確認後才開始。"
+    },
+    "sent": {
+        "message": "已交給 Mulee；請在 Mulee 中確認。"
+    },
+    "sendFailed": {
+        "message": "未能交給 Mulee。請確認已安裝並開啟 Mulee，或暫時關閉下載接管後重試。"
+    },
+    "invalidLinks": {
+        "message": "沒有有效的遠端下載連結。"
+    },
+    "tooLarge": {
+        "message": "單條連結或選取文字超過 1 MiB，請縮小選取範圍後重試。"
+    },
+    "restrictedPage": {
+        "message": "此頁面不允許擴充功能讀取，請在一般網頁使用。"
+    },
+    "permissionDenied": {
+        "message": "未授予下載權限，接管保持關閉。"
+    },
+    "externalPrompt": {
+        "message": "請在瀏覽器提示中選擇「開啟 Mulee」，可勾選「一律允許」。返回瀏覽器後此暫存分頁會關閉；取消時可手動關閉。"
+    },
+    "openMulee": {
+        "message": "開啟 Mulee"
+    },
+    "closeTab": {
+        "message": "關閉此分頁"
+    }
+}

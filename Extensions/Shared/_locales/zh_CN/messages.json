@@ -1,0 +1,77 @@
+{
+    "name": {
+        "message": "Mulee 浏览器扩展"
+    },
+    "description": {
+        "message": "将你点选的下载链接交给本机 Mulee，确认后开始下载。"
+    },
+    "downloadLink": {
+        "message": "用 Mulee 下载"
+    },
+    "downloadSelection": {
+        "message": "用 Mulee 下载选中的链接"
+    },
+    "chooseLinks": {
+        "message": "选择要交给 Mulee 的链接。"
+    },
+    "pageLinks": {
+        "message": "页面中的下载链接"
+    },
+    "empty": {
+        "message": "这个页面暂未识别到可下载链接。可在链接上点右键，用 Mulee 下载。"
+    },
+    "send": {
+        "message": "发送到 Mulee"
+    },
+    "options": {
+        "message": "下载接管设置"
+    },
+    "takeover": {
+        "message": "接管浏览器下载"
+    },
+    "takeoverHint": {
+        "message": "默认关闭。按以下扩展名取消浏览器下载并交给 Mulee 确认。需要登录 cookie 的下载可能失败，失败时可临时关闭接管；不读取或传递 cookie。"
+    },
+    "takeoverUnavailable": {
+        "message": "此浏览器未提供下载接管 API。请使用右键菜单或手动选择链接发送到 Mulee。"
+    },
+    "extensions": {
+        "message": "接管的文件扩展名（空格或逗号分隔）"
+    },
+    "save": {
+        "message": "保存扩展名"
+    },
+    "saved": {
+        "message": "扩展名已保存。"
+    },
+    "confirmHint": {
+        "message": "链接会交给本机 Mulee，在新建下载面板确认后才开始。"
+    },
+    "sent": {
+        "message": "已交给 Mulee；请在 Mulee 中确认。"
+    },
+    "sendFailed": {
+        "message": "未能交给 Mulee。请确认已安装并打开 Mulee，或临时关闭下载接管后重试。"
+    },
+    "invalidLinks": {
+        "message": "没有有效的远程下载链接。"
+    },
+    "tooLarge": {
+        "message": "单条链接或选中文字超过 1 MiB，请缩小选择范围后重试。"
+    },
+    "restrictedPage": {
+        "message": "此页面不允许扩展读取，请在普通网页使用。"
+    },
+    "permissionDenied": {
+        "message": "未授予下载权限，接管保持关闭。"
+    },
+    "externalPrompt": {
+        "message": "请在浏览器提示中选择「打开 Mulee」，可勾选「始终允许」。切回浏览器后此临时标签页会关闭；取消时可手动关闭。"
+    },
+    "openMulee": {
+        "message": "打开 Mulee"
+    },
+    "closeTab": {
+        "message": "关闭此标签页"
+    }
+}
