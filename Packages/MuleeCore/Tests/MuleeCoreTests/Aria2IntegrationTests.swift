@@ -131,10 +131,10 @@ struct Aria2IntegrationTests {
                 "max-concurrent-downloads": "3",
                 "max-connection-per-server": "16",
                 "split": "16",
-                "max-overall-download-limit": "1234567",
-                "max-overall-upload-limit": "23456"
+                "max-overall-download-limit": "1234567"
             ]
             for (key, value) in expected { #expect(globals[key] == value, "\(key) 应即时生效") }
+            #expect(globals["max-overall-upload-limit"] == nil)
             #expect(globals["disk-cache"] == "4194304")
             // Unsupported global keys can return OK while being ignored: verify by readback.
             let _: String = try await rpc.call("aria2.changeGlobalOption", [

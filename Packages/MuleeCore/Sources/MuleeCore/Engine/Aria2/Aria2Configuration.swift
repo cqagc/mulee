@@ -27,8 +27,7 @@ struct Aria2Configuration: Sendable {
             "max-concurrent-downloads": String(max(1, options.maxConcurrentDownloads)),
             "max-connection-per-server": String(connections),
             "split": String(connections),
-            "max-overall-download-limit": String(max(0, options.downloadLimit)),
-            "max-overall-upload-limit": String(max(0, options.uploadLimit))
+            "max-overall-download-limit": String(max(0, options.downloadLimit))
         ]
     }
 
@@ -50,9 +49,6 @@ struct Aria2Configuration: Sendable {
             "auto-file-renaming": "true",
             "allow-overwrite": "false",
             "check-certificate": "true",
-            "follow-torrent": "false",
-            "enable-dht": "false",
-            "bt-enable-lpd": "false",
             "console-log-level": "warn",
             "log": logURL.path,
             "log-level": "warn",

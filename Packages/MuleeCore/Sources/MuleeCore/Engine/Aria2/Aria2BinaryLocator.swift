@@ -12,8 +12,6 @@ struct Aria2BinaryLocator: Sendable {
         if let path = environment["MULEE_ARIA2C"], !path.isEmpty {
             candidates.append(URL(fileURLWithPath: path))
         }
-        candidates.append(URL(fileURLWithPath: "/opt/homebrew/bin/aria2c"))
-        candidates.append(URL(fileURLWithPath: "/usr/local/bin/aria2c"))
         guard let binary = candidates.first(where: {
             var isDirectory: ObjCBool = false
             return FileManager.default.fileExists(atPath: $0.path, isDirectory: &isDirectory)
