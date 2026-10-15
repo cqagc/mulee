@@ -10,6 +10,12 @@ struct SettingsSyncModifier: ViewModifier {
             .onChange(of: settings.preventSleep, initial: true) {
                 model.preventsSleepWhileDownloading = settings.preventSleep
             }
+            .onChange(of: settings.allowSleepWhenDone, initial: true) {
+                model.allowsSleepWhenDone = settings.allowSleepWhenDone
+            }
+            .onChange(of: settings.watchClipboard) {
+                model.settingsRuntime?.refresh()
+            }
             .onChange(of: EngineOptionsMapper.options(from: settings)) {
                 model.coordinator?.apply(options: EngineOptionsMapper.options(from: settings))
             }

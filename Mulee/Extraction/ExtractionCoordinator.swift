@@ -88,28 +88,14 @@ final class ExtractionCoordinator {
                 ).matchedRule?.pattern
             }
             model.flushTaskHistory()
-            let extractionRules = await rulesIncludingPagePassword(for: job)
-            var outcome = await extractor.extract(
+            var extractionOptions = job.options
+            extractionOptions.pagePasswords = job.taskIDs.compactMap { model.pagePasswords[$0] }
+            let outcome = await extractor.extract(
                 archive: job.archive, destination: job.destination,
-                rules: extractionRules, sourceURL: job.sourceURL, options: job.options
+                rules: job.rules, sourceURL: job.sourceURL, options: extractionOptions
             ) { [weak self] value in
                 Task { @MainActor [weak self] in
                     self?.reportProgress(value, jobID: job.id)
-                }
-            }
-            if extractionRules != job.rules {
-                if outcome.failure == .wrongPasswords, !Task.isCancelled {
-                    outcome = await extractor.extract(
-                        archive: job.archive, destination: job.destination,
-                        rules: job.rules, sourceURL: job.sourceURL, options: job.options
-                    ) { [weak self] value in
-                        Task { @MainActor [weak self] in self?.reportProgress(value, jobID: job.id) }
-                    }
-                }
-                do {
-                    try await model.extractionPasswords.setPassword(nil, for: "page-password-" + job.id.uuidString)
-                } catch {
-                    model.unzipRuleIssue = String(localized: "无法移除临时解压密码：\(error.localizedDescription)")
                 }
             }
             finish(outcome, job: job)
@@ -188,21 +174,6 @@ final class ExtractionCoordinator {
         return nil
     }
 
-    private func rulesIncludingPagePassword(for job: ExtractionJob) async -> [UnzipRule] {
-        guard let password = job.taskIDs.compactMap({ model.pagePasswords[$0] }).first else { return job.rules }
-        let key = "page-password-" + job.id.uuidString
-        do {
-            try await model.extractionPasswords.setPassword(password, for: key)
-            return [UnzipRule(
-                matchKind: .filenamePrefix, pattern: "*", keychainItemID: key,
-                maskedLength: password.count, hitCount: 0
-            )]
-        } catch {
-            model.unzipRuleIssue = String(localized: "无法临时保存页面解压密码：\(error.localizedDescription)")
-            return job.rules
-        }
-    }
-
     private func options(volumeNames: [String]?) -> ExtractionOptions {
         let encoding: ArchiveFilenameEncoding = switch settings.filenameEncoding {
         case .auto: .automatic
@@ -216,6 +187,7 @@ final class ExtractionCoordinator {
         case .delete: .delete
         }
         return ExtractionOptions(
+            readArchiveComment: settings.readArchiveComment,
             encoding: encoding, postAction: action, recursivelyExtract: settings.extractNested,
             expectedVolumeNames: volumeNames
         )

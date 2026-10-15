@@ -49,9 +49,7 @@ struct OpenURLRequest {
     }
 
     static func pagePassword(in text: String, enabled: Bool) -> String? {
-        guard enabled,
-              let match = text.firstMatch(of: #/(?i)(?:解压密码|密码|password)\s*[:：]\s*([^\s，。；;]+)/#) else { return nil }
-        return String(match.1)
+        enabled ? PasswordTextParser.password(in: text) : nil
     }
 
     static func isRemote(_ link: ParsedLink) -> Bool {

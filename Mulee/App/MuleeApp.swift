@@ -38,6 +38,7 @@ struct MuleeApp: App {
             MainWindowView()
                 .frame(minWidth: Theme.mainWindowMinWidth, minHeight: Theme.mainWindowMinHeight)
                 .debugLaunchOptions()
+                .background(MainWindowRegistration(delegate: appDelegate))
                 .onOpenURL { url in
                     appDelegate.openURLRouter?.open([url])
                 }
@@ -47,6 +48,8 @@ struct MuleeApp: App {
                 .environment(settings)
         }
         .handlesExternalEvents(matching: ["*"])
+        .defaultLaunchBehavior(.suppressed)
+        .restorationBehavior(.disabled)
         .defaultSize(width: 1240, height: 780)
         .keyboardShortcut("n", modifiers: [.command, .shift])
         .commands {
@@ -60,6 +63,7 @@ struct MuleeApp: App {
                 .environment(settings)
         } label: {
             MenuBarLabel()
+                .modifier(MainWindowPresenter())
                 .modifier(SettingsSyncModifier())
                 .environment(model)
                 .environment(settings)

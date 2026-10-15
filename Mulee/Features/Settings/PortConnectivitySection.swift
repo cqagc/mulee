@@ -59,8 +59,7 @@ struct PortConnectivitySection: View {
     }
 
     private func copyInstructions() {
-        NSPasteboard.general.clearContents()
-        copied = NSPasteboard.general.setString(instructions, forType: .string)
+        copied = SystemClipboard.write(instructions)
     }
 }
 

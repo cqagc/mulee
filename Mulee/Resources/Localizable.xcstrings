@@ -9483,6 +9483,358 @@
           }
         }
       }
+    },
+    "工作日按以下时段限速；支持跨午夜，开始与结束相同时不生效": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作日按以下时段限速；支持跨午夜，开始与结束相同时不生效"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply these limits on weekdays; overnight periods are supported. Equal start and end times disable the period."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作日依下列時段限制速度；支援跨午夜，開始與結束相同時不生效"
+          }
+        }
+      }
+    },
+    "开始时间": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始时间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start time"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始時間"
+          }
+        }
+      }
+    },
+    "结束时间": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结束时间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End time"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結束時間"
+          }
+        }
+      }
+    },
+    "时段内下载限速": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时段内下载限速"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled download limit"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時段內下載速度限制"
+          }
+        }
+      }
+    },
+    "时段内上传限速": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时段内上传限速"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled upload limit"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時段內上傳速度限制"
+          }
+        }
+      }
+    },
+    "计划限速中": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "计划限速中"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled limits active"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排程速度限制中"
+          }
+        }
+      }
+    },
+    "开启时，做种和电驴等待来源不阻止睡眠；关闭时，这些任务也会阻止睡眠。仅在「下载时阻止睡眠」开启时生效。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启时，做种和电驴等待来源不阻止睡眠；关闭时，这些任务也会阻止睡眠。仅在「下载时阻止睡眠」开启时生效。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When enabled, seeding and eD2k tasks waiting for sources allow sleep. When disabled, they also prevent sleep. Applies only when “Prevent sleep while downloading” is enabled."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟時，做種和電驢等待來源不防止睡眠；關閉時，這些任務也會防止睡眠。僅在「下載時防止睡眠」開啟時生效。"
+          }
+        }
+      }
+    },
+    "允许睡眠": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许睡眠"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sleep allowed"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允許睡眠"
+          }
+        }
+      }
+    },
+    "下载、做种或等待来源时阻止睡眠": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载、做种或等待来源时阻止睡眠"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prevent sleep while downloading, seeding, or waiting for sources"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載、做種或等待來源時防止睡眠"
+          }
+        }
+      }
+    },
+    "请在系统设置的「登录项」中批准 Mulee 开机启动。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在系统设置的「登录项」中批准 Mulee 开机启动。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Approve Mulee in System Settings > Login Items to launch at login."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請在系統設定的「登入項目」中核准 Mulee 登入時啟動。"
+          }
+        }
+      }
+    },
+    "打开登录项": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开登录项"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Login Items"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開登入項目"
+          }
+        }
+      }
+    },
+    "无法更新开机启动：%@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法更新开机启动：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to update launch at login: %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法更新登入時啟動：%@"
+          }
+        }
+      }
+    },
+    "还有任务正在运行，确定退出 Mulee？": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还有任务正在运行，确定退出 Mulee？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasks are still running. Quit Mulee?"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還有任務正在執行，確定結束 Mulee？"
+          }
+        }
+      }
+    },
+    "退出会暂停下载和解压，下载进度会保留。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出会暂停下载和解压，下载进度会保留。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitting stops downloads and extraction. Download progress is saved."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結束會暫停下載和解壓縮，下載進度會保留。"
+          }
+        }
+      }
+    },
+    "退出": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結束"
+          }
+        }
+      }
+    },
+    "支持 ZIP 和 RAR5；当前解压工具不提供 7z 和旧版 RAR 的注释": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持 ZIP 和 RAR5；当前解压工具不提供 7z 和旧版 RAR 的注释"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supports ZIP and RAR5. The current extraction tool does not expose comments for 7z or older RAR archives."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支援 ZIP 和 RAR5；目前解壓縮工具不提供 7z 和舊版 RAR 的註解"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

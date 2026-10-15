@@ -70,6 +70,10 @@ final class SettingsModel {
         static let downloadLimit = "network.downloadLimitMBps"
         static let uploadLimit = "network.uploadLimitMBps"
         static let scheduledLimit = "network.scheduledLimit"
+        static let scheduleStart = "network.scheduleStart"
+        static let scheduleEnd = "network.scheduleEnd"
+        static let scheduledDownloadLimit = "network.scheduledDownloadLimitMBps"
+        static let scheduledUploadLimit = "network.scheduledUploadLimitMBps"
         static let diskCacheMB = "network.diskCacheMB"
         static let portMapping = "network.portMapping"
         static let seedingAction = "bt.seedingAction"
@@ -123,6 +127,10 @@ final class SettingsModel {
     var downloadLimit: Int { didSet { defaults.set(downloadLimit, forKey: Key.downloadLimit) } }
     var uploadLimit: Double { didSet { defaults.set(uploadLimit, forKey: Key.uploadLimit) } }
     var scheduledLimit: Bool { didSet { defaults.set(scheduledLimit, forKey: Key.scheduledLimit) } }
+    var scheduleStart: Date { didSet { defaults.set(scheduleStart, forKey: Key.scheduleStart) } }
+    var scheduleEnd: Date { didSet { defaults.set(scheduleEnd, forKey: Key.scheduleEnd) } }
+    var scheduledDownloadLimit: Int { didSet { defaults.set(scheduledDownloadLimit, forKey: Key.scheduledDownloadLimit) } }
+    var scheduledUploadLimit: Double { didSet { defaults.set(scheduledUploadLimit, forKey: Key.scheduledUploadLimit) } }
     var diskCacheMB: Double { didSet { defaults.set(diskCacheMB, forKey: Key.diskCacheMB) } }
     var portMapping: Bool { didSet { defaults.set(portMapping, forKey: Key.portMapping) } }
 
@@ -166,7 +174,13 @@ final class SettingsModel {
         httpThreads = Self.int(defaults, Key.httpThreads, 8)
         downloadLimit = Self.int(defaults, Key.downloadLimit, 0)
         uploadLimit = defaults.object(forKey: Key.uploadLimit) as? Double ?? 2
-        scheduledLimit = Self.bool(defaults, Key.scheduledLimit, true)
+        scheduledLimit = Self.bool(defaults, Key.scheduledLimit, false)
+        scheduleStart = defaults.object(forKey: Key.scheduleStart) as? Date
+            ?? Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date()
+        scheduleEnd = defaults.object(forKey: Key.scheduleEnd) as? Date
+            ?? Calendar.current.date(bySettingHour: 18, minute: 0, second: 0, of: Date()) ?? Date()
+        scheduledDownloadLimit = Self.int(defaults, Key.scheduledDownloadLimit, 5)
+        scheduledUploadLimit = defaults.object(forKey: Key.scheduledUploadLimit) as? Double ?? 2
         diskCacheMB = defaults.object(forKey: Key.diskCacheMB) as? Double ?? 128
         portMapping = Self.bool(defaults, Key.portMapping, true)
         seedingAction = Self.raw(defaults, Key.seedingAction, .throttle)

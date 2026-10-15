@@ -4,4 +4,6 @@ import Foundation
 public enum UnzipPasswordSource: Sendable, Equatable {
     case keychainItem(String)
     case passwordBook
+    case pageText
+    case archiveComment
 }

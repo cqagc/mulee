@@ -23,10 +23,20 @@ struct MenuBarFooter: View {
                 networkStatus
             }
             .controlSize(.small)
-            Label("下载时阻止睡眠 · 全部完成后允许睡眠", systemImage: MuleeSymbol.preventSleep.name)
+            if model.isScheduledLimitActive {
+                Text("计划限速中").font(.caption).foregroundStyle(.secondary)
+            }
+            Label(sleepDescription, systemImage: MuleeSymbol.preventSleep.name)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private var sleepDescription: String {
+        guard model.preventsSleepWhileDownloading else { return String(localized: "允许睡眠") }
+        return model.allowsSleepWhenDone
+            ? String(localized: "下载时阻止睡眠 · 全部完成后允许睡眠")
+            : String(localized: "下载、做种或等待来源时阻止睡眠")
     }
 
     @ViewBuilder

@@ -4,8 +4,7 @@ import MuleeCore
 /// 列表菜单和详情栏共用的系统操作。
 enum TaskActions {
     static func copyLink(_ task: DownloadTask) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(task.sourceLink, forType: .string)
+        _ = SystemClipboard.write(task.sourceLink)
     }
 
     static func localURL(for task: DownloadTask) -> URL {

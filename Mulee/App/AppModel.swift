@@ -18,6 +18,12 @@ final class AppModel {
     var preventsSleepWhileDownloading: Bool {
         didSet { updateSleepPrevention() }
     }
+    var allowsSleepWhenDone = true {
+        didSet { updateSleepPrevention() }
+    }
+    var isScheduledLimitActive = false
+    var mainWindowRequest = 0
+    @ObservationIgnored weak var settingsRuntime: SettingsRuntime?
     var bitTorrent: BitTorrentController?
     var ed2k: Ed2kController?
     var networkStatus: NetworkStatus
@@ -87,13 +93,14 @@ final class AppModel {
         tasks.reduce(0) { $0 + $1.uploadRate }
     }
 
-    /// 是否有任务在传输数据（决定是否阻止系统睡眠）。
+    /// 是否有任务在传输或后处理；睡眠判定还会结合完成后允许睡眠的偏好。
     var hasActiveTransfers: Bool {
         tasks.contains { [.downloading, .seeding, .extracting, .postProcessing].contains($0.status) }
     }
 
     /// 打开「新建下载」面板，可选预填文本。
     func showNewTask(prefill text: String = "") {
+        mainWindowRequest += 1
         if !text.isEmpty {
             let separator = pendingNewTaskText.isEmpty || pendingNewTaskText.hasSuffix("\n") ? "" : "\n"
             pendingNewTaskText += separator + text
@@ -213,7 +220,15 @@ final class AppModel {
     }
 
     private func updateSleepPrevention() {
-        sleepPreventer.update(isActive: preventsSleepWhileDownloading && hasActiveTransfers)
+        let active = tasks.contains { task in
+            switch task.status {
+            case .downloading, .queued, .extracting, .postProcessing: true
+            case .seeding: !allowsSleepWhenDone
+            case .waitingForSources: task.kind != .ed2k || !allowsSleepWhenDone
+            default: false
+            }
+        }
+        sleepPreventer.update(isActive: preventsSleepWhileDownloading && active)
     }
 
     private func pause(at index: Int) {
