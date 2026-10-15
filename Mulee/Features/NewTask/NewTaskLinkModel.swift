@@ -7,17 +7,38 @@ import Observation
 final class NewTaskLinkModel: Identifiable {
     let link: ParsedLink
     var files: [TorrentFile]?
+    private(set) var torrentName: String?
+    private(set) var metadataError: String?
     var videoQuality = NewTaskVideoQuality.compatible1080p
     var danmakuToASS = true
     var ccSubtitles = true
 
     var id: ParsedLink { link }
 
-    init(link: ParsedLink, metadataProvider: any TorrentMetadataProvider) {
+    init(link: ParsedLink, metadataProvider: (any TorrentMetadataProvider)? = nil) {
         self.link = link
         if case .magnet(let infoHash, _, _) = link {
-            files = metadataProvider.files(for: infoHash)
+            files = metadataProvider?.files(for: infoHash)
         }
+        if case .torrentFile(let url, _) = link, url.isFileURL {
+            do {
+                let info = try TorrentFileInfo.parse(data: Data(contentsOf: url))
+                torrentName = info.name
+                files = info.files.map { TorrentFile(name: $0.path, size: $0.size) }
+            } catch {
+                metadataError = "无法读取种子文件，请重新选择完整的 .torrent 文件"
+            }
+        }
+    }
+
+    var filePriorities: [Int]? { files?.map { $0.isSelected ? 4 : 0 } }
+
+    var canStart: Bool {
+        metadataError == nil && (files == nil || files?.contains(where: \.isSelected) == true)
+    }
+
+    func canDeselect(_ file: TorrentFile) -> Bool {
+        !file.isSelected || (files?.filter(\.isSelected).count ?? 0) > 1
     }
 
     var selectedSize: Int64? {
@@ -42,7 +63,7 @@ final class NewTaskLinkModel: Identifiable {
         case .magnet(let infoHash, let displayName, _):
             displayName ?? infoHash
         case .torrentFile(let url, _):
-            url.lastPathComponent
+            torrentName ?? url.lastPathComponent
         case .ed2k(let fileName, _, _, _):
             fileName
         case .http(let url, _, _):
@@ -57,7 +78,13 @@ final class NewTaskLinkModel: Identifiable {
         case .magnet:
             "磁力链接 · 正在获取元数据"
         case .torrentFile:
-            "BT 种子文件"
+            if let metadataError {
+                metadataError
+            } else if let files {
+                "BT 种子文件 · \(files.count.formatted()) 个文件"
+            } else {
+                "BT 种子文件"
+            }
         case .ed2k:
             "电驴链接 · 冷门资源可能需要长时间等待来源"
         case .http(let url, let decodedFromThunder, _):

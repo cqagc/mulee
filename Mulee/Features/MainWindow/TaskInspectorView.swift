@@ -2,11 +2,12 @@ import MuleeCore
 import SwiftUI
 
 struct TaskInspectorView: View {
+    @Environment(SettingsModel.self) private var settings
     let task: DownloadTask?
 
     var body: some View {
         if let task {
-            let presentation = TaskPresentation(task: task)
+            let presentation = TaskPresentation(task: task, seedingAction: settings.seedingAction)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -27,6 +28,9 @@ struct TaskInspectorView: View {
                         SourceHistoryChart(sightings: info.dailySourceSightings)
                     } else {
                         TaskInformationCard(presentation: presentation)
+                    }
+                    if task.kind == .bittorrent {
+                        BitTorrentInspectorView(task: task)
                     }
                     PostDownloadCard(presentation: presentation)
                 }

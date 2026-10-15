@@ -3,6 +3,29 @@ import Testing
 @testable import MuleeCore
 
 @Suite struct TorrentEngineTests {
+    @Test("按任务读取做种者与私有标记，缺失任务返回 not_found")
+    func taskInfo() async throws {
+        let fake = TorrentFakeTransport()
+        try await TorrentFixtures.withEngine(fake: fake) { engine, root in
+            try await engine.start(options: EngineOptions(downloadDirectory: root))
+            await fake.setResult("list", .object(["torrents": .array([TorrentFixtures.task([
+                "is_private": .bool(true)
+            ])])]))
+            let info = try await engine.taskInfo(TorrentFixtures.id)
+            #expect(info.numPeers == 3)
+            #expect(info.numSeeds == 2)
+            #expect(info.listPeers == 10)
+            #expect(info.listSeeds == 5)
+            #expect(info.ratio == 0.5)
+            #expect(info.isPrivate)
+            #expect(info.hasMetadata)
+            #expect(info.uploadLimit == 0)
+            await #expect(throws: TorrentErrorDescriptions.error(for: "not_found")) {
+                try await engine.taskInfo("missing")
+            }
+        }
+    }
+
     @Test("ready 前不发请求，ready 超时回收进程")
     func readyTimeout() async throws {
         let fake = TorrentFakeTransport(sendsReady: false)

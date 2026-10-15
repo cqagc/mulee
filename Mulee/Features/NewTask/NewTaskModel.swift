@@ -13,14 +13,14 @@ final class NewTaskModel {
     var autoExtract: Bool
 
     private let parser: (String) -> [ParsedLink]
-    private let metadataProvider: any TorrentMetadataProvider
+    private let metadataProvider: (any TorrentMetadataProvider)?
 
     init(
         inputText: String = "",
         saveDirectory: URL = URL.homeDirectory.appending(path: "Downloads/Mulee", directoryHint: .isDirectory),
         autoExtract: Bool = true,
         parser: @escaping (String) -> [ParsedLink] = LinkParser.parse,
-        metadataProvider: any TorrentMetadataProvider = ExampleTorrentMetadataProvider()
+        metadataProvider: (any TorrentMetadataProvider)? = nil
     ) {
         self.inputText = inputText
         self.saveDirectory = saveDirectory
@@ -32,7 +32,12 @@ final class NewTaskModel {
 
     var parsedLinks: [ParsedLink] { links.map(\.link) }
     var linkCount: Int { links.count }
-    var canStartDownload: Bool { !links.isEmpty }
+    var canStartDownload: Bool { !links.isEmpty && links.allSatisfy(\.canStart) }
+    var filePriorities: [ParsedLink: [Int]] {
+        Dictionary(uniqueKeysWithValues: links.compactMap { item in
+            item.filePriorities.map { (item.link, $0) }
+        })
+    }
     var hasVideoLinks: Bool { links.contains { $0.link.kind == .video } }
 
     var saveDirectoryLabel: String {
@@ -62,7 +67,22 @@ final class NewTaskModel {
     func createTasks(in model: AppModel) {
         guard canStartDownload else { return }
         // TODO: 把逐任务画质和字幕选项传给视频引擎；当前使用全局设置。
-        model.addTasks(from: parsedLinks, autoExtract: autoExtract, directory: saveDirectory)
+        model.addTasks(
+            from: parsedLinks, autoExtract: autoExtract, directory: saveDirectory, filePriorities: filePriorities
+        )
+    }
+
+    @discardableResult
+    func appendTorrentFiles(_ urls: [URL]) -> Bool {
+        let text = Self.torrentFileText(urls)
+        guard !text.isEmpty else { return false }
+        mergePrefillText(text)
+        return true
+    }
+
+    static func torrentFileText(_ urls: [URL]) -> String {
+        urls.filter { $0.isFileURL && $0.pathExtension.lowercased() == "torrent" }
+            .map(\.absoluteString).joined(separator: "\n")
     }
 
     private func parseInput() {

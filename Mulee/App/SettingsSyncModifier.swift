@@ -13,6 +13,9 @@ struct SettingsSyncModifier: ViewModifier {
             .onChange(of: EngineOptionsMapper.options(from: settings)) {
                 model.coordinator?.apply(options: EngineOptionsMapper.options(from: settings))
             }
+            .onChange(of: BitTorrentEngineConfiguration.configuration(from: settings)) {
+                model.bitTorrent?.configure(BitTorrentEngineConfiguration.configuration(from: settings))
+            }
             .onChange(of: VideoEngineConfiguration.configuration(from: settings)) {
                 model.coordinator?.configureVideo(VideoEngineConfiguration.configuration(from: settings))
             }

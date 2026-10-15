@@ -93,7 +93,7 @@ final class DownloadCoordinator {
                         try await engine.start(options: options)
                         return (engine.kind, nil)
                     } catch {
-                        return (engine.kind, EngineStatusPresentation.errorMessage(error))
+                        return (engine.kind, EngineStatusPresentation.errorMessage(error, kind: engine.kind))
                     }
                 }
             }
@@ -104,6 +104,7 @@ final class DownloadCoordinator {
                 } else {
                     started.insert(kind)
                     model.engineStates[kind] = .running
+                    if kind == .bittorrent { model.bitTorrent?.start() }
                 }
             }
         }
@@ -134,6 +135,7 @@ final class DownloadCoordinator {
 
     func stop() async {
         generation = nil
+        model.bitTorrent?.stop()
         waitingVideoLinks.removeAll()
         pollingTask?.cancel()
         pollingTask = nil
@@ -185,10 +187,14 @@ final class DownloadCoordinator {
         if let selected = model.selectedTaskID, !model.tasks.contains(where: { $0.id == selected }) {
             model.selectedTaskID = nil
         }
+        model.bitTorrent?.observePeers(in: model.tasks)
         model.downloadRateHistory = EngineSnapshotMerger.appendingRate(model.totalDownloadRate, to: model.downloadRateHistory)
     }
 
-    func add(links: [ParsedLink], autoExtract: Bool, directory: URL? = nil) async {
+    func add(
+        links: [ParsedLink], autoExtract: Bool, directory: URL? = nil,
+        filePriorities: [ParsedLink: [Int]] = [:]
+    ) async {
         var insertionIndex = 0
         for link in links {
             var task = DownloadTask(link: link, autoExtract: autoExtract)
@@ -212,7 +218,13 @@ final class DownloadCoordinator {
             if let engine = engine(for: link.kind) {
                 pendingAdds[link.kind, default: 0] += 1
                 do {
-                    task.engineTaskID = try await engine.add(link: link, directory: directory)
+                    if let torrent = engine as? TorrentEngine {
+                        task.engineTaskID = try await torrent.add(
+                            link: link, directory: directory, filePriorities: filePriorities[link]
+                        )
+                    } else {
+                        task.engineTaskID = try await engine.add(link: link, directory: directory)
+                    }
                     task.status = .queued
                 } catch {
                     task.status = .failed
@@ -247,11 +259,11 @@ final class DownloadCoordinator {
         await perform(id, action: .resume)
     }
 
-    func remove(_ id: DownloadTask.ID) async {
+    func remove(_ id: DownloadTask.ID, deleteFiles: Bool = false) async {
         guard let index = model.tasks.firstIndex(where: { $0.id == id }) else { return }
         let task = model.tasks[index]
         waitingVideoLinks[id] = nil
-        if task.status == .completed || task.engineTaskID == nil {
+        if (task.status == .completed && task.kind != .bittorrent) || task.engineTaskID == nil {
             excludeFromSnapshots(task)
             model.removeRecord(id)
             return
@@ -266,7 +278,7 @@ final class DownloadCoordinator {
         revisions[task.kind, default: 0] += 1
         defer { revisions[task.kind, default: 0] += 1 }
         do {
-            try await engine.remove(engineTaskID, deleteFiles: false)
+            try await engine.remove(engineTaskID, deleteFiles: deleteFiles)
         } catch {
             excludedTaskIDs[task.kind]?.remove(engineTaskID)
             var restored = task
