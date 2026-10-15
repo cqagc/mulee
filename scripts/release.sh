@@ -42,7 +42,7 @@ xcodegen generate >/dev/null
 xcodebuild -project Mulee.xcodeproj -scheme Mulee -configuration Release \
   -destination 'generic/platform=macOS' -derivedDataPath "$DERIVED" \
   CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$IDENTITY" DEVELOPMENT_TEAM="$TEAM" \
-  OTHER_CODE_SIGN_FLAGS=--timestamp \
+  OTHER_CODE_SIGN_FLAGS=--timestamp CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
   build > "$OUT/xcodebuild.log" 2>&1 || { tail -30 "$OUT/xcodebuild.log"; error "构建失败，见 $OUT/xcodebuild.log"; }
 APP="$DERIVED/Build/Products/Release/Mulee.app"
 [ -d "$APP" ] || error "找不到 $APP"
@@ -55,6 +55,7 @@ while IFS= read -r -d '' item; do
   grep -q "Authority=Developer ID Application" <<<"$info" || error "$item 不是 Developer ID 签名"
   grep -q "Timestamp=" <<<"$info" || error "$item 没有安全时间戳"
   grep -q "flags=.*runtime" <<<"$info" || error "$item 没有启用硬化运行时"
+  ! codesign -d --entitlements - "$item" 2>/dev/null | grep -q get-task-allow || error "$item 带有调试权限 get-task-allow，公证会被拒"
 done < <(find "$APP" \( -path '*/Contents/MacOS/*' -o -path '*/Contents/Helpers/*' -o -name '*.appex' \) -type f -perm -u+x -print0;
          find "$APP/Contents/PlugIns" -maxdepth 1 -name '*.appex' -print0 2>/dev/null)
 echo "全部部件签名合格"
