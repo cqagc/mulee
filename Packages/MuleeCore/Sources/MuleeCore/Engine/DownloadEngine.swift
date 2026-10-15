@@ -17,6 +17,8 @@ public protocol DownloadEngine: Actor {
 
     /// 添加下载，返回引擎任务标识。`directory` 为 nil 时用全局保存目录。
     func add(link: ParsedLink, directory: URL?) async throws -> String
+    /// 添加后保持暂停，由 App 的统一队列放行。
+    func addQueued(link: ParsedLink, directory: URL?) async throws -> String
     func pause(_ engineTaskID: String) async throws
     func resume(_ engineTaskID: String) async throws
     /// 删除任务；`deleteFiles` 为 true 时同时删除已下载的文件（含未完成的临时文件）。
@@ -24,4 +26,13 @@ public protocol DownloadEngine: Actor {
 
     /// 引擎里所有任务（进行中、排队、暂停、做种、已完成、出错）的当前状态。
     func snapshots() async throws -> [EngineTaskSnapshot]
+}
+
+public extension DownloadEngine {
+    /// 不支持原子添加暂停任务的引擎，在同一次调用内立即暂停。
+    func addQueued(link: ParsedLink, directory: URL?) async throws -> String {
+        let id = try await add(link: link, directory: directory)
+        try await pause(id)
+        return id
+    }
 }

@@ -8,7 +8,8 @@ enum Ed2kEngineConfiguration {
             udpPort: UInt16(clamping: max(1, settings.ed2kUDPPort)),
             connectToServers: settings.ed2kConnectToServers,
             enableKad: settings.ed2kEnableKad,
-            uploadLimit: EngineOptionsMapper.options(from: settings).uploadLimit,
+            // 上传额度由协调器统一分配，专用设置不覆盖它。
+            uploadLimit: 0,
             shareCompletedFiles: settings.ed2kShare,
             obfuscation: settings.ed2kObfuscation
         )

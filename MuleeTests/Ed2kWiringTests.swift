@@ -58,7 +58,7 @@ import Testing
         #expect(configuration.tcpPort == 40123 && configuration.udpPort == 40124)
         #expect(!configuration.connectToServers && !configuration.enableKad)
         #expect(!configuration.shareCompletedFiles && !configuration.obfuscation)
-        #expect(configuration.uploadLimit == 500_000)
+        #expect(configuration.uploadLimit == 0)
         #expect(options.downloadLimit == 5_000_000 && options.uploadLimit == 500_000)
         #expect(options.downloadDirectory.path == settings.saveDirectory)
         #expect(Ed2kEngineConfiguration.configuration(from: restored) == configuration)

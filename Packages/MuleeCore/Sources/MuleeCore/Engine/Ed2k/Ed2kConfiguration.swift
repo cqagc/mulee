@@ -46,6 +46,9 @@ struct Ed2kConfiguration: Sendable {
                 "AddServerListFromServer": "0", "AddServerListFromClient": "0",
                 "IncomingDir": Self.universalPath(options.downloadDirectory),
                 "TempDir": Self.universalPath(temporaryDirectory),
+                // aMule 3.1.0 Preferences.cpp: uint8 units, GetFileBufferSize() = units * 15000.
+                // No EC tag exists for this preference; it takes effect at the next daemon launch.
+                "FileBufferSizePref": String(min(255, min(4, max(0, options.diskCacheMegabytes)) * 1_000_000 / 15_000)),
                 "MaxDownload": String(try Self.limitInKiB(options.downloadLimit)),
                 "MaxUpload": String(try Self.limitInKiB(settings.uploadLimit)),
                 "ShareHiddenFiles": "0", "AutoRescanSharedDirs": "0",

@@ -162,7 +162,9 @@ import Testing
         coordinator.apply(options: changed)
         try await Task.sleep(for: .milliseconds(650))
 
-        #expect(await engine.appliedOptions == [changed])
+        var parked = changed
+        parked.downloadLimit = 1
+        #expect(await engine.appliedOptions == [parked])
         await engine.failApply(with: .notRunning)
         coordinator.apply(options: options)
         try await Task.sleep(for: .milliseconds(650))

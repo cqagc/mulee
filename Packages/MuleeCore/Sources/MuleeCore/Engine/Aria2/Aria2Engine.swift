@@ -58,13 +58,24 @@ public actor Aria2Engine: DownloadEngine {
     }
 
     public func add(link: ParsedLink, directory: URL?) async throws -> String {
+        try await add(link: link, directory: directory, paused: false)
+    }
+
+    public func addQueued(link: ParsedLink, directory: URL?) async throws -> String {
+        try await add(link: link, directory: directory, paused: true)
+    }
+
+    private func add(link: ParsedLink, directory: URL?, paused: Bool) async throws -> String {
         let client = try runningClient()
         guard case .http(let url, _, _) = link,
               let scheme = url.scheme?.lowercased(), ["http", "https", "ftp"].contains(scheme) else {
             throw EngineError.unsupportedLink
         }
         var params: [Aria2RPCValue] = [.array([.string(url.absoluteString)])]
-        if let directory { params.append(.object(["dir": .string(directory.path)])) }
+        var values: [String: Aria2RPCValue] = [:]
+        if let directory { values["dir"] = .string(directory.path) }
+        if paused { values["pause"] = .string("true") }
+        if !values.isEmpty { params.append(.object(values)) }
         return try await client.call("aria2.addUri", params)
     }
 

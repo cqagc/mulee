@@ -9835,6 +9835,72 @@
           }
         }
       }
+    },
+    "BT 和电驴上传合计；电驴上传越多，别人给你排队越靠前": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combined uploads for BitTorrent and eD2k; uploading more on eD2k improves your queue position"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT 和电驴上传合计；电驴上传越多，别人给你排队越靠前"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT 與電驢上傳合計；電驢上傳越多，別人給你的佇列順位越前"
+          }
+        }
+      }
+    },
+    "所有下载合计，按各引擎实际需求分配": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combined limit for all downloads, allocated by engine demand"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有下载合计，按各引擎实际需求分配"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有下載合計，依各引擎實際需求分配"
+          }
+        }
+      }
+    },
+    "所有引擎合计；电驴等待来源和 BT 做种不占名额": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total across all engines; eD2k waiting for sources and BitTorrent seeding do not count"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有引擎合计；电驴等待来源和 BT 做种不占名额"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有引擎合計；電驢等待來源與 BT 做種不占名額"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

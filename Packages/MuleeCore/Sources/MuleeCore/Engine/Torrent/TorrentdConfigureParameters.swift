@@ -11,6 +11,7 @@ struct TorrentdConfigureParameters: Codable, Sendable {
     let encryption: TorrentEncryption
 
     init(options: EngineOptions, settings: TorrentEngineSettings) {
+        // torrentd has no disk-cache field. libtorrent 2.0 uses mmap and the OS page cache.
         downloadDir = options.downloadDirectory.path
         listenPort = settings.listenPort
         downloadLimit = options.downloadLimit

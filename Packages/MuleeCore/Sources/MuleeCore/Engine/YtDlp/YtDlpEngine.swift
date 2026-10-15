@@ -119,13 +119,25 @@ public actor YtDlpEngine: DownloadEngine {
         try requireRunning()
         try Self.validate(options)
         try FileManager.default.createDirectory(at: options.downloadDirectory, withIntermediateDirectories: true)
+        let restart = self.options?.downloadLimit != options.downloadLimit
+            || self.options?.maxConcurrentDownloads != options.maxConcurrentDownloads
         self.options = options
-        await requeueActive()
+        // --limit-rate is startup-only: restart resumable workers only when their envelope changes.
+        // The coordinator reserves that envelope while video workers are running.
+        if restart { await requeueActive() }
         try persist()
         schedule()
     }
 
     public func add(link: ParsedLink, directory: URL? = nil) async throws -> String {
+        try await add(link: link, directory: directory, paused: false)
+    }
+
+    public func addQueued(link: ParsedLink, directory: URL?) async throws -> String {
+        try await add(link: link, directory: directory, paused: true)
+    }
+
+    private func add(link: ParsedLink, directory: URL?, paused: Bool) async throws -> String {
         try requireRunning()
         guard case .video(let url, let site, _) = link,
               ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { throw EngineError.unsupportedLink }
@@ -133,9 +145,9 @@ public actor YtDlpEngine: DownloadEngine {
         let destination = directory ?? options.downloadDirectory
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
         let id = UUID().uuidString.lowercased()
-        jobs.append(YtDlpJob(id: id, url: url, site: site, directory: destination, name: url.lastPathComponent))
+        jobs.append(YtDlpJob(id: id, url: url, site: site, directory: destination, name: url.lastPathComponent, status: paused ? .paused : .queued))
         try persist()
-        if options.downloadLimit > 0 { await requeueActive() }
+        if !paused, options.downloadLimit > 0 { await requeueActive() }
         schedule()
         return id
     }

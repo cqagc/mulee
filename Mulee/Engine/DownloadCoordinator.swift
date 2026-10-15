@@ -23,12 +23,15 @@ final class DownloadCoordinator {
     private var revisions: [TaskKind: Int] = [:]
     private var excludedTaskIDs: [TaskKind: Set<String>] = [:]
     private var isPolling = false
+    private let scheduling: DownloadScheduling
 
     init(
         model: AppModel, engines: [any DownloadEngine], videoBootstrap: VideoEngineBootstrap? = nil,
-        videoEngineFactory: (@MainActor (VideoEngineConfiguration) async throws -> any DownloadEngine)? = nil
+        videoEngineFactory: (@MainActor (VideoEngineConfiguration) async throws -> any DownloadEngine)? = nil,
+        schedulingDefaults: UserDefaults? = nil
     ) {
         self.model = model
+        scheduling = DownloadScheduling(defaults: schedulingDefaults ?? (AppEnvironment.isRunningUnitTests ? nil : .standard))
         self.engines = engines
         self.videoBootstrap = videoBootstrap
         self.videoEngineFactory = videoEngineFactory
@@ -40,6 +43,13 @@ final class DownloadCoordinator {
         let token = UUID()
         generation = token
         latestOptions = options
+        scheduling.reset()
+        let startupKinds = Set(engines.map(\.kind)).union(
+            videoBootstrap != nil || videoEngineFactory != nil ? [.video] : []
+        )
+        for kind in startupKinds {
+            _ = scheduling.startupOptions(options, kind: kind, kinds: startupKinds)
+        }
         self.videoConfiguration = videoConfiguration
         // 尚未交给引擎的任务没有会话及可靠的目录记录，重启后明确提示重新下载。
         for index in model.tasks.indices where model.tasks[index].kind == .video
@@ -68,7 +78,11 @@ final class DownloadCoordinator {
                     if let video = engine as? YtDlpEngine {
                         try await self.videoConfiguration.apply(to: video)
                     }
-                    try await engine.start(options: self.latestOptions ?? options)
+                    let startup = self.scheduling.startupOptions(
+                        self.latestOptions ?? options, kind: .video,
+                        kinds: Set(self.engines.map(\.kind)).union([.video])
+                    )
+                    try await engine.start(options: startup)
                     guard self.generation == token, !Task.isCancelled else {
                         await engine.stop()
                         return
@@ -77,6 +91,7 @@ final class DownloadCoordinator {
                     self.started.insert(.video)
                     self.model.engineStates[.video] = self.videoBootstrap == nil ? .running : EngineStatusPresentation.videoReadyState(ffmpegURL: self.videoFFmpegURL)
                     self.configureVideo(self.videoConfiguration)
+                    await self.refreshScheduling(sample: false)
                     await self.submitWaitingVideos()
                 } catch {
                     guard self.generation == token, !Task.isCancelled else { return }
@@ -88,9 +103,10 @@ final class DownloadCoordinator {
         }
         await withTaskGroup(of: (TaskKind, String?).self) { group in
             for engine in engines {
+                let startup = scheduling.startupOptions(options, kind: engine.kind, kinds: startupKinds)
                 group.addTask {
                     do {
-                        try await engine.start(options: options)
+                        try await engine.start(options: startup)
                         return (engine.kind, nil)
                     } catch {
                         return (engine.kind, EngineStatusPresentation.errorMessage(error, kind: engine.kind))
@@ -189,6 +205,8 @@ final class DownloadCoordinator {
         if let selected = model.selectedTaskID, !model.tasks.contains(where: { $0.id == selected }) {
             model.selectedTaskID = nil
         }
+        await refreshScheduling()
+        guard generation == token else { return }
         model.bitTorrent?.observePeers(in: model.tasks)
         model.downloadRateHistory = EngineSnapshotMerger.appendingRate(model.totalDownloadRate, to: model.downloadRateHistory)
     }
@@ -220,13 +238,17 @@ final class DownloadCoordinator {
             if let engine = engine(for: link.kind) {
                 pendingAdds[link.kind, default: 0] += 1
                 do {
+                    let queued = shouldQueueNewTask()
                     if let torrent = engine as? TorrentEngine {
                         task.engineTaskID = try await torrent.add(
-                            link: link, directory: directory, filePriorities: filePriorities[link]
+                            link: link, directory: directory, filePriorities: filePriorities[link], paused: queued
                         )
+                    } else if queued {
+                        task.engineTaskID = try await engine.addQueued(link: link, directory: directory)
                     } else {
                         task.engineTaskID = try await engine.add(link: link, directory: directory)
                     }
+                    if queued { scheduling.queue(task) }
                     task.status = .queued
                 } catch {
                     task.status = .failed
@@ -251,6 +273,7 @@ final class DownloadCoordinator {
             }
             insertionIndex += 1
         }
+        await refreshScheduling(sample: false)
     }
 
     func pause(_ id: DownloadTask.ID) async {
@@ -267,6 +290,7 @@ final class DownloadCoordinator {
         waitingVideoLinks[id] = nil
         if (task.status == .completed && ![.bittorrent, .ed2k].contains(task.kind)) || task.engineTaskID == nil {
             excludeFromSnapshots(task)
+            scheduling.removed(task)
             model.removeRecord(id)
             return
         }
@@ -281,6 +305,7 @@ final class DownloadCoordinator {
         defer { revisions[task.kind, default: 0] += 1 }
         do {
             try await engine.remove(engineTaskID, deleteFiles: deleteFiles)
+            scheduling.removed(task)
         } catch {
             excludedTaskIDs[task.kind]?.remove(engineTaskID)
             var restored = task
@@ -308,15 +333,8 @@ final class DownloadCoordinator {
                 return
             }
             guard let self, let token = self.generation else { return }
-            for engine in self.engines where self.started.contains(engine.kind) {
-                guard !Task.isCancelled, self.generation == token else { return }
-                do {
-                    try await engine.apply(options: options)
-                } catch {
-                    guard !Task.isCancelled, self.generation == token else { return }
-                    self.model.engineStates[engine.kind] = .failed(EngineStatusPresentation.errorMessage(error))
-                }
-            }
+            guard self.generation == token else { return }
+            await self.refreshScheduling(sample: false)
         }
     }
 
@@ -353,8 +371,24 @@ final class DownloadCoordinator {
             do {
                 revisions[task.kind, default: 0] += 1
                 switch action {
-                case .pause: try await engine.pause(engineTaskID)
-                case .resume: try await engine.resume(engineTaskID)
+                case .pause:
+                    let wasQueued = scheduling.isQueuePaused(task)
+                    scheduling.userPause(task)
+                    do {
+                        try await engine.pause(engineTaskID)
+                    } catch {
+                        if wasQueued { scheduling.queue(task) }
+                        else { scheduling.userResume(task) }
+                        throw error
+                    }
+                case .resume:
+                    scheduling.userResume(task)
+                    if let total = task.totalBytes, total > 0, task.receivedBytes >= total {
+                        try await engine.resume(engineTaskID)
+                    } else {
+                        // 由统一队列决定何时恢复，不能从手动恢复入口绕过并发上限。
+                        scheduling.queue(task)
+                    }
                 }
                 revisions[task.kind, default: 0] += 1
             } catch {
@@ -373,9 +407,14 @@ final class DownloadCoordinator {
         case .resume:
             model.tasks[index].status = waitingVideoLinks[id] != nil ? .queued
                 : task.engineTaskID == nil ? (task.kind == .ed2k ? .waitingForSources : .downloading) : .queued
+            if let total = task.totalBytes, total > 0, task.receivedBytes >= total {
+                if task.kind == .bittorrent { model.tasks[index].status = .seeding }
+                if task.kind == .ed2k { model.tasks[index].status = .completed }
+            }
             model.tasks[index].errorMessage = nil
             if waitingVideoLinks[id] != nil { await submitWaitingVideos() }
         }
+        await refreshScheduling(sample: false)
     }
 
     private func failWaitingVideos(reason: String) {
@@ -401,13 +440,17 @@ final class DownloadCoordinator {
                 revisions[.video, default: 0] += 1
             }
             do {
-                let engineID = try await engine.add(link: pending.link, directory: pending.directory)
+                let queued = shouldQueueNewTask()
+                let engineID = try await queued
+                    ? engine.addQueued(link: pending.link, directory: pending.directory)
+                    : engine.add(link: pending.link, directory: pending.directory)
                 guard generation == token, let index = model.tasks.firstIndex(where: { $0.id == id }) else {
                     excludedTaskIDs[.video, default: []].insert(engineID)
                     try await engine.remove(engineID, deleteFiles: false)
                     continue
                 }
                 model.tasks[index].engineTaskID = engineID
+                if queued { scheduling.queue(model.tasks[index]) }
                 waitingVideoLinks[id] = nil
                 if model.tasks[index].status == .paused {
                     try await engine.pause(engineID)
@@ -419,6 +462,22 @@ final class DownloadCoordinator {
                 model.tasks[index].errorMessage = EngineStatusPresentation.errorMessage(error)
             }
         }
+    }
+
+    private func shouldQueueNewTask() -> Bool {
+        let occupied = model.tasks.filter {
+            GlobalConcurrencyPolicy.occupiesSlot($0) && !scheduling.isQueuePaused($0)
+        }.count
+        return occupied >= max(1, latestOptions?.maxConcurrentDownloads ?? 1)
+    }
+
+    private func refreshScheduling(sample: Bool = true) async {
+        guard let token = generation, let latestOptions else { return }
+        await scheduling.refresh(
+            model: model, engines: engines.filter { started.contains($0.kind) },
+            options: latestOptions, sample: sample,
+            isCurrent: { self.generation == token && !Task.isCancelled }
+        )
     }
 
     private func setError(_ message: String, for id: DownloadTask.ID) {
