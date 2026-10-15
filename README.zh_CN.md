@@ -4,7 +4,7 @@
 
 # Mulee
 
-**一个 macOS 原生下载器，统一管理 HTTP、BT、电驴和视频下载。**
+**macOS 原生下载器，支持 HTTP、BT、电驴和视频下载。**
 
 <p align="center">
   <a href="README.md">English</a> |
@@ -25,8 +25,8 @@
 
 <p align="center">
   <a href="#description">项目说明</a> •
-  <a href="#screenshots">项目截图</a> •
-  <a href="#capabilities">核心能力</a> •
+  <a href="#screenshots">截图</a> •
+  <a href="#capabilities">功能</a> •
   <a href="#quick-start">快速开始</a> •
   <a href="#development">开发</a> •
   <a href="#documentation">文档与社区</a> •
@@ -49,12 +49,12 @@
 
 ## 📝 项目说明
 
-Mulee 把 HTTP / HTTPS / FTP、BT / 磁力链接、电驴和视频下载放进一个原生 Mac App：一个入口、一套设置、一个下载队列。开源、免费，永不加广告。
+Mulee 支持 HTTP / HTTPS / FTP、BT / 磁力链接、电驴和视频下载。不同类型的下载共用队列和设置。免费开源，永不加广告。
 
-仅支持 **Apple 芯片、macOS 26 及以上**。界面提供简体中文、繁體中文和 English。
+仅支持 **Apple 芯片、macOS 26 及以上**。界面支持简体中文、繁体中文和英文。
 
 > [!IMPORTANT]
-> Mulee 只是下载工具，请只下载你有权获取的内容。不内置任何资源搜索。
+> Mulee 是下载工具，不内置资源搜索。请只下载你有权获取的内容。
 
 > [!NOTE]
 > 当前为 0.1.x 早期版本，项目版本是 **0.1.3**。
@@ -63,7 +63,7 @@ Mulee 把 HTTP / HTTPS / FTP、BT / 磁力链接、电驴和视频下载放进�
 
 <a id="screenshots"></a>
 
-## 项目截图
+## 截图
 
 截图中的任务均为示例数据。点击图片可查看原图。
 
@@ -77,22 +77,22 @@ Mulee 把 HTTP / HTTPS / FTP、BT / 磁力链接、电驴和视频下载放进�
 
 <a id="capabilities"></a>
 
-## 核心能力
+## 功能
 
-| 能力 | 说明 |
+| 功能 | 说明 |
 |---|---|
 | HTTP / HTTPS / FTP | aria2 引擎，多连接下载、断点续传，重启后恢复任务。 |
-| BT / 磁力 / .torrent | libtorrent 2.0 引擎，可选择下载文件；分享到 1:1 后降速或停止，私有种子可豁免。 |
-| 电驴 ed2k | aMule 3.1（`amuled`）引擎，冷门资源可以挂几周。显示排队名次、来源数、完整来源最后出现时间和近 14 天来源情况；暂时下不动是正常等待。 |
-| 视频 | 基于 yt-dlp，重点支持 Bilibili / YouTube；B 站弹幕可转为 ASS 字幕。yt-dlp、Deno、ffmpeg 由 Mulee 自行下载并校验。 |
+| BT / 磁力 / .torrent | libtorrent 2.0 引擎，可选择下载文件；分享率达到 1:1 后降速或停止，私有种子可不受此限制。 |
+| 电驴 ed2k | 使用 aMule 3.1（`amuled`），冷门资源可以挂几周等待来源。显示排队名次、来源数、完整来源最后出现时间和近 14 天来源记录。等待来源是正常任务状态。 |
+| 视频 | 使用 yt-dlp，主要支持 Bilibili / YouTube；B 站弹幕可转为 ASS 字幕。yt-dlp、Deno、ffmpeg 由 Mulee 自行下载并校验。 |
 | 迅雷链接 | 解析 `thunder://` 中的原始链接，交给对应引擎；不提供迅雷 P2SP 加速。 |
 | 自动解压 | 7-Zip 解压已完成的下载，密码规则中的密码存入钥匙串，修复 GBK / Big5 / Shift-JIS 文件名乱码。 |
-| 网络诊断 | 说明 P2P 是否被代理软件接管、监听端口能否从外部连入，提供可复制的 Stash / Clash 规则和端口转发说明。 |
+| 网络诊断 | 检查 P2P 流量是否经过代理、监听端口能否从外部连入。附有可复制的 Stash / Clash 规则和端口转发说明。 |
 | macOS 集成 | 可设为 magnet / ed2k / thunder / .torrent 默认打开程序，提供 Chrome / Safari 扩展、菜单栏实时速度和下载时防止睡眠。 |
 
-四个辅助程序 `aria2c`、`mulee-torrentd`、`amuled`、`7zz` 从固定版本源码编译进 App，动态依赖仅限系统库。分发的 App 使用 Developer ID 签名，并经过 Apple 公证。
+App 附带四个辅助程序：`aria2c`、`mulee-torrentd`、`amuled`、`7zz`。它们由固定版本的源码编译，只动态链接系统库。分发的 App 使用 Developer ID 签名，并经过 Apple 公证。
 
-### 不做什么
+### 项目范围
 
 不加广告，不内置资源搜索、推荐或种子站，不提供迅雷 P2SP 加速，也不做 Windows / Linux 版。
 
@@ -109,7 +109,7 @@ Mulee 把 HTTP / HTTPS / FTP、BT / 磁力链接、电驴和视频下载放进�
 可选设置：
 
 - 在「**设置 → 通用**」中，将 Mulee 设为 magnet / ed2k / thunder 链接和 `.torrent` 文件的默认打开程序。
-- 从设置启用 Safari 扩展或安装 Chrome 扩展，详见[浏览器扩展说明](docs/BROWSER-EXTENSION.md)。扩展发送的链接会先打开确认面板。
+- 在 Mulee 设置中打开 Safari 扩展设置，或查看 Chrome 扩展安装说明，详见[浏览器扩展说明](docs/BROWSER-EXTENSION.md)。扩展发送的链接会先打开确认面板。
 - 使用代理软件时，查看「**设置 → 网络**」中的 P2P 路由和外部连入状态，按需复制 Stash / Clash 规则：
 
 ```text
@@ -135,9 +135,9 @@ xcodegen generate
 xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' build
 ```
 
-首次构建需要编译第三方库，耗时较长。已有克隆可先运行 `git submodule update --init --recursive` 初始化子模块，再构建。参与开发前请读[开发约定](docs/CONVENTIONS.md)。
+首次构建需要编译第三方库，耗时较长。如果已经克隆了仓库，先运行 `git submodule update --init --recursive` 初始化子模块，再构建。参与开发前请读[开发约定](docs/CONVENTIONS.md)。
 
-| 目录 | 职责 |
+| 目录 | 内容 |
 |---|---|
 | `Mulee/` | 原生 App、界面与 macOS 服务 |
 | `Packages/MuleeCore/` | 不依赖 UI 的模型、解析和下载逻辑 |
@@ -155,7 +155,7 @@ xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' 
 
 ## 文档与社区
 
-| 资源 | 入口 |
+| 资源 | 内容 |
 |---|---|
 | [构建说明](docs/BUILDING.md) | 构建工具、辅助程序与打包 |
 | [浏览器扩展](docs/BROWSER-EXTENSION.md) | Chrome / Safari 安装、使用和权限 |
@@ -214,12 +214,12 @@ Mulee 采用 [GPL-3.0](LICENSE) 许可证。第三方组件保留各自的许可
 
 <div align="center">
 
-### 💖 感谢使用 Mulee
+### 致谢
 
-如果 Mulee 对你有帮助，欢迎给项目一个 ⭐ Star。
+觉得 Mulee 好用的话，欢迎点个 Star。
 
 **[下载最新版](https://github.com/cqagc/mulee/releases/latest)** • **[问题反馈](https://github.com/cqagc/mulee/issues)** • **[构建说明](docs/BUILDING.md)**
 
-Made with ❤️ by [CQAGC](https://www.cqagc.com)
+由 [CQAGC](https://www.cqagc.com) 维护
 
 </div>

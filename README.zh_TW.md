@@ -4,7 +4,7 @@
 
 # Mulee
 
-**一個 macOS 原生下載工具，統一管理 HTTP、BT、電驢和影片下載。**
+**macOS 原生下載工具，支援 HTTP、BT、電驢與影片下載。**
 
 <p align="center">
   <a href="README.md">English</a> |
@@ -25,8 +25,8 @@
 
 <p align="center">
   <a href="#description">專案說明</a> •
-  <a href="#screenshots">專案截圖</a> •
-  <a href="#capabilities">核心功能</a> •
+  <a href="#screenshots">螢幕截圖</a> •
+  <a href="#capabilities">功能</a> •
   <a href="#quick-start">快速開始</a> •
   <a href="#development">開發</a> •
   <a href="#documentation">文件與社群</a> •
@@ -49,12 +49,12 @@
 
 ## 📝 專案說明
 
-Mulee 將 HTTP / HTTPS / FTP、BT / 磁力連結、電驢和影片下載整合到一個原生 Mac App：一個入口、一套設定、一個下載佇列。開放原始碼、免費，永遠不加廣告。
+Mulee 支援 HTTP / HTTPS / FTP、BT / 磁力連結、電驢與影片下載。各類下載共用佇列與設定。免費、開放原始碼，永遠不加廣告。
 
-僅支援 **Apple 晶片、macOS 26 以上版本**。介面提供繁體中文、简体中文和 English。
+僅支援 **Apple 晶片、macOS 26 以上版本**。介面支援繁體中文、簡體中文與英文。
 
 > [!IMPORTANT]
-> Mulee 只是下載工具，請只下載你有權取得的內容。不內建任何資源搜尋。
+> Mulee 是下載工具，不內建資源搜尋。請只下載你有權取得的內容。
 
 > [!NOTE]
 > 目前為 0.1.x 早期版本，專案版本是 **0.1.3**。
@@ -63,7 +63,7 @@ Mulee 將 HTTP / HTTPS / FTP、BT / 磁力連結、電驢和影片下載整合�
 
 <a id="screenshots"></a>
 
-## 專案截圖
+## 螢幕截圖
 
 截圖中的任務皆為範例資料。點選圖片可查看原圖。
 
@@ -77,22 +77,22 @@ Mulee 將 HTTP / HTTPS / FTP、BT / 磁力連結、電驢和影片下載整合�
 
 <a id="capabilities"></a>
 
-## 核心功能
+## 功能
 
 | 功能 | 說明 |
 |---|---|
 | HTTP / HTTPS / FTP | aria2 引擎，多連線下載、續傳，重新啟動後恢復任務。 |
-| BT / 磁力 / .torrent | libtorrent 2.0 引擎，可選擇下載檔案；分享率達到 1:1 後降低速度或停止，私有種子可排除限制。 |
-| 電驢 ed2k | aMule 3.1（`amuled`）引擎，冷門資源可以持續等待數週。顯示排隊名次、來源數、完整來源最後出現時間和近 14 天來源情況；暫時沒有進度是正常等待。 |
-| 影片 | 基於 yt-dlp，著重支援 Bilibili / YouTube；B 站彈幕可轉為 ASS 字幕。yt-dlp、Deno、ffmpeg 由 Mulee 自行下載並驗證。 |
+| BT / 磁力 / .torrent | libtorrent 2.0 引擎，可選擇下載檔案；分享率達到 1:1 後降低速度或停止，可設定私有種子不受此限制。 |
+| 電驢 ed2k | 使用 aMule 3.1（`amuled`），冷門資源可以掛幾週等待來源。顯示排隊名次、來源數、完整來源最後出現時間與近 14 天的來源紀錄。等待來源是正常的任務狀態。 |
+| 影片 | 使用 yt-dlp，主要支援 Bilibili / YouTube；Bilibili 彈幕可轉成 ASS 字幕。yt-dlp、Deno、ffmpeg 由 Mulee 自行下載並驗證。 |
 | 迅雷連結 | 解析 `thunder://` 中的原始連結，交給對應引擎；不提供迅雷 P2SP 加速。 |
 | 自動解壓縮 | 7-Zip 解壓縮已完成的下載，密碼規則中的密碼存入鑰匙圈，修復 GBK / Big5 / Shift-JIS 檔名亂碼。 |
-| 網路診斷 | 說明 P2P 是否被代理軟體接管、監聽連接埠能否從外部連入，提供可複製的 Stash / Clash 規則和連接埠轉送說明。 |
+| 網路診斷 | 檢查 P2P 流量是否經過代理、監聽連接埠能否從外部連入。附有可複製的 Stash / Clash 規則與連接埠轉送說明。 |
 | macOS 整合 | 可設為 magnet / ed2k / thunder / .torrent 預設開啟程式，提供 Chrome / Safari 擴充功能、選單列即時速度和下載時防止睡眠。 |
 
-四個輔助程式 `aria2c`、`mulee-torrentd`、`amuled`、`7zz` 從固定版本原始碼編譯後隨 App 提供，動態相依性僅限系統函式庫。發行的 App 使用 Developer ID 簽署，並通過 Apple 公證。
+App 隨附四個輔助程式：`aria2c`、`mulee-torrentd`、`amuled`、`7zz`。它們以固定版本的原始碼編譯，僅動態連結系統函式庫。發行的 App 使用 Developer ID 簽署，並通過 Apple 公證。
 
-### 不做什麼
+### 專案範圍
 
 不加廣告，不內建資源搜尋、推薦或種子站，不提供迅雷 P2SP 加速，也不製作 Windows / Linux 版。
 
@@ -109,7 +109,7 @@ Mulee 將 HTTP / HTTPS / FTP、BT / 磁力連結、電驢和影片下載整合�
 選用設定：
 
 - 在「**設定 → 一般**」中，將 Mulee 設為 magnet / ed2k / thunder 連結和 `.torrent` 檔案的預設開啟程式。
-- 從設定啟用 Safari 擴充功能或安裝 Chrome 擴充功能，詳見[瀏覽器擴充功能說明](docs/BROWSER-EXTENSION.md)。擴充功能傳送的連結會先開啟確認面板。
+- 在 Mulee 設定中開啟 Safari 擴充功能設定，或查看 Chrome 擴充功能的安裝說明，詳見[瀏覽器擴充功能說明](docs/BROWSER-EXTENSION.md)。擴充功能傳送的連結會先開啟確認面板。
 - 使用代理軟體時，查看「**設定 → 網路**」中的 P2P 路由和外部連入狀態，視需要複製 Stash / Clash 規則：
 
 ```text
@@ -135,9 +135,9 @@ xcodegen generate
 xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' build
 ```
 
-首次建置需要編譯第三方函式庫，所需時間較長。若已複製儲存庫，可先執行 `git submodule update --init --recursive` 初始化子模組，再建置。參與開發前請閱讀[開發慣例](docs/CONVENTIONS.md)。
+首次建置需要編譯第三方函式庫，所需時間較長。若已 clone 儲存庫，先執行 `git submodule update --init --recursive` 初始化子模組，再建置。參與開發前請閱讀[開發慣例](docs/CONVENTIONS.md)。
 
-| 目錄 | 職責 |
+| 目錄 | 內容 |
 |---|---|
 | `Mulee/` | 原生 App、介面與 macOS 服務 |
 | `Packages/MuleeCore/` | 不依賴 UI 的模型、解析和下載邏輯 |
@@ -155,7 +155,7 @@ xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' 
 
 ## 文件與社群
 
-| 資源 | 入口 |
+| 資源 | 內容 |
 |---|---|
 | [建置說明](docs/BUILDING.md) | 建置工具、輔助程式與封裝 |
 | [瀏覽器擴充功能](docs/BROWSER-EXTENSION.md) | Chrome / Safari 安裝、使用和權限 |
@@ -214,12 +214,12 @@ Mulee 採用 [GPL-3.0](LICENSE) 授權。第三方元件保留各自的授權條
 
 <div align="center">
 
-### 💖 感謝使用 Mulee
+### 致謝
 
-如果 Mulee 對你有幫助，歡迎給專案一個 ⭐ Star。
+如果覺得 Mulee 好用，歡迎幫專案點個 Star。
 
 **[下載最新版](https://github.com/cqagc/mulee/releases/latest)** • **[問題回報](https://github.com/cqagc/mulee/issues)** • **[建置說明](docs/BUILDING.md)**
 
-Made with ❤️ by [CQAGC](https://www.cqagc.com)
+由 [CQAGC](https://www.cqagc.com) 維護
 
 </div>

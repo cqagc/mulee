@@ -24,9 +24,9 @@
 </p>
 
 <p align="center">
-  <a href="#description">Project description</a> •
+  <a href="#description">About</a> •
   <a href="#screenshots">Screenshots</a> •
-  <a href="#capabilities">Capabilities</a> •
+  <a href="#capabilities">Features</a> •
   <a href="#quick-start">Quick start</a> •
   <a href="#development">Development</a> •
   <a href="#documentation">Documentation & community</a> •
@@ -47,9 +47,9 @@
 
 <a id="description"></a>
 
-## 📝 Project description
+## 📝 About
 
-Mulee brings HTTP / HTTPS / FTP, BitTorrent and magnet links, eD2k, and video downloads into one native Mac app, with one queue and one set of settings. It is open source, free to use, and will never include ads.
+Mulee supports HTTP / HTTPS / FTP, BitTorrent and magnet links, eD2k, and video downloads. Downloads share a queue and settings. It is free and open source, and will never include ads.
 
 Mulee supports **Apple Silicon Macs running macOS 26 or later**. The app is available in English, Simplified Chinese, and Traditional Chinese.
 
@@ -77,20 +77,20 @@ All tasks shown are sample data. Click an image to view it at full size.
 
 <a id="capabilities"></a>
 
-## Capabilities
+## Features
 
-| Capability | What it does |
+| Feature | Description |
 |---|---|
 | HTTP / HTTPS / FTP | aria2 handles multi-connection downloads, resuming, and restoring tasks after a restart. |
 | BitTorrent / magnet / .torrent | libtorrent 2.0 supports file selection and seeding policies: throttle or stop at a 1:1 share ratio, with an optional exemption for private torrents. |
-| eD2k | aMule 3.1 (`amuled`) keeps rare files waiting for sources for weeks if needed. See queue position, source counts, when a complete source was last seen, and source activity over the past 14 days. Waiting without progress is a normal state. |
-| Video | yt-dlp powers downloads with a focus on Bilibili and YouTube. Bilibili danmaku can be converted to ASS subtitles. Mulee downloads and verifies yt-dlp, Deno, and ffmpeg itself. |
+| eD2k | Uses aMule 3.1 (`amuled`). Downloads of rare files can wait for sources for weeks. Shows queue position, source counts, when a complete source was last seen, and source activity over the past 14 days. Waiting for sources is a normal task state. |
+| Video | Uses yt-dlp, with Bilibili and YouTube as the main supported sites. Bilibili danmaku can be converted to ASS subtitles. Mulee downloads and verifies yt-dlp, Deno, and ffmpeg itself. |
 | Thunder links | Decodes `thunder://` links and passes the original URL to the appropriate engine. No Xunlei P2SP acceleration. |
 | Automatic extraction | 7-Zip extracts completed downloads, stores password-rule secrets in Keychain, and repairs garbled GBK / Big5 / Shift-JIS filenames. |
-| Network diagnostics | Explains whether proxy software is routing P2P traffic and whether listening ports are reachable from outside your network, with copyable Stash / Clash rules and port-forwarding instructions. |
+| Network diagnostics | Checks whether P2P traffic goes through a proxy and whether listening ports accept incoming connections. Includes Stash / Clash rules to copy and instructions for port forwarding. |
 | macOS integration | Default handler for magnet / ed2k / thunder / .torrent, Chrome and Safari extensions, live menu bar speeds, and sleep prevention while downloading. |
 
-The four helpers—`aria2c`, `mulee-torrentd`, `amuled`, and `7zz`—are built from pinned source versions and bundled with the app. Their dynamic dependencies are limited to system libraries. The distributed app is Developer ID signed and notarized by Apple.
+The app bundles four helpers built from pinned source versions: `aria2c`, `mulee-torrentd`, `amuled`, and `7zz`. Their dynamic dependencies are limited to system libraries. The distributed app is Developer ID signed and notarized by Apple.
 
 ### Scope
 
@@ -109,7 +109,7 @@ Mulee does not include ads, built-in resource search or recommendations, torrent
 Optional setup:
 
 - In **Settings → General**, choose Mulee as the default app for magnet / ed2k / thunder links and `.torrent` files.
-- Enable the Safari extension or install the Chrome extension from Settings. See the [browser extension guide](docs/BROWSER-EXTENSION.md). Links sent by an extension open the confirmation panel before downloading.
+- Settings links to Safari's extension preferences and explains how to install the Chrome extension. See the [browser extension guide](docs/BROWSER-EXTENSION.md). Links sent by an extension open the confirmation panel before downloading.
 - If you use proxy software, open **Settings → Network** to check P2P routing and incoming connectivity. Copy the Stash / Clash rules as needed:
 
 ```text
@@ -137,7 +137,7 @@ xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' 
 
 The first build compiles third-party libraries and can take a while. For an existing clone, initialize its submodules with `git submodule update --init --recursive` before building. Read the [development conventions](docs/CONVENTIONS.md) before contributing.
 
-| Directory | Responsibility |
+| Directory | Contents |
 |---|---|
 | `Mulee/` | Native app, interface, and macOS services |
 | `Packages/MuleeCore/` | UI-independent models, parsing, and download logic |
@@ -155,7 +155,7 @@ The first build compiles third-party libraries and can take a while. For an exis
 
 ## Documentation & community
 
-| Resource | Where to go |
+| Resource | Description |
 |---|---|
 | [Build guide](docs/BUILDING.md) | Build tools, helpers, and packaging |
 | [Browser extensions](docs/BROWSER-EXTENSION.md) | Chrome / Safari installation, usage, and permissions |
@@ -214,12 +214,12 @@ Mulee is licensed under [GPL-3.0](LICENSE). Third-party components retain their 
 
 <div align="center">
 
-### 💖 Thank you for using Mulee
+### Thanks
 
-If Mulee is useful to you, a ⭐ Star is welcome.
+If you find Mulee useful, consider starring the project.
 
 **[Download latest](https://github.com/cqagc/mulee/releases/latest)** • **[Report an issue](https://github.com/cqagc/mulee/issues)** • **[Build guide](docs/BUILDING.md)**
 
-Made with ❤️ by [CQAGC](https://www.cqagc.com)
+Maintained by [CQAGC](https://www.cqagc.com)
 
 </div>
