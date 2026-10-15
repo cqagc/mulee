@@ -30,7 +30,7 @@ final class NewTaskLinkModel: Identifiable {
 
     var typeLabel: String {
         switch link {
-        case .magnet: "BT"
+        case .magnet, .torrentFile: "BT"
         case .ed2k: "ED2K"
         case .http: "HTTP"
         case .video: "视频"
@@ -41,6 +41,8 @@ final class NewTaskLinkModel: Identifiable {
         switch link {
         case .magnet(let infoHash, let displayName, _):
             displayName ?? infoHash
+        case .torrentFile(let url, _):
+            url.lastPathComponent
         case .ed2k(let fileName, _, _, _):
             fileName
         case .http(let url, _, _):
@@ -54,6 +56,8 @@ final class NewTaskLinkModel: Identifiable {
         switch link {
         case .magnet:
             "磁力链接 · 正在获取元数据"
+        case .torrentFile:
+            "BT 种子文件"
         case .ed2k:
             "电驴链接 · 冷门资源可能需要长时间等待来源"
         case .http(let url, let decodedFromThunder, _):

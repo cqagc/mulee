@@ -18,6 +18,18 @@ extension DownloadTask {
                 postDownload: postDownload,
                 sourceLink: original
             )
+        case .torrentFile(let url, let original):
+            self.init(
+                name: url.lastPathComponent,
+                fileExtension: nil,
+                kind: .bittorrent,
+                status: .downloading,
+                totalBytes: nil,
+                receivedBytes: 0,
+                detail: .bittorrent(fileCount: 0, selectedFileCount: 0, peerCount: 0, shareRatio: 0),
+                postDownload: postDownload,
+                sourceLink: original
+            )
         case .ed2k(let fileName, let size, let hash, let original):
             self.init(
                 name: fileName,
