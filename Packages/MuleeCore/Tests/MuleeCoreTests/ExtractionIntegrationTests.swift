@@ -118,6 +118,29 @@ struct ExtractionIntegrationTests {
         }
     }
 
+    @Test("UTF-8 标志与实际字节不符时按本地编码修复，不误报损坏")
+    func mislabeledUTF8Flag() async throws {
+        try await ExtractionFixture.withFixture { fixture in
+            let name = "星雲傳說_繁體資料說明書.txt"
+            let encoding = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(CFStringEncoding(CFStringEncodings.big5.rawValue)))
+            let raw = try #require(name.data(using: encoding))
+            let archive = try fixture.zip("mislabeled.zip", rawName: raw)
+            // 给本地头和中央目录都置上 0x800（UTF-8）标志，模拟打包工具写错标志。
+            var bytes = try Data(contentsOf: archive)
+            for index in 0..<(bytes.count - 10) {
+                let signature = bytes[index..<index + 4]
+                if signature == Data([0x50, 0x4b, 0x03, 0x04]) { bytes[index + 7] |= 0x08 }
+                if signature == Data([0x50, 0x4b, 0x01, 0x02]) { bytes[index + 9] |= 0x08 }
+            }
+            try bytes.write(to: archive)
+            #expect(try ZipFilenameDirectory.read(archive).first?.isUTF8 == false)
+            let result = await ArchiveExtractor().extract(archive: archive, destination: fixture.destination, options: ExtractionOptions(postAction: .keep))
+            #expect(result.status == .succeeded)
+            #expect(result.encoding == .big5)
+            #expect(result.topLevelItems.map(\.lastPathComponent) == [name])
+        }
+    }
+
     @Test("Big5 多层目录与目录条目一起修复，Unicode Path 扩展优先")
     func directoriesAndUnicodeExtra() async throws {
         try await ExtractionFixture.withFixture { fixture in

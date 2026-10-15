@@ -31,9 +31,12 @@ enum ZipFilenameDirectory {
             let next = position + 46 + nameLength + extraLength + commentLength
             guard next <= data.count else { throw ExtractionFailure.damagedArchive }
             let attributes = integer(data, position + 38, 4)
+            let nameBytes = data.subdata(in: position + 46..<position + 46 + nameLength)
+            // 有些打包工具置了 UTF-8 标志、实际写的却是本地编码；解不开时按本地编码处理。
+            let flaggedUTF8 = integer(data, position + 8, 2) & 0x800 != 0
             entries.append(ZipFilenameEntry(
-                bytes: data.subdata(in: position + 46..<position + 46 + nameLength),
-                isUTF8: integer(data, position + 8, 2) & 0x800 != 0,
+                bytes: nameBytes,
+                isUTF8: flaggedUTF8 && String(data: nameBytes, encoding: .utf8) != nil,
                 isLink: (attributes >> 16) & 0xf000 == 0xa000,
                 crc: UInt32(integer(data, position + 16, 4)),
                 size: UInt64(integer(data, position + 24, 4)),
