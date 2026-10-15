@@ -130,6 +130,7 @@ struct NewTaskSheet: View {
     }
 }
 
+#if DEBUG
 #Preview("四种链接") {
     NewTaskSheet(draft: NewTaskModel(inputText: NewTaskPreviewData.inputText, parser: { _ in
         NewTaskPreviewData.links
@@ -137,6 +138,7 @@ struct NewTaskSheet: View {
     .environment(AppModel(tasks: MockData.tasks))
     .environment(SettingsModel())
 }
+#endif
 
 #Preview("等待粘贴") {
     NewTaskSheet()
