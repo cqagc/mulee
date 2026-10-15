@@ -8,6 +8,7 @@ import Observation
 final class AppModel {
     var tasks: [DownloadTask] {
         didSet {
+            extractionCoordinator?.tasksDidChange()
             updateSleepPrevention()
             historyStore?.scheduleSave(tasks: tasks) { [weak self] issue in
                 self?.taskHistoryIssue = issue
@@ -23,7 +24,13 @@ final class AppModel {
     var taskHistoryIssue: String?
     @ObservationIgnored private var historyStore: TaskHistoryStore?
     @ObservationIgnored weak var coordinator: DownloadCoordinator?
-    var unzipRules: [UnzipRule]
+    @ObservationIgnored weak var extractionCoordinator: ExtractionCoordinator?
+    @ObservationIgnored var unzipRuleStore: UnzipRuleStore?
+    @ObservationIgnored var extractionPasswords: any ExtractionPasswordStoring = KeychainPasswordProvider()
+    var unzipRuleIssue: String?
+    var unzipRules: [UnzipRule] {
+        didSet { persistUnzipRules() }
+    }
     /// 主窗口当前选中的任务。
     var selectedTaskID: DownloadTask.ID?
     /// 是否显示「新建下载」面板。

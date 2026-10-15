@@ -3,6 +3,7 @@ import SwiftUI
 /// 设置·解压。
 struct UnzipSettingsTab: View {
     @Environment(SettingsModel.self) private var model
+    @State private var isEditingPasswordBook = false
 
     var body: some View {
         @Bindable var model = model
@@ -16,6 +17,11 @@ struct UnzipSettingsTab: View {
             Section("密码规则 · 按顺序匹配，命中即停") {
                 UnzipRulesTable()
                     .listRowInsets(EdgeInsets())
+            }
+            Section("密码本") {
+                Button("编辑密码本", systemImage: MuleeSymbol.rulePasswordBook.name, action: editPasswordBook)
+                Text("常用密码只保存在本机钥匙串中；没有命中规则时依次尝试")
+                    .foregroundStyle(.secondary)
             }
             Section("自动找密码") {
                 Toggle(isOn: $model.detectPagePassword) {
@@ -57,6 +63,13 @@ struct UnzipSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+        .sheet(isPresented: $isEditingPasswordBook) {
+            ExtractionPasswordBookSheet()
+        }
+    }
+
+    private func editPasswordBook() {
+        isEditingPasswordBook = true
     }
 }
 

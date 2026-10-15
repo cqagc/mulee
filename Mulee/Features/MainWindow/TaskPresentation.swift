@@ -67,7 +67,10 @@ struct TaskPresentation {
     }
 
     var progressStyle: TaskProgressStyle {
-        switch task.status {
+        if task.status == .completed, [.waitingForVolumes, .failed, .cancelled].contains(task.postDownload.extractionState) {
+            return .waiting
+        }
+        return switch task.status {
         case .waitingForSources, .failed: .waiting
         case .extracting, .seeding: .success
         case .completed: .completed
@@ -80,13 +83,13 @@ struct TaskPresentation {
         case .extracting: "解压中 · \(percent)"
         case .seeding: "做种 \(percent) · 到 1:1 后降速"
         case .postProcessing: "\(percent) · 合并音视频"
-        case .completed: size
+        case .completed: extractionStatus ?? size
         default: "\(percent) · \(receivedAndTotal)"
         }
     }
 
     var inspectorProgressText: String {
-        guard task.kind == .ed2k, let total = task.totalBytes else { return progressText }
+        guard [.downloading, .waitingForSources, .paused].contains(task.status), task.kind == .ed2k, let total = task.totalBytes else { return progressText }
         return "\(percent) · 已收到 \(Self.bytes(task.receivedBytes))，剩余 \(Self.bytes(max(0, total - task.receivedBytes)))"
     }
 
@@ -97,7 +100,7 @@ struct TaskPresentation {
         case .postProcessing: "处理中"
         case .extracting: "解压中"
         case .seeding: "↑ \(Self.rate(task.uploadRate))"
-        case .completed: "已完成"
+        case .completed: extractionStatus ?? "已完成"
         case .paused: "已暂停"
         case .failed: "需要处理"
         case .queued: "排队中"
@@ -110,9 +113,18 @@ struct TaskPresentation {
         case .downloading: task.estimatedTimeRemaining.map { "剩 \(Self.duration($0, remaining: true))" } ?? "正在下载"
         case .waitingForSources: longTail.map { "已挂 \(days(since: $0.waitingSince)) 天" } ?? "耐心等待"
         case .postProcessing: "即将完成"
-        case .extracting: task.postDownload.filenameEncoding == nil ? "正在解压文件" : "已修复文件名编码"
+        case .extracting:
+            task.postDownload.extractionState == nil && task.postDownload.filenameEncoding != nil
+                ? "已修复文件名编码" : "正在解压文件"
         case .seeding: "做种中"
-        case .completed: task.completedAt.map(time) ?? ""
+        case .completed:
+            switch task.postDownload.extractionState {
+            case .waitingForVolumes: "其余分卷下完后继续"
+            case .queued: "正在处理其他压缩包"
+            case .failed, .cancelled: task.postDownload.extractionFailure ?? "原压缩包已保留"
+            case .succeeded: extractedItems.first?.lastPathComponent ?? "文件已准备好"
+            default: task.completedAt.map(time) ?? ""
+            }
         case .paused: ""
         case .failed: task.errorMessage ?? "可稍后重试"
         case .queued: "等待空位"
@@ -162,7 +174,23 @@ struct TaskPresentation {
     var waitingDuration: String { longTail.map { "\(days(since: $0.waitingSince)) 天" } ?? "" }
     var transferDuration: String { longTail.map { Self.duration($0.activeTransferDuration) } ?? "" }
     var extractionSetting: String { task.postDownload.autoExtract ? "开" : "关" }
-    var filenameEncoding: String { task.postDownload.filenameEncoding.map { "自动检测（\($0)）" } ?? "自动检测" }
+    var filenameEncoding: String {
+        guard let encoding = task.postDownload.filenameEncoding else { return "自动检测" }
+        return task.postDownload.extractionState == nil ? "自动检测（\(encoding)）" : encoding
+    }
+    var extractedItems: [URL] { task.postDownload.extractedItems ?? [] }
+
+    var extractionStatus: String? {
+        switch task.postDownload.extractionState {
+        case .queued: "等待解压"
+        case .waitingForVolumes: "等待其余分卷"
+        case .extracting: "解压中"
+        case .succeeded: "已解压"
+        case .failed: "解压未完成"
+        case .cancelled: "解压已取消"
+        case nil: nil
+        }
+    }
 
     var hash: String? {
         if case .ed2k(let hash, _) = task.detail { "ED2K \(hash)" } else { nil }
