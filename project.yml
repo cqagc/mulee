@@ -15,6 +15,14 @@ settings:
     CURRENT_PROJECT_VERSION: "6"
     ARCHS: arm64
     DEVELOPMENT_TEAM: LV69DG6R9Y
+  configs:
+    Release:
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+      DEPLOYMENT_POSTPROCESSING: YES
+      STRIP_INSTALLED_PRODUCT: YES
+      STRIP_STYLE: all
+      COPY_PHASE_STRIP: YES
+      OTHER_SWIFT_FLAGS: '$(inherited) -file-prefix-map $(SRCROOT)=. -debug-prefix-map $(SRCROOT)=.'
 packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle

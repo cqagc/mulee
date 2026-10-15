@@ -8,6 +8,11 @@ export MACOSX_DEPLOYMENT_TARGET=26.0
 error() { echo "error: mulee-torrentd: $*" >&2; exit 1; }
 SRCROOT="${SRCROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 CACHE="${MULEE_THIRDPARTY_CACHE:-$SRCROOT/build/thirdparty}"
+SRCROOT="$(cd "$SRCROOT" && pwd -P)"
+mkdir -p "$CACHE"
+CACHE="$(cd "$CACHE" && pwd -P)"
+# -ffile-prefix-map 同时清理 __FILE__/assert 宏与 DWARF 源码路径。
+PREFIX_FLAGS="-ffile-prefix-map=$HOME=home -ffile-prefix-map=$SRCROOT=. -ffile-prefix-map=$CACHE=build/thirdparty"
 STANDALONE=0
 if [ "${1:-}" = "--standalone" ] && [ "$#" = 1 ]; then
   STANDALONE=1
@@ -36,14 +41,17 @@ LT_REV="$(submodule_revision libtorrent)"
 mkdir -p "$CACHE"
 CACHE="$(cd "$CACHE" && pwd -P)"
 JOBS="$(sysctl -n hw.logicalcpu)"
-OPENSSL_FLAGS=(darwin64-arm64-cc no-shared no-tests no-docs no-apps -mmacosx-version-min=26.0 --openssldir=/private/etc/ssl)
-LT_FLAGS=(-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_OSX_ARCHITECTURES=arm64
+OPENSSL_FLAGS=(darwin64-arm64-cc no-shared no-tests no-docs no-apps
+  --prefix=/mulee-openssl --libdir=lib --openssldir=/private/etc/ssl
+  -mmacosx-version-min=26.0 $PREFIX_FLAGS)
+LT_FLAGS=("-DCMAKE_C_FLAGS=$PREFIX_FLAGS" "-DCMAKE_CXX_FLAGS=$PREFIX_FLAGS"
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DCMAKE_OSX_ARCHITECTURES=arm64
   -DCMAKE_OSX_DEPLOYMENT_TARGET=26.0 -DOPENSSL_USE_STATIC_LIBS=TRUE
   -Ddeprecated-functions=OFF -Dpython-bindings=OFF -Dbuild_tools=OFF
   "-DBoost_ROOT=$BOOST" -DCMAKE_CXX_STANDARD=17)
 # CMake 的绝对路径只用于构建/安装；命中后直接链接头文件和静态库，键无需缓存路径。
 KEY="$( {
-  printf '%s\n' "$OPENSSL_REV"
+  printf '%s\n' "$OPENSSL_REV" "$(shasum -a 256 < "$0")"
   printf '%s\n' "$LT_REV"
   printf '%s\n' "${OPENSSL_FLAGS[@]}" "${LT_FLAGS[@]}"
   clang++ --version
@@ -52,7 +60,8 @@ KEY="$( {
   cat "$BOOST/include/boost/version.hpp"
 } | shasum -a 256 | awk '{print $1}')"
 DEPS="$CACHE/$KEY"
-SSL="$DEPS/openssl"
+SSL_DESTDIR="$DEPS/openssl"
+SSL="$SSL_DESTDIR/mulee-openssl"
 LT="$DEPS/libtorrent"
 mkdir -p "$DEPS" "$CACHE/bin"
 if [ ! -f "$DEPS/complete" ] || [ ! -f "$SSL/lib/libcrypto.a" ] || [ ! -f "$LT/lib/libtorrent-rasterbar.a" ]; then
@@ -61,15 +70,18 @@ if [ ! -f "$DEPS/complete" ] || [ ! -f "$SSL/lib/libcrypto.a" ] || [ ! -f "$LT/l
       || error "子模块 $sub 未初始化；请运行 git submodule update --init --recursive"
   done
   echo "mulee-torrentd: 首次构建静态依赖（约 8 分钟），日志：$DEPS"
-  rm -rf "$DEPS/openssl-src" "$DEPS/libtorrent-build" "$SSL" "$LT"
+  rm -rf "$DEPS/openssl-src" "$DEPS/libtorrent-build" "$SSL_DESTDIR" "$LT"
   mkdir -p "$DEPS/openssl-src"
   # 在源码副本中构建，绝不写子模块。
   rsync -a --exclude .git "$SRCROOT/ThirdParty/openssl/" "$DEPS/openssl-src/"
   (
     cd "$DEPS/openssl-src"
-    ./Configure "${OPENSSL_FLAGS[@]}" "--prefix=$SSL"
+    # OpenSSL 会把编译参数写进版本信息；摘要不保留含绝对路径的映射参数。
+    # 只修改缓存副本中的摘要生成规则，实际编译继续使用完整 FLAGS。
+    sed -i '' 's/\$(LIB_CFLAGS)/$(filter-out -ffile-prefix-map=%,$(LIB_CFLAGS))/' crypto/build.info
+    ./Configure "${OPENSSL_FLAGS[@]}"
     make -j"$JOBS"
-    make install_sw
+    make install_sw "DESTDIR=$SSL_DESTDIR"
   ) > "$DEPS/openssl.log" 2>&1 || error "OpenSSL 构建失败，见 $DEPS/openssl.log"
   cmake -S "$SRCROOT/ThirdParty/libtorrent" -B "$DEPS/libtorrent-build" -G 'Unix Makefiles' \
     "${LT_FLAGS[@]}" "-DOPENSSL_ROOT_DIR=$SSL" "-DCMAKE_INSTALL_PREFIX=$LT" \
@@ -91,7 +103,7 @@ else
 fi
 
 BIN="$CACHE/bin/mulee-torrentd"
-clang++ -std=c++17 -O2 -arch arm64 -mmacosx-version-min=26.0 -Wl,-dead_strip \
+clang++ $PREFIX_FLAGS -std=c++17 -O2 -arch arm64 -mmacosx-version-min=26.0 -Wl,-dead_strip \
   -DBOOST_ASIO_ENABLE_CANCELIO -DBOOST_ASIO_NO_DEPRECATED -DTORRENT_NO_DEPRECATE \
   -DTORRENT_USE_OPENSSL -DTORRENT_USE_LIBCRYPTO -DTORRENT_SSL_PEERS \
   -DOPENSSL_NO_SSL2 -DOPENSSL_NO_SSL3 -DOPENSSL_NO_TLS1 -DOPENSSL_NO_TLS1_1 -DOPENSSL_NO_DTLS1 \

@@ -8,6 +8,11 @@ export LC_ALL=en_US.UTF-8
 error() { echo "error: $*" >&2; exit 1; }
 SRCROOT="${SRCROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 CACHE="${MULEE_THIRDPARTY_CACHE:-$SRCROOT/build/thirdparty}"
+SRCROOT="$(cd "$SRCROOT" && pwd -P)"
+mkdir -p "$CACHE"
+CACHE="$(cd "$CACHE" && pwd -P)"
+# -ffile-prefix-map 同时清理 __FILE__/assert 宏与 DWARF 源码路径。
+PREFIX_FLAGS="-ffile-prefix-map=$HOME=home -ffile-prefix-map=$SRCROOT=. -ffile-prefix-map=$CACHE=build/thirdparty"
 STANDALONE=OFF
 case "${1:-}" in
   --standalone) STANDALONE=ON ;;
@@ -45,7 +50,7 @@ export MACOSX_DEPLOYMENT_TARGET=26.0
 unset CPATH CPLUS_INCLUDE_PATH C_INCLUDE_PATH LIBRARY_PATH PKG_CONFIG_PATH CMAKE_PREFIX_PATH
 export PKG_CONFIG_LIBDIR="$SDK/usr/lib/pkgconfig"
 JOBS="${BUILD_JOBS:-8}"
-FLAGS="-O2 -DNDEBUG -arch arm64 -mmacosx-version-min=26.0 -isysroot $SDK"
+FLAGS="-O2 -DNDEBUG -arch arm64 -mmacosx-version-min=26.0 -isysroot $SDK $PREFIX_FLAGS"
 # wx 3.2 的 base-only configure 漏掉 macOS 平台宏；ObjC++ 工具代码仍使用 AppKit 类型。
 WX_CPPFLAGS="-D__WXMAC__ -D__WXOSX__"
 WX_OBJCXXFLAGS="$FLAGS -std=c++17 -include AppKit/AppKit.h"
@@ -129,7 +134,8 @@ if [ ! -f "$BUILD/complete" ]; then
     "${AMULE_ARGS[@]}" "-DBUILD_AMULECMD=$STANDALONE" \
     "-DCMAKE_C_COMPILER=$CC" "-DCMAKE_CXX_COMPILER=$CXX" \
     "-DCMAKE_OSX_SYSROOT=$SDK" \
-    "-DCMAKE_CXX_FLAGS=$WX_CPPFLAGS -I$CRYPTO/include -I$BOOST/include" \
+    "-DCMAKE_C_FLAGS=$FLAGS" \
+    "-DCMAKE_CXX_FLAGS=$FLAGS $WX_CPPFLAGS -I$CRYPTO/include -I$BOOST/include" \
     '-DCMAKE_EXE_LINKER_FLAGS=-framework AppKit' \
     "-DCRYPTOPP_INCLUDE_DIR=$CRYPTO/include" \
     "-DCRYPTOPP_LIBRARY=$CRYPTO/source/libcryptopp.a" \

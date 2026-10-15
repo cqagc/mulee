@@ -8,6 +8,11 @@ export MACOSX_DEPLOYMENT_TARGET=26.0
 error() { echo "error: build-aria2: $*" >&2; exit 1; }
 SRCROOT="${SRCROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 CACHE="${MULEE_THIRDPARTY_CACHE:-$SRCROOT/build/thirdparty}"
+SRCROOT="$(cd "$SRCROOT" && pwd -P)"
+mkdir -p "$CACHE"
+CACHE="$(cd "$CACHE" && pwd -P)"
+# -ffile-prefix-map 同时清理 __FILE__/assert 宏与 DWARF 源码路径。
+PREFIX_FLAGS="-ffile-prefix-map=$HOME=home -ffile-prefix-map=$SRCROOT=. -ffile-prefix-map=$CACHE=build/thirdparty"
 STANDALONE=0
 if [ "${1:-}" = --standalone ] && [ "$#" = 1 ]; then
   STANDALONE=1
@@ -41,7 +46,7 @@ CXX="$(xcrun -f clang++)"
 # 不读取构建机的 Homebrew 头文件、库和 pkg-config 搜索路径。
 unset CPATH CPLUS_INCLUDE_PATH C_INCLUDE_PATH LIBRARY_PATH PKG_CONFIG_PATH CMAKE_PREFIX_PATH
 export PKG_CONFIG_LIBDIR="$SDK/usr/lib/pkgconfig"
-FLAGS="-O2 -DNDEBUG -arch arm64 -mmacosx-version-min=26.0 -isysroot $SDK"
+FLAGS="-O2 -DNDEBUG -arch arm64 -mmacosx-version-min=26.0 -isysroot $SDK $PREFIX_FLAGS"
 ARGS=(--with-appletls --without-openssl --without-gnutls
   --disable-bittorrent --disable-metalink --without-sqlite3
   --without-libxml2 --without-libexpat --without-libssh2 --without-libcares
