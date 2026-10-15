@@ -31,6 +31,7 @@ final class AppModel {
     /// 历史读取、备份或写入异常；独立于引擎启停，避免启动成功后覆盖诊断。
     var taskHistoryIssue: String?
     @ObservationIgnored private var historyStore: TaskHistoryStore?
+    @ObservationIgnored private(set) var excludedVideoTaskIDs: Set<String> = []
     @ObservationIgnored weak var coordinator: DownloadCoordinator?
     @ObservationIgnored weak var extractionCoordinator: ExtractionCoordinator?
     @ObservationIgnored var unzipRuleStore: UnzipRuleStore?
@@ -146,6 +147,15 @@ final class AppModel {
             return
         }
         if let task = tasks.first(where: { $0.id == id }), task.status == .completed {
+            if task.kind == .video {
+                if let coordinator {
+                    coordinator.removeCompletedVideo(task)
+                } else {
+                    excludeVideoFromHistory(task)
+                    removeRecord(id)
+                }
+                return
+            }
             coordinator?.excludeFromSnapshots(task)
             removeRecord(id)
             return
@@ -174,6 +184,14 @@ final class AppModel {
         let engineOwnedIDs = coordinator == nil ? Set<DownloadTask.ID>() : Set(ed2kTasks.map(\.id))
         for task in tasks where task.status == .completed {
             guard !engineOwnedIDs.contains(task.id) else { continue }
+            if task.kind == .video {
+                if let coordinator {
+                    coordinator.removeCompletedVideo(task)
+                } else {
+                    excludeVideoFromHistory(task)
+                }
+                continue
+            }
             coordinator?.excludeFromSnapshots(task)
         }
         tasks.removeAll { $0.status == .completed && !engineOwnedIDs.contains($0.id) }
@@ -189,10 +207,38 @@ final class AppModel {
 
     func loadTaskHistory(from store: TaskHistoryStore) {
         let result = store.load()
-        tasks = result.tasks
-        selectedTaskID = tasks.first?.id
         taskHistoryIssue = result.issue
         historyStore = store
+        let exclusions = store.fileURL.deletingLastPathComponent().appending(path: "removed-video-jobs.json")
+        if FileManager.default.fileExists(atPath: exclusions.path) {
+            do {
+                excludedVideoTaskIDs = Set(try JSONDecoder().decode([String].self, from: Data(contentsOf: exclusions)))
+            } catch {
+                taskHistoryIssue = String(localized: "无法读取任务历史：\(error.localizedDescription)")
+            }
+        }
+        tasks = result.tasks.filter { task in
+            task.kind != .video || task.engineTaskID.map { !excludedVideoTaskIDs.contains($0) } ?? true
+        }
+        selectedTaskID = tasks.first?.id
+    }
+
+    /// 在删列表和等待引擎之前原子保存用户意图；即使引擎离线也能跨启动排除。
+    func excludeVideoFromHistory(_ task: DownloadTask) {
+        guard let id = task.engineTaskID else { return }
+        excludedVideoTaskIDs.insert(id)
+        guard let historyStore else { return }
+        let directory = historyStore.fileURL.deletingLastPathComponent()
+        do {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            try encoder.encode(excludedVideoTaskIDs.sorted()).write(
+                to: directory.appending(path: "removed-video-jobs.json"), options: .atomic
+            )
+        } catch {
+            taskHistoryIssue = String(localized: "无法保存任务历史：\(error.localizedDescription)")
+        }
     }
 
     func flushTaskHistory() {

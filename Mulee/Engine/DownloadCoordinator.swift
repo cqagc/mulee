@@ -83,6 +83,7 @@ final class DownloadCoordinator {
                         kinds: Set(self.engines.map(\.kind)).union([.video])
                     )
                     try await engine.start(options: startup)
+                    await self.removeExcludedVideoTasks(using: engine)
                     guard self.generation == token, !Task.isCancelled else {
                         await engine.stop()
                         return
@@ -118,6 +119,10 @@ final class DownloadCoordinator {
                 if let error {
                     model.engineStates[kind] = .failed(error)
                 } else {
+                    if kind == .video, let engine = engines.first(where: { $0.kind == .video }) {
+                        await removeExcludedVideoTasks(using: engine)
+                        guard generation == token else { continue }
+                    }
                     started.insert(kind)
                     model.engineStates[kind] = .running
                     if kind == .bittorrent { model.bitTorrent?.start() }
@@ -198,6 +203,9 @@ final class DownloadCoordinator {
         }
         for kind in snapshots.keys {
             snapshots[kind]?.removeAll { excludedTaskIDs[kind, default: []].contains($0.engineTaskID) }
+            if kind == .video {
+                snapshots[kind]?.removeAll { model.excludedVideoTaskIDs.contains($0.engineTaskID) }
+            }
         }
         model.tasks = EngineSnapshotMerger.merge(
             tasks: model.tasks, snapshots: snapshots, now: .now, videoConfiguration: videoConfiguration
@@ -290,6 +298,10 @@ final class DownloadCoordinator {
         guard let index = model.tasks.firstIndex(where: { $0.id == id }) else { return }
         let task = model.tasks[index]
         waitingVideoLinks[id] = nil
+        if task.kind == .video, task.status == .completed {
+            await removeCompletedVideo(task).value
+            return
+        }
         if (task.status == .completed && ![.bittorrent, .ed2k].contains(task.kind)) || task.engineTaskID == nil {
             excludeFromSnapshots(task)
             scheduling.removed(task)
@@ -316,6 +328,26 @@ final class DownloadCoordinator {
             if wasSelected {
                 model.selectedTaskID = id
             }
+        }
+    }
+
+    /// 同步保存删除意图并移除列表；引擎失败不能撤销用户删除，也不能删除成品。
+    @discardableResult
+    func removeCompletedVideo(_ task: DownloadTask) -> Task<Void, Never> {
+        model.excludeVideoFromHistory(task)
+        excludeFromSnapshots(task)
+        scheduling.removed(task)
+        model.removeRecord(task.id)
+        return Task {
+            guard let id = task.engineTaskID, let engine = engine(for: .video) else { return }
+            try? await engine.remove(id, deleteFiles: false)
+        }
+    }
+
+    private func removeExcludedVideoTasks(using engine: any DownloadEngine) async {
+        for id in model.excludedVideoTaskIDs {
+            // 保留排除标记，覆盖迟到的旧快照及引擎写盘失败；下次启动仍可补删。
+            try? await engine.remove(id, deleteFiles: false)
         }
     }
 
