@@ -23,9 +23,9 @@ struct NewTaskVideoPartsView: View {
                 }
                 ForEach(item.videoParts) { part in
                     Toggle(isOn: selection(for: part)) {
-                        Text("P\(part.index) \(part.title)")
+                        Text(part.displayTitle)
                             .lineLimit(2)
-                            .help(part.title)
+                            .help(part.displayTitle)
                     }
                     .toggleStyle(.checkbox)
                 }

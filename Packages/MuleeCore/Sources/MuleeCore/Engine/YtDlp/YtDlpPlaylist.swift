@@ -1,6 +1,14 @@
 import Foundation
 
 public enum YtDlpPlaylist {
+    /// nil 表示接口不适用或失败，空数组表示已确认没有分 P 或合集。
+    public static func fetchMetadata(
+        url: URL, cookies: [VideoCookie] = [],
+        load: (@Sendable (URLRequest) async throws -> (Data, URLResponse))? = nil
+    ) async -> [YtDlpPlaylistEntry]? {
+        await YtDlpBilibiliMetadata.fetch(source: url, cookies: cookies, load: load)
+    }
+
     public static func fetch(
         url: URL, binary: URL, cookies: [VideoCookie] = [], timeout: Duration = .seconds(20)
     ) async throws -> [YtDlpPlaylistEntry] {
@@ -36,7 +44,7 @@ public enum YtDlpPlaylist {
                     }
                     let entries = try parse(data, source: url)
                     let source = url.host == "b23.tv" ? (entries.first?.url ?? url) : url
-                    return await YtDlpBilibiliMetadata.enrich(entries, source: source)
+                    return await YtDlpBilibiliMetadata.enrich(entries, source: source, cookies: cookies)
                 }
                 group.addTask {
                     try await Task.sleep(for: timeout)

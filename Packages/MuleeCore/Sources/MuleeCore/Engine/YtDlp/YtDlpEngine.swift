@@ -151,7 +151,7 @@ public actor YtDlpEngine: DownloadEngine {
         let destination = directory ?? options.downloadDirectory
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
         let id = UUID().uuidString.lowercased()
-        jobs.append(YtDlpJob(id: id, url: url, site: site, directory: destination, name: entry.map { "P\($0.index) \($0.title)" } ?? url.lastPathComponent,
+        jobs.append(YtDlpJob(id: id, url: url, site: site, directory: destination, name: entry?.taskTitle ?? url.lastPathComponent,
                                 playlistIndex: entry?.index, playlistTitle: entry?.title, status: paused ? .paused : .queued))
         try persist()
         if !paused, options.downloadLimit > 0 { await requeueActive() }
@@ -395,8 +395,12 @@ public actor YtDlpEngine: DownloadEngine {
     private func consume(_ line: String, id: String, token: UUID, errors: inout String) {
         guard tokens[id] == token, let index = jobs.firstIndex(where: { $0.id == id }) else { return }
         if progress[id]?.consume(line) == true {
-            if let title = progress[id]?.title {
-                jobs[index].name = jobs[index].playlistIndex.map { "P\($0) " + (jobs[index].playlistTitle ?? title) } ?? title
+            // 分 P / 剧集任务保留列表接口给的标题，yt-dlp 的标题只用于单个视频。
+            if let title = progress[id]?.title, jobs[index].playlistTitle?.isEmpty ?? true {
+                if jobs[index].name != title {
+                    jobs[index].name = title
+                    persistOrReport()
+                }
             }
             if progress[id]?.postProcessing == true, jobs[index].status != .postProcessing {
                 captureProgress(id)

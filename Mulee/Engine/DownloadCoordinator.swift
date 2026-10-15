@@ -219,7 +219,7 @@ final class DownloadCoordinator {
         var insertionIndex = 0
         for link in links {
             var task = DownloadTask(link: link, autoExtract: autoExtract)
-            if let entry = videoEntries[link] { task.name = "P\(entry.index) \(entry.title)" }
+            if let entry = videoEntries[link] { task.name = entry.taskTitle }
             if let detail = videoConfiguration.detail(for: link) {
                 task.detail = detail
             }

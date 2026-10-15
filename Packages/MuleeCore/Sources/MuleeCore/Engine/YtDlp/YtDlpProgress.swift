@@ -21,7 +21,10 @@ struct YtDlpProgress: Sendable {
               let event = object["event"] as? String else { return false }
         switch event {
         case "metadata":
-            title = object["title"] as? String
+            if let value = object["title"] as? String {
+                let value = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !value.isEmpty, value != "NA" { title = String(value.prefix(512)) }
+            }
             videoCodec = object["vcodec"] as? String
             videoSize = Self.dimensions(object)
             if let formats = object["formats"] as? [[String: Any]], !formats.isEmpty {

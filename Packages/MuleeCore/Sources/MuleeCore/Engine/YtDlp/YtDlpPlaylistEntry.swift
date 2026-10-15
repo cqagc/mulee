@@ -12,6 +12,20 @@ public struct YtDlpPlaylistEntry: Sendable, Identifiable, Equatable {
         self.url = url
     }
 
+    public var displayTitle: String {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return "P\(index)" }
+        if url.path.hasPrefix("/bangumi/play/") { return title }
+        let prefix = "P\(index)"
+        if title == prefix || title.hasPrefix(prefix + " ") { return title }
+        return prefix + " · " + title
+    }
+
+    public var taskTitle: String {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? "P\(index)" : title
+    }
+
     public var link: ParsedLink { .video(url: url, site: .bilibili, original: url.absoluteString) }
 
     public static func selectedPart(in url: URL) -> Int {

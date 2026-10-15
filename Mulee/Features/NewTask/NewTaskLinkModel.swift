@@ -70,7 +70,7 @@ final class NewTaskLinkModel: Identifiable {
     }
 
     var selectedVideoEntries: [YtDlpPlaylistEntry] {
-        videoParts.count > 1 ? videoParts.filter { selectedVideoParts.contains($0.id) } : []
+        videoParts.filter { selectedVideoParts.contains($0.id) }
     }
 
     func canDeselect(_ file: TorrentFile) -> Bool {
