@@ -25,6 +25,8 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
     public var postDownload: PostDownloadInfo
     /// 原始链接（用于「复制链接」）。
     public var sourceLink: String
+    /// 浏览器提供的来源页面；旧任务记录没有此字段时为 nil。
+    public var sourcePageURL: URL?
     /// 引擎内部的任务标识（例如 aria2 的 GID）；还没交给引擎时为 nil。
     public var engineTaskID: String?
     /// 文件在磁盘上的完整路径；引擎还没确定文件名时为 nil。
@@ -47,6 +49,7 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
         detail: TaskDetail,
         postDownload: PostDownloadInfo,
         sourceLink: String,
+        sourcePageURL: URL? = nil,
         engineTaskID: String? = nil,
         savePath: URL? = nil,
         errorMessage: String? = nil
@@ -65,6 +68,7 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
         self.detail = detail
         self.postDownload = postDownload
         self.sourceLink = sourceLink
+        self.sourcePageURL = sourcePageURL
         self.engineTaskID = engineTaskID
         self.savePath = savePath
         self.errorMessage = errorMessage

@@ -4,6 +4,7 @@ import MuleeCore
 /// 菜单栏常驻，并在退出前给下载引擎最多五秒保存会话。
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    var openURLRouter: OpenURLRouter?
     private var coordinator: DownloadCoordinator?
     private var extractionCoordinator: ExtractionCoordinator?
     private var startupTask: Task<Void, Never>?
@@ -15,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hasReplied = false
 
     func configure(model: AppModel, settings: SettingsModel, usesSampleData: Bool) {
+        openURLRouter = OpenURLRouter(model: model, settings: settings)
         // 示例数据模式和单元测试宿主都不启动真实引擎。
         guard !usesSampleData, !AppEnvironment.isRunningUnitTests, coordinator == nil else { return }
         self.model = model

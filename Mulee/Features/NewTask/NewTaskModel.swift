@@ -11,6 +11,7 @@ final class NewTaskModel {
     private(set) var links: [NewTaskLinkModel] = []
     var saveDirectory: URL
     var autoExtract: Bool
+    private var contexts: [ParsedLink: NewTaskContext] = [:]
 
     private let parser: (String) -> [ParsedLink]
     private let metadataProvider: (any TorrentMetadataProvider)?
@@ -54,8 +55,15 @@ final class NewTaskModel {
     func consumePendingText(from model: AppModel) {
         let pendingText = model.pendingNewTaskText
         guard !pendingText.isEmpty else { return }
+        contexts.merge(model.pendingNewTaskContexts) { _, new in new }
+        model.pendingNewTaskContexts = [:]
         mergePrefillText(pendingText)
         model.pendingNewTaskText = ""
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "MuleeOpenURLDiagnostics") {
+            FileHandle.standardOutput.write(Data("Mulee OpenURL draft: \(inputText)\n".utf8))
+        }
+        #endif
     }
 
     func mergePrefillText(_ text: String) {
@@ -68,7 +76,7 @@ final class NewTaskModel {
         guard canStartDownload else { return }
         // TODO: 把逐任务画质和字幕选项传给视频引擎；当前使用全局设置。
         model.addTasks(
-            from: parsedLinks, autoExtract: autoExtract, directory: saveDirectory, filePriorities: filePriorities
+            from: parsedLinks, autoExtract: autoExtract, directory: saveDirectory, filePriorities: filePriorities, contexts: contexts
         )
     }
 

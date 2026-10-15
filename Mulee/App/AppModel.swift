@@ -28,6 +28,7 @@ final class AppModel {
     @ObservationIgnored weak var extractionCoordinator: ExtractionCoordinator?
     @ObservationIgnored var unzipRuleStore: UnzipRuleStore?
     @ObservationIgnored var extractionPasswords: any ExtractionPasswordStoring = KeychainPasswordProvider()
+    @ObservationIgnored var pagePasswords: [DownloadTask.ID: String] = [:]
     var unzipRuleIssue: String?
     var unzipRules: [UnzipRule] {
         didSet { persistUnzipRules() }
@@ -36,8 +37,10 @@ final class AppModel {
     var selectedTaskID: DownloadTask.ID?
     /// 是否显示「新建下载」面板。
     var isShowingNewTask = false
-    /// 打开「新建下载」面板时预填的文本（例如菜单栏里粘贴的链接）。读取后由面板清空。
+    var openURLIssue: String?
+    /// 打开「新建下载」面板时预填的文本，读取后由面板清空。
     var pendingNewTaskText = ""
+    var pendingNewTaskContexts: [ParsedLink: NewTaskContext] = [:]
     /// 最近 30 次采样的总下载速度（字节/秒），最后一个是最新值。菜单栏速度曲线使用。
     var downloadRateHistory: [Int64]
     /// 有任务在传输时阻止系统空闲睡眠。
@@ -90,7 +93,10 @@ final class AppModel {
 
     /// 打开「新建下载」面板，可选预填文本。
     func showNewTask(prefill text: String = "") {
-        pendingNewTaskText = text
+        if !text.isEmpty {
+            let separator = pendingNewTaskText.isEmpty || pendingNewTaskText.hasSuffix("\n") ? "" : "\n"
+            pendingNewTaskText += separator + text
+        }
         isShowingNewTask = true
     }
 

@@ -27,6 +27,22 @@ targets:
       path: Mulee/Resources/Info.plist
       properties:
         CFBundleDisplayName: Mulee
+        CFBundleURLTypes:
+          - CFBundleURLName: com.cqagc.mulee.links
+            CFBundleTypeRole: Viewer
+            CFBundleURLSchemes: [magnet, ed2k, thunder, mulee]
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: BitTorrent 种子文件
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [org.bittorrent.torrent]
+        UTImportedTypeDeclarations:
+          - UTTypeIdentifier: org.bittorrent.torrent
+            UTTypeDescription: BitTorrent 种子文件
+            UTTypeConformsTo: [public.data]
+            UTTypeTagSpecification:
+              public.filename-extension: [torrent]
+              public.mime-type: [application/x-bittorrent]
         LSApplicationCategoryType: public.app-category.utilities
         NSHumanReadableCopyright: "© 2026 CQAGC. GPL-3.0."
     postBuildScripts:
