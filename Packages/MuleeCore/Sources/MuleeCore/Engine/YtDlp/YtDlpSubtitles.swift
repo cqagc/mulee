@@ -1,4 +1,4 @@
-/// Bilibili 字幕选择。弹幕保留原始 XML，暂不转换 ASS。
+/// Bilibili 字幕选择。弹幕先下载 XML，任务后处理时转换为 ASS。
 public struct YtDlpSubtitles: Sendable {
     public var danmaku: Bool
     public var closedCaptions: Bool
@@ -10,7 +10,6 @@ public struct YtDlpSubtitles: Sendable {
 
     public var arguments: [String] {
         guard danmaku || closedCaptions else { return [] }
-        // TODO: 弹幕 XML 转 ASS。
         let languages = closedCaptions ? (danmaku ? "all" : "all,-danmaku") : "danmaku"
         return ["--write-subs", "--sub-langs", languages]
     }
