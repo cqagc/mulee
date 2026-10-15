@@ -45,8 +45,8 @@ struct MenuBarFooter: View {
 
     private var statusStyle: (Color, String) {
         switch model.networkStatus.ed2kID {
-        case .high: (Theme.success, "High ID")
-        case .low: (Theme.wait, "Low ID")
+        case .high: (Theme.success, NetworkPresentation.ed2kID(.high).text)
+        case .low: (Theme.wait, NetworkPresentation.ed2kID(.low).text)
         case .disconnected: (Color.secondary, "未连接")
         }
     }

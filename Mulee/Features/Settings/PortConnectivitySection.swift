@@ -1,71 +1,66 @@
+import AppKit
 import SwiftUI
 import MuleeCore
 
-/// 设置·网络：端口与连通性。
+/// 入站连接证据及可复制的路由器转发说明。
 struct PortConnectivitySection: View {
     @Environment(AppModel.self) private var appModel
     @Environment(SettingsModel.self) private var model
+    @State private var diagnostics = NetworkDiagnosticsService.shared
+    @State private var copied = false
 
     var body: some View {
         @Bindable var model = model
         let status = appModel.networkStatus
-        let ed2k = NetworkPresentation.ed2kID(status.ed2kID)
-        let kad = NetworkPresentation.kadBadge(status.kad)
-        let bt = NetworkPresentation.bittorrentPort(reachable: status.bittorrentPortReachable)
         let mapping = NetworkPresentation.portMapping(succeeded: status.portMappingSucceeded)
-        Section("端口与连通性") {
-            LabeledContent {
-                HStack(spacing: 4) {
-                    Image(systemName: MuleeSymbol.statusDot.name)
-                        .imageScale(.small)
-                    Text(ed2k.text)
-                }
-                .fontWeight(.semibold)
-                .foregroundStyle(ed2k.isAbnormal ? Theme.wait : Theme.success)
-            } label: {
-                Text("电驴端口")
-                Text("TCP \(model.ed2kTCPPort.formatted(.number.grouping(.never))) · UDP \(model.ed2kUDPPort.formatted(.number.grouping(.never)))")
+        Section(NetworkPresentation.portCardTitle) {
+            NetworkPortStatusRow(title: NetworkPresentation.btPortTitle,
+                                 port: model.btPort, transport: "TCP / UDP",
+                                 line: NetworkPresentation.bittorrentPort(reachable: status.bittorrentPortReachable))
+            NetworkPortStatusRow(title: NetworkPresentation.ed2kTCPTitle,
+                                 port: model.ed2kTCPPort, transport: "TCP",
+                                 line: NetworkPresentation.ed2kID(status.ed2kID))
+            NetworkPortStatusRow(title: NetworkPresentation.ed2kUDPTitle,
+                                 port: model.ed2kUDPPort, transport: "UDP",
+                                 line: NetworkPresentation.kadBadge(status.kad))
+            Text(NetworkPresentation.portSummary(status))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            if status.bittorrentPortReachable != true || status.ed2kID != .high || status.kad != .open {
+                Text(instructions)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(copied ? NetworkPresentation.instructionsCopied : NetworkPresentation.copyInstructions,
+                       systemImage: MuleeSymbol.copy.name, action: copyInstructions)
             }
             LabeledContent {
-                Text(kad.text)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(kad.isAbnormal ? Theme.wait : Theme.success)
-            } label: {
-                Text("Kad 网络")
-                Text(NetworkPresentation.kadDescription(status.kad))
-            }
-            LabeledContent {
-                HStack {
-                    Text(bt.text)
-                        .foregroundStyle(bt.isAbnormal ? Theme.wait : .secondary)
-                    if status.bittorrentPortReachable == nil {
-                        Button("刷新", action: refreshBitTorrentPort)
-                    }
-                }
-            } label: {
-                Text("BT 端口")
-                Text("TCP / UDP \(model.btPort.formatted(.number.grouping(.never)))")
-            }
-            LabeledContent {
-                HStack {
-                    if let mapping {
-                        Text(mapping.text)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(mapping.isAbnormal ? Theme.wait : Theme.success)
-                    }
-                    Toggle("自动端口映射", isOn: $model.portMapping)
+                VStack(alignment: .trailing, spacing: 4) {
+                    Toggle(NetworkPresentation.mappingTitle, isOn: $model.portMapping)
                         .toggleStyle(.switch)
                         .labelsHidden()
+                    if let mapping {
+                        Text(mapping.text)
+                            .font(.caption)
+                            .foregroundStyle(mapping.isAbnormal ? Theme.wait : Theme.success)
+                    }
                 }
             } label: {
-                Text("自动端口映射（UPnP / NAT-PMP）")
-                Text("路由器支持时自动打开端口，是拿到 High ID 最省事的办法")
+                Text(NetworkPresentation.mappingTitle)
+                Text(NetworkPresentation.mappingAdvice)
             }
         }
     }
 
-    private func refreshBitTorrentPort() {
-        Task { await appModel.bitTorrent?.refreshSession() }
+    private var instructions: String {
+        NetworkPresentation.forwardingInstructions(btPort: model.btPort, tcpPort: model.ed2kTCPPort,
+                                                   udpPort: model.ed2kUDPPort, network: diagnostics.snapshot)
+    }
+
+    private func copyInstructions() {
+        NSPasteboard.general.clearContents()
+        copied = NSPasteboard.general.setString(instructions, forType: .string)
     }
 }
 

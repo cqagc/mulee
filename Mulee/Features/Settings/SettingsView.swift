@@ -3,10 +3,11 @@ import SwiftUI
 /// 设置窗口：七个标签页。
 struct SettingsView: View {
     @Environment(SettingsModel.self) private var model
-    @State private var selection = SettingsTab.general
+    @State private var navigation = NetworkSettingsNavigation.shared
 
     var body: some View {
-        TabView(selection: $selection) {
+        @Bindable var navigation = navigation
+        TabView(selection: $navigation.selection) {
             Tab(SettingsTab.general.title, systemImage: SettingsTab.general.symbol.name, value: .general) {
                 GeneralSettingsTab()
             }
@@ -41,7 +42,7 @@ struct SettingsView: View {
     /// Debug 启动参数 -MuleeSettingsTab 指定的标签页（用于截图核对）。
     private func selectDebugLaunchTab() async {
         if let raw = DebugLaunchOptions.settingsTab, let tab = SettingsTab(rawValue: raw) {
-            selection = tab
+            navigation.selection = tab
         }
     }
     #endif

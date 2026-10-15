@@ -3,6 +3,78 @@ import MuleeCore
 
 /// 设置·网络页的文案与异常判断。纯函数，方便测试。
 enum NetworkPresentation {
+    static let rules = "PROCESS-NAME,amuled,DIRECT\nPROCESS-NAME,mulee-torrentd,DIRECT"
+    static let proxyCardTitle = "是否走代理"
+    static let portCardTitle = "端口能否从外部连入"
+    static let proxyWarning = "代理软件可能接管了下载连接"
+    static let copyRules = "复制 Stash / Clash 规则"
+    static let recheck = "重新检测"
+    static let checking = "正在检测…"
+    static let rulesCopied = "规则已复制"
+    static let instructionsCopied = "说明已复制"
+    static let copyInstructions = "复制端口转发说明"
+    static let processRecognition = "Clash Verge / mihomo 需要开启进程识别（find-process-mode），让按进程名匹配的规则生效。"
+    static let fakeIPAdvice = "域名解析使用了代理软件的虚拟地址。某些配置下，仅加直连规则仍不能连接来源；可在代理软件里为下载来源域名关闭虚拟地址解析，再重新检测。"
+    static let differentSubnet = "你的电脑和路由器不在同一网段，自动映射不起作用。需要由网络管理员手工转发端口。"
+    static let unknownSubnet = "暂时无法确认电脑和路由器是否在同一网段。"
+    static let mappingTitle = "BT 自动端口映射"
+    static let mappingAdvice = "路由器支持时，BT 引擎会尝试自动打开端口；电驴端口需要在路由器里手工转发。"
+    static let portImpact = "外部暂时无法主动连入时，仍可尝试连接其他来源，但能找到的来源可能较少，速度也可能较慢。"
+    static let portPending = "尚未连接或未确认的端口暂时无法判断，等待连接后再查看。"
+    static let portsOpen = "这些连接已收到外部可连入的证据，更容易找到来源。"
+    static let btPortTitle = "BT 端口"
+    static let ed2kTCPTitle = "电驴 TCP 端口"
+    static let ed2kUDPTitle = "电驴 UDP 端口"
+
+    static func proxyTitle(_ kind: NetworkDiagnosticsSnapshot.ProxyKind) -> String {
+        switch kind {
+        case .unknown: "代理状态尚未确认"
+        case .none: "未发现代理接管"
+        case .system: "开启了系统网页代理"
+        case .tunnel: "虚拟网卡可能接管了下载连接"
+        }
+    }
+
+    static func proxyDescription(_ kind: NetworkDiagnosticsSnapshot.ProxyKind) -> String {
+        switch kind {
+        case .unknown: "部分网络信息暂时无法读取。点击重新检测，确认 BT 和电驴的连接是否受到代理影响。"
+        case .none: "当前未发现代理接管的迹象。BT 和电驴仍需要有可用来源，端口是否可连入可在下方查看。"
+        case .system: "系统代理只影响网页类连接，BT 和电驴不受这项设置影响。端口是否可连入可在下方查看。"
+        case .tunnel: "BT 和电驴的流量现在很可能被代理软件接管了。代理节点通常不支持这类连接，所以可能找不到来源、速度很慢。在代理规则里加上下面两行，让它们直连后再检测。"
+        }
+    }
+
+    static func portSummary(_ status: NetworkStatus) -> String {
+        if status.bittorrentPortReachable == false || status.ed2kID == .low || status.kad == .firewalled {
+            return portImpact
+        }
+        if status.bittorrentPortReachable == nil || status.ed2kID == .disconnected || status.kad == .disconnected {
+            return portPending
+        }
+        return portsOpen
+    }
+
+    static func forwardingInstructions(btPort: Int, tcpPort: Int, udpPort: Int, network: NetworkDiagnosticsSnapshot) -> String {
+        let target = network.localIP.map { "转发到这台电脑的局域网地址 \($0)。" }
+            ?? "暂时未读到本机局域网地址，请连接局域网后重新检测，再确认转发目标。"
+        let router = network.gateway.map { "打开路由器（\($0)）的管理页面，找到端口转发设置。" }
+            ?? "打开路由器管理页面，找到端口转发设置；网关地址暂时无法读取。"
+        let subnet: String
+        switch network.isOnGatewaySubnet {
+        case .some(false): subnet = differentSubnet
+        case .some(true): subnet = "电脑和路由器在同一网段。若自动映射未生效，可以手工转发。"
+        case .none: subnet = unknownSubnet
+        }
+        return [router, "BT：TCP / UDP \(btPort.formatted(.number.grouping(.never)))",
+                "电驴：TCP \(tcpPort.formatted(.number.grouping(.never)))、UDP \(udpPort.formatted(.number.grouping(.never)))",
+                target, "外部端口与电脑端口填写相同的端口号。", subnet,
+                "转发后等待来源连接，再查看端口状态。"].joined(separator: "\n")
+    }
+
+    static func exitDescription(_ ip: String?) -> String {
+        "下载连接出口：\(maskedIP(ip))"
+    }
+
     /// 一段状态文案，以及它是否属于「需要留意」的异常状态（界面用琥珀色）。
     struct Line: Equatable {
         var text: String
@@ -28,18 +100,18 @@ enum NetworkPresentation {
 
     static func ed2kID(_ id: NetworkStatus.Ed2kID) -> Line {
         switch id {
-        case .high: Line(text: "High ID", isAbnormal: false)
-        case .low: Line(text: "Low ID", isAbnormal: true)
-        case .disconnected: Line(text: "未连接", isAbnormal: true)
+        case .high: Line(text: "可从外部连入", isAbnormal: false)
+        case .low: Line(text: "暂时无法从外部连入", isAbnormal: true)
+        case .disconnected: Line(text: "尚未连接，暂无法判断", isAbnormal: false)
         }
     }
 
     /// Kad 右侧的简短标签。
     static func kadBadge(_ state: NetworkStatus.KadState) -> Line {
         switch state {
-        case .open: Line(text: "正常", isAbnormal: false)
-        case .firewalled: Line(text: "受限", isAbnormal: true)
-        case .disconnected: Line(text: "未连接", isAbnormal: true)
+        case .open: Line(text: "可从外部连入", isAbnormal: false)
+        case .firewalled: Line(text: "暂时无法从外部连入", isAbnormal: true)
+        case .disconnected: Line(text: "尚未连接，暂无法判断", isAbnormal: false)
         }
     }
 
@@ -64,7 +136,7 @@ enum NetworkPresentation {
     static func portMapping(succeeded: Bool?) -> Line? {
         switch succeeded {
         case .some(true): Line(text: "已映射", isAbnormal: false)
-        case .some(false): Line(text: "映射失败", isAbnormal: true)
+        case .some(false): Line(text: "暂未自动打开端口", isAbnormal: true)
         case .none: nil
         }
     }

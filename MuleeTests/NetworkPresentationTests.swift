@@ -17,9 +17,9 @@ import Testing
     }
 
     @Test func ed2kStates() {
-        #expect(NetworkPresentation.ed2kID(.high) == .init(text: "High ID", isAbnormal: false))
-        #expect(NetworkPresentation.ed2kID(.low) == .init(text: "Low ID", isAbnormal: true))
-        #expect(NetworkPresentation.ed2kID(.disconnected).isAbnormal)
+        #expect(NetworkPresentation.ed2kID(.high) == .init(text: "可从外部连入", isAbnormal: false))
+        #expect(NetworkPresentation.ed2kID(.low) == .init(text: "暂时无法从外部连入", isAbnormal: true))
+        #expect(!NetworkPresentation.ed2kID(.disconnected).isAbnormal)
     }
 
     @Test func kadStates() {
@@ -32,6 +32,6 @@ import Testing
         #expect(NetworkPresentation.bittorrentPort(reachable: nil).text == "未确认")
         #expect(NetworkPresentation.bittorrentPort(reachable: false).isAbnormal)
         #expect(NetworkPresentation.portMapping(succeeded: nil) == nil)
-        #expect(NetworkPresentation.portMapping(succeeded: false)?.text == "映射失败")
+        #expect(NetworkPresentation.portMapping(succeeded: false)?.text == "暂未自动打开端口")
     }
 }

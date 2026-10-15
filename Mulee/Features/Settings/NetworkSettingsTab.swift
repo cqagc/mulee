@@ -6,8 +6,6 @@ struct NetworkSettingsTab: View {
     var body: some View {
         Form {
             ProxyStatusCard()
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
             PortConnectivitySection()
             SpeedLimitSection()
         }

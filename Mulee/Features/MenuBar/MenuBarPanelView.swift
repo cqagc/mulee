@@ -28,6 +28,9 @@ struct MenuBarPanelView: View {
             }
             MenuBarPasteField()
             Ed2kNetworkStatusView(status: model.networkStatus)
+            if model.networkStatus.p2pRoutedThroughProxy {
+                NetworkProxyWarningButton()
+            }
             Divider()
             MenuBarFooter(pauseResumeAction: presentation.pauseResumeAction)
         }
