@@ -51,15 +51,34 @@ struct ECClientTests {
     func timeoutAndCancellation(cancel: Bool) async throws {
         let server = try ECFakeServer(hangRequests: true)
         await server.start()
-        let client = ECClient(port: server.port, password: "密碼-test", timeout: .milliseconds(250))
-        try await client.connect()
+        // 认证不是本测试的计时对象；取消分支也不能先被请求超时抢走。
+        let client = ECClient(port: server.port, password: "密碼-test", timeout: cancel ? .seconds(30) : .seconds(1))
+        do {
+            try await client.connect(deadline: ContinuousClock.now.advanced(by: .seconds(30)))
+        } catch {
+            await client.disconnect()
+            try await server.stop()
+            throw error
+        }
         let operation = Task { try await client.request(ECPacket(opcode: 6)) }
-        if cancel {
-            while await server.requests.count < 3 { await Task.yield() }
+        do {
+            if cancel {
+                let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+                while await server.requests.count < 3, ContinuousClock.now < deadline {
+                    try await Task.sleep(for: .milliseconds(5))
+                }
+                try #require(await server.requests.count == 3, "取消前必须确认服务端已收到请求")
+                operation.cancel()
+                await #expect(throws: CancellationError.self) { try await operation.value }
+            } else {
+                await #expect(throws: ECError.timeout) { try await operation.value }
+            }
+        } catch {
             operation.cancel()
-            await #expect(throws: CancellationError.self) { try await operation.value }
-        } else {
-            await #expect(throws: ECError.timeout) { try await operation.value }
+            _ = await operation.result
+            await client.disconnect()
+            try await server.stop()
+            throw error
         }
         await client.disconnect()
         try await server.stop()

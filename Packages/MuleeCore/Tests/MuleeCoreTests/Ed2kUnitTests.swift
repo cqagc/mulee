@@ -131,6 +131,10 @@ struct Ed2kUnitTests {
         let root = try Ed2kTestDirectory()
         defer { try? root.remove() }
         let lock = try Ed2kStateLock(directory: root.url)
+        // 模拟启动其他子进程时继承的同一个 open file description。
+        let inherited = dup(lock.descriptor)
+        defer { if inherited >= 0 { close(inherited) } }
+        try #require(inherited >= 0)
         #expect(throws: EngineError.self) { try Ed2kStateLock(directory: root.url) }
         lock.unlock()
         let replacement = try Ed2kStateLock(directory: root.url)

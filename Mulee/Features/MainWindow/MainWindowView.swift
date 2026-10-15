@@ -15,14 +15,15 @@ struct MainWindowView: View {
 
     var body: some View {
         @Bindable var model = model
+        let visibleTasks = category.filter(model.tasks, search: search)
 
         NavigationSplitView {
             MainSidebarView(selection: $selection)
                 .navigationSplitViewColumnWidth(Theme.sidebarWidth)
         } detail: {
-            TaskListView(tasks: category.filter(model.tasks, search: search), isSearching: !search.isEmpty)
+            TaskListView(tasks: visibleTasks, isSearching: !search.isEmpty)
                 .navigationTitle(category.navigationTitle)
-                .navigationSubtitle(SidebarItem.subtitle(for: category.filter(model.tasks, search: search)))
+                .navigationSubtitle(SidebarItem.subtitle(for: visibleTasks))
                 .searchable(text: $search, prompt: String(localized: "搜索任务"))
         }
         .inspector(isPresented: $isShowingInspector) {

@@ -8,7 +8,13 @@ enum DebugLaunchOptions {
     private static let defaults = UserDefaults.standard
 
     /// 截图核对时使用示例数据，并且不启动下载引擎。
-    static var usesSampleData: Bool { defaults.bool(forKey: "MuleeSampleData") }
+    static var usesSampleData: Bool { defaults.bool(forKey: "MuleeSampleData") || stressTaskCount > 0 }
+
+    /// 列表压测沿用示例模式，确保不启动引擎、不读取或写入任务历史。
+    static var stressTaskCount: Int { max(0, defaults.integer(forKey: "MuleeStressTasks")) }
+
+    /// 测量滚动和每秒刷新同时发生时的开销。
+    static var stressScrolls: Bool { defaults.bool(forKey: "MuleeStressScroll") }
 
     /// 启动后自动添加的链接文本（端到端验证用），引擎就绪后提交。
     static var linksToAdd: String? { defaults.string(forKey: "MuleeAddLinks") }

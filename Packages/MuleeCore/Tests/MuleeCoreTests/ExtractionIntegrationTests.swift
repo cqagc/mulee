@@ -237,24 +237,44 @@ struct ExtractionIntegrationTests {
     func processLifecycle() async throws {
         let sleeper = URL(fileURLWithPath: "/bin/sleep")
         for _ in 0..<10 {
+            // 独有参数标记本次调用，避免把其他并行测试的 sleep / 7zz 算成泄漏。
+            let argument = "300.\(Int.random(in: 100_000...999_999))"
             await #expect(throws: ExtractionFailure.timedOut) {
-                try await SevenZipProcess.run(binary: sleeper, arguments: ["30"], timeout: .milliseconds(40))
+                try await SevenZipProcess.run(binary: sleeper, arguments: [argument], timeout: .milliseconds(40))
             }
+            #expect(try await sleeperPIDs(argument: argument).isEmpty)
             let task = Task {
-                try await SevenZipProcess.run(binary: sleeper, arguments: ["30"])
+                try await SevenZipProcess.run(binary: sleeper, arguments: [argument])
             }
-            try await Task.sleep(for: .milliseconds(40))
+            do {
+                let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+                var running = try await sleeperPIDs(argument: argument)
+                while running.isEmpty, ContinuousClock.now < deadline {
+                    try await Task.sleep(for: .milliseconds(10))
+                    running = try await sleeperPIDs(argument: argument)
+                }
+                try #require(running.count == 1, "必须在子进程启动后验证运行中取消")
+            } catch {
+                task.cancel()
+                _ = await task.result
+                throw error
+            }
             task.cancel()
             await #expect(throws: CancellationError.self) { try await task.value }
+            #expect(try await sleeperPIDs(argument: argument).isEmpty)
         }
-        let processes = try await SevenZipProcess.run(binary: URL(fileURLWithPath: "/bin/ps"), arguments: ["-axo", "ppid=,comm="])
-        let remaining = processes.text.components(separatedBy: "\n").filter { line in
-            let fields = line.split(maxSplits: 1, whereSeparator: \.isWhitespace)
-            guard fields.count == 2, Int32(fields[0]) == ProcessInfo.processInfo.processIdentifier else { return false }
-            return ["sleep", "7zz"].contains(URL(fileURLWithPath: String(fields[1])).lastPathComponent)
-        }
-        #expect(remaining.isEmpty)
+    }
 
+    private func sleeperPIDs(argument: String) async throws -> [Int32] {
+        let processes = try await SevenZipProcess.run(
+            binary: URL(fileURLWithPath: "/bin/ps"), arguments: ["-axo", "pid=,ppid=,args="]
+        )
+        return processes.text.components(separatedBy: "\n").compactMap { line in
+            let fields = line.split(whereSeparator: \.isWhitespace)
+            guard fields.count == 4, Int32(fields[1]) == ProcessInfo.processInfo.processIdentifier,
+                  fields[2] == "/bin/sleep", fields[3] == argument else { return nil }
+            return Int32(fields[0])
+        }
     }
 
     @Test("成功原件移入系统废纸篓，失败结果调用后处理也不动原件")
