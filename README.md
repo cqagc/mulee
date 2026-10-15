@@ -5,16 +5,17 @@
 **一个纯粹的 macOS 下载器。** HTTP、BT / 磁力、ed2k、视频，一个软件全搞定。
 开源，免费，永不加广告。
 
-Chrome / Safari 扩展可把你选择的网页下载链接交给本机 Mulee 确认，安装与权限见[浏览器扩展说明](docs/BROWSER-EXTENSION.md)。
-
-> 🚧 开发中。已经可用：
-> - **HTTP / HTTPS / FTP 下载**（aria2 引擎，多线程、断点续传、重启后自动恢复）
-> - **视频下载**（yt-dlp，已实测 Bilibili；yt-dlp 和 Deno 首次使用时自动下载并校验）。合并音视频暂时需要本机有 ffmpeg（`brew install ffmpeg`）
-> - **自动解压**（下载完成后自动解压，规则密码存在钥匙串里，自动修复 GBK / Big5 / Shift-JIS 文件名乱码）
+> 🚧 早期版本（0.1.x），欢迎试用和反馈。现在已经可用：
+> - **HTTP / HTTPS / FTP**：aria2 引擎，多线程、断点续传、重启后自动恢复
+> - **BT / 磁力 / .torrent**：libtorrent 引擎，可选择要下载的文件，默认做种到分享率 1:1 后降速（私有种子可不受限）
+> - **电驴 ed2k**：aMule 引擎，长期挂着等冷门资源，显示来源、排队名次和近 14 天来源情况
+> - **视频**：yt-dlp，已实测 Bilibili；yt-dlp、Deno、ffmpeg 由 Mulee 自己下载并校验；B 站弹幕自动转成 ASS 字幕
+> - **自动解压**：规则密码存在钥匙串里，自动修复 GBK / Big5 / Shift-JIS 文件名乱码
+> - **网络诊断**：讲清楚「P2P 是否被代理软件接管」「端口能否从外部连入」，给出可复制的代理规则和端口转发说明
+> - 可设为 magnet / ed2k / thunder / .torrent 的默认打开程序；Chrome / Safari 扩展把网页上的链接交给 Mulee（见[浏览器扩展说明](docs/BROWSER-EXTENSION.md)）
+> - 简体中文、繁體中文、English
 >
-> BT、电驴引擎还在开发中。
->
-> 开发构建从固定子模块源码编译 aria2（AppleTLS，仅依赖系统库），不需要安装 Homebrew aria2。构建机需 cmake、boost、autoconf、automake、libtool、gettext、pkgconf，并递归初始化子模块；运行方无需这些工具。详见 [docs/BUILDING.md](docs/BUILDING.md)。
+> 三个下载引擎都从固定版本的源码编译进 App，只依赖系统库，不需要另装任何东西。从源码构建需要的工具见 [docs/BUILDING.md](docs/BUILDING.md)。
 
 ![主窗口](docs/screenshots/main-light.png)
 
@@ -96,7 +97,7 @@ Mulee 只是一个下载工具，请只下载你有权获取的内容。
 **Mulee is a no-nonsense download manager for macOS.** HTTP, BitTorrent / magnet, ed2k and video sites, all in one native app.
 Open source, free, and never any ads.
 
-> 🚧 Work in progress. **Working now:** HTTP / HTTPS / FTP downloads (aria2 engine: multi-connection, resume, session restore), video downloads via yt-dlp (tested with Bilibili; merging audio and video currently needs a local ffmpeg), and auto-extraction with Keychain-stored rule passwords and GBK / Big5 / Shift-JIS filename repair. BitTorrent and ed2k engines are in progress. Development builds compile aria2 from pinned submodule source with AppleTLS and system libraries. The build machine needs cmake, boost, autoconf, automake, libtool, gettext and pkgconf, plus `git submodule update --init --recursive`; end users need none of these tools (see [docs/BUILDING.md](docs/BUILDING.md)).
+> 🚧 Early release (0.1.x). **Working now:** HTTP / HTTPS / FTP (aria2: multi-connection, resume, session restore); BitTorrent, magnet and .torrent (libtorrent: file selection, seeding to a 1:1 share ratio then throttling, private torrents exempt); ed2k (aMule, built for waiting on rare files for weeks); video via yt-dlp (tested with Bilibili; yt-dlp, Deno and ffmpeg are downloaded and verified by Mulee; Bilibili danmaku converted to ASS); auto-extraction with Keychain-stored rule passwords and GBK / Big5 / Shift-JIS filename repair; network diagnostics that explain proxy takeover of P2P traffic and port reachability; default handler for magnet / ed2k / thunder / .torrent; Chrome and Safari extensions ([details](docs/BROWSER-EXTENSION.md)). Available in Simplified Chinese, Traditional Chinese and English. All three engines are compiled from pinned sources into the app and depend only on system libraries; see [docs/BUILDING.md](docs/BUILDING.md) to build from source.
 
 Build on Apple Silicon with macOS 26+, Xcode 27+ and XcodeGen:
 
