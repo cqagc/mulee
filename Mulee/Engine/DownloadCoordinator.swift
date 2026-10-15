@@ -13,6 +13,7 @@ final class DownloadCoordinator {
     private var latestOptions: EngineOptions?
     private var pendingAdds: [TaskKind: Int] = [:]
     private var revisions: [TaskKind: Int] = [:]
+    private var excludedTaskIDs: [TaskKind: Set<String>] = [:]
     private var isPolling = false
 
     init(model: AppModel, engines: [any DownloadEngine]) {
@@ -111,6 +112,9 @@ final class DownloadCoordinator {
         snapshots = snapshots.filter { kind, _ in
             pendingAdds[kind, default: 0] == 0 && revisions[kind, default: 0] == snapshotRevisions[kind]
         }
+        for kind in snapshots.keys {
+            snapshots[kind]?.removeAll { excludedTaskIDs[kind, default: []].contains($0.engineTaskID) }
+        }
         model.tasks = EngineSnapshotMerger.merge(tasks: model.tasks, snapshots: snapshots, now: .now)
         if let selected = model.selectedTaskID, !model.tasks.contains(where: { $0.id == selected }) {
             model.selectedTaskID = nil
@@ -162,7 +166,39 @@ final class DownloadCoordinator {
     }
 
     func remove(_ id: DownloadTask.ID) async {
-        await perform(id, action: .remove)
+        guard let index = model.tasks.firstIndex(where: { $0.id == id }) else { return }
+        let task = model.tasks[index]
+        if task.status == .completed || task.engineTaskID == nil {
+            excludeFromSnapshots(task)
+            model.removeRecord(id)
+            return
+        }
+        guard let engine = engine(for: task.kind), let engineTaskID = task.engineTaskID else {
+            setError("下载引擎未运行", for: id)
+            return
+        }
+        let wasSelected = model.selectedTaskID == id
+        excludeFromSnapshots(task)
+        model.removeRecord(id)
+        revisions[task.kind, default: 0] += 1
+        defer { revisions[task.kind, default: 0] += 1 }
+        do {
+            try await engine.remove(engineTaskID, deleteFiles: false)
+        } catch {
+            excludedTaskIDs[task.kind]?.remove(engineTaskID)
+            var restored = task
+            restored.errorMessage = EngineStatusPresentation.errorMessage(error)
+            model.tasks.insert(restored, at: min(index, model.tasks.count))
+            if wasSelected {
+                model.selectedTaskID = id
+            }
+        }
+    }
+
+    /// 已删除的记录不再从仍在返回旧结果的引擎中重新导入。
+    func excludeFromSnapshots(_ task: DownloadTask) {
+        guard let id = task.engineTaskID else { return }
+        excludedTaskIDs[task.kind, default: []].insert(id)
     }
 
     func apply(options: EngineOptions) {
@@ -190,7 +226,6 @@ final class DownloadCoordinator {
     private enum Action {
         case pause
         case resume
-        case remove
     }
 
     private func perform(_ id: DownloadTask.ID, action: Action) async {
@@ -205,7 +240,6 @@ final class DownloadCoordinator {
                 switch action {
                 case .pause: try await engine.pause(engineTaskID)
                 case .resume: try await engine.resume(engineTaskID)
-                case .remove: try await engine.remove(engineTaskID, deleteFiles: false)
                 }
                 revisions[task.kind, default: 0] += 1
             } catch {
@@ -224,11 +258,6 @@ final class DownloadCoordinator {
         case .resume:
             model.tasks[index].status = task.engineTaskID == nil ? (task.kind == .ed2k ? .waitingForSources : .downloading) : .queued
             model.tasks[index].errorMessage = nil
-        case .remove:
-            model.tasks.remove(at: index)
-            if model.selectedTaskID == id {
-                model.selectedTaskID = nil
-            }
         }
     }
 

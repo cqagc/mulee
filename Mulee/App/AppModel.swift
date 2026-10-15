@@ -7,13 +7,21 @@ import Observation
 @Observable
 final class AppModel {
     var tasks: [DownloadTask] {
-        didSet { updateSleepPrevention() }
+        didSet {
+            updateSleepPrevention()
+            historyStore?.scheduleSave(tasks: tasks) { [weak self] issue in
+                self?.taskHistoryIssue = issue
+            }
+        }
     }
     var preventsSleepWhileDownloading: Bool {
         didSet { updateSleepPrevention() }
     }
     var networkStatus: NetworkStatus
     var engineStates: [TaskKind: EngineState] = Dictionary(uniqueKeysWithValues: TaskKind.allCases.map { ($0, .unavailable) })
+    /// 历史读取、备份或写入异常；独立于引擎启停，避免启动成功后覆盖诊断。
+    var taskHistoryIssue: String?
+    @ObservationIgnored private var historyStore: TaskHistoryStore?
     @ObservationIgnored weak var coordinator: DownloadCoordinator?
     var unzipRules: [UnzipRule]
     /// 主窗口当前选中的任务。
@@ -111,13 +119,53 @@ final class AppModel {
     }
 
     func remove(_ id: DownloadTask.ID) {
+        if let task = tasks.first(where: { $0.id == id }), task.status == .completed {
+            coordinator?.excludeFromSnapshots(task)
+            removeRecord(id)
+            return
+        }
         if let coordinator {
             Task { await coordinator.remove(id) }
             return
         }
+        removeRecord(id)
+    }
+
+    func removeRecord(_ id: DownloadTask.ID) {
         tasks.removeAll { $0.id == id }
         if selectedTaskID == id {
             selectedTaskID = nil
+        }
+    }
+
+    var hasCompletedTasks: Bool {
+        tasks.contains { $0.status == .completed }
+    }
+
+    /// 只清理记录，不触碰已经下载的文件。
+    func clearCompletedTasks() {
+        for task in tasks where task.status == .completed {
+            coordinator?.excludeFromSnapshots(task)
+        }
+        tasks.removeAll { $0.status == .completed }
+        if let selectedTaskID, !tasks.contains(where: { $0.id == selectedTaskID }) {
+            self.selectedTaskID = nil
+        }
+    }
+
+    func loadTaskHistory(from store: TaskHistoryStore) {
+        let result = store.load()
+        tasks = result.tasks
+        selectedTaskID = tasks.first?.id
+        taskHistoryIssue = result.issue
+        historyStore = store
+    }
+
+    func flushTaskHistory() {
+        do {
+            try historyStore?.flush(tasks: tasks)
+        } catch {
+            taskHistoryIssue = "无法保存任务历史：\(error.localizedDescription)"
         }
     }
 

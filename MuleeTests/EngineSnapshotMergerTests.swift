@@ -67,17 +67,19 @@ import Testing
         #expect(task.estimatedTimeRemaining == nil)
     }
 
-    @Test func removalOnlyAffectsSuccessfullyPolledEngineAndKeepsLocalTasks() {
+    @Test func missingTaskOnlyFailsForSuccessfullyPolledEngineAndKeepsLocalTasks() {
         var http = MockData.tasks[0]
         http.kind = .http
         http.engineTaskID = "same-id"
+        http.status = .downloading
         var bt = http
         bt.kind = .bittorrent
         let local = MockData.longTailTask
 
         let result = EngineSnapshotMerger.merge(tasks: [http, bt, local], snapshots: [.http: []], now: .now)
 
-        #expect(result.count == 2)
+        #expect(result.count == 3)
+        #expect(result.first { $0.kind == .http }?.status == .failed)
         #expect(result.contains { $0.kind == .bittorrent && $0.engineTaskID == "same-id" })
         #expect(result.contains { $0.id == local.id })
     }
