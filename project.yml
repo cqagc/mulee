@@ -1,0 +1,68 @@
+name: Mulee
+options:
+  bundleIdPrefix: com.cqagc
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: zh-Hans
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ARCHS: arm64
+    DEVELOPMENT_TEAM: LV69DG6R9Y
+packages:
+  MuleeCore:
+    path: Packages/MuleeCore
+targets:
+  Mulee:
+    type: application
+    platform: macOS
+    sources:
+      - path: Mulee
+    dependencies:
+      - package: MuleeCore
+    info:
+      path: Mulee/Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Mulee
+        LSApplicationCategoryType: public.app-category.utilities
+        NSHumanReadableCopyright: "© 2026 CQAGC. GPL-3.0."
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cqagc.mulee
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_HARDENED_RUNTIME: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+  MuleeTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: MuleeTests
+    dependencies:
+      - target: Mulee
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cqagc.mulee.tests
+        GENERATE_INFOPLIST_FILE: YES
+        BUNDLE_LOADER: $(TEST_HOST)
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Mulee.app/Contents/MacOS/Mulee
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        CODE_SIGN_IDENTITY: "-"
+schemes:
+  Mulee:
+    build:
+      targets:
+        Mulee: all
+        MuleeTests: [test]
+    test:
+      targets:
+        - MuleeTests

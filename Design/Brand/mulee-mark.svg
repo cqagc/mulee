@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 标志本体（无底板），单色。用于菜单栏模板图、文档、浅色背景 -->
+  <path d="M100 344 L118 96 L256 300 L394 96 L412 344" fill="none" stroke="#000" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M136 440 H376" stroke="#000" stroke-width="56" stroke-linecap="round"/>
+</svg>

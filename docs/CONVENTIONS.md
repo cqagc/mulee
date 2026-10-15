@@ -1,0 +1,66 @@
+# Mulee 开发约定
+
+写代码前先读这份。新代码不符合这里的约定，会在评审时退回。
+
+## 工程
+
+- 工程由 [XcodeGen](https://github.com/yonaskolb/XcodeGen) 从 `project.yml` 生成，`Mulee.xcodeproj` 不进仓库。改了工程结构就改 `project.yml`，然后运行 `xcodegen generate`。
+- 构建：`xcodegen generate && xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' build`
+- 测试：`swift test --package-path Packages/MuleeCore`（核心逻辑），`xcodebuild ... test`（App 层）
+- 只支持 Apple Silicon、macOS 26 及以上。Swift 6，严格并发检查。
+- App target 默认 MainActor 隔离（`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`）；`MuleeCore` 包不是，里面的类型要自己保证 `Sendable`。
+
+## 目录
+
+```
+Mulee/                      App target
+  App/                      入口与全局状态
+  DesignSystem/             MuleeSymbol（图标）、Theme（颜色、间距等常量）
+  Features/<功能>/          按功能分目录：MainWindow、NewTask、MenuBar、Settings
+  Services/                 和系统打交道的服务（防睡眠等）
+  Resources/                Assets.xcassets
+Packages/MuleeCore/         不依赖 UI 的核心逻辑：数据模型、链接解析、示例数据
+Design/                     品牌、图标规范、原型
+```
+
+## 设计对齐
+
+- 设计以 Claude Design 原型为准：`Design/Prototype/` 下有原型源码（.dc.html）和截图。颜色、间距、文案、信息层级要和原型一致；原型里的占位方块，换成 `Design/ICONS.md` 规定的 SF Symbols。
+- 图标只能通过 `MuleeSymbol` 枚举使用，不准在视图里写符号名字符串。
+- 颜色只能用资源目录里的 `AccentColor`、`WaitColor`、`SuccessColor` 和系统语义色（`.primary`、`.secondary`、`.tertiary` 等）。不准自己写十六进制颜色。
+- 字号用系统文字样式（`.body`、`.callout`、`.subheadline`、`.caption` 等），不写死字号；`.caption2` 尽量不用。
+- 文件图标用 `NSWorkspace.shared.icon(for:)` 取系统图标。
+
+## SwiftUI 规则（摘自 swiftui-pro 规范）
+
+- 用 `foregroundStyle()`，不用 `foregroundColor()`；用 `clipShape(.rect(cornerRadius:))`，不用 `cornerRadius()`。
+- `onChange` 只用双参数或无参数的版本。
+- 共享状态用 `@Observable` 类，持有方用 `@State`，传递用 `@Bindable` 或 `@Environment`。不用 `ObservableObject`、`@Published`、`@StateObject`、`@EnvironmentObject`。
+- `@State` 一律 `private`。
+- 不要用返回 `some View` 的计算属性或方法拆分 body，**拆成独立的 View 结构体，每个类型放一个文件**。
+- 按钮的 action 抽成方法，不在 body 里写业务逻辑。
+- 只有图标的按钮也要有文字：`Button("暂停", systemImage: MuleeSymbol.pause.name, action: pause)`，需要时加 `.labelStyle(.iconOnly)`。
+- 不用 `onTapGesture` 代替按钮。
+- 能用 `Label` 就不要手写 `HStack { Image; Text }`。
+- 空状态用 `ContentUnavailableView`。
+- 用 `Form`、`LabeledContent` 做设置页，滑块等控件包在 `LabeledContent` 里。
+- 不用 `AnyView`；不用 `GeometryReader`，除非没有替代方案。
+- 用 `#Preview`，不用 `PreviewProvider`。
+- 数字、日期、文件大小用 FormatStyle（`.byteCount(style: .file)` 等），不用 `String(format:)`。
+- 不用 GCD（`DispatchQueue`），用 async/await；`Task.sleep(for:)`，不用纳秒版本。
+- 不强制解包；错误不能静默吞掉。
+- 每个类型一个文件。
+
+## 并发
+
+- 引擎相关的长期运行逻辑放在 actor 里，UI 状态放在 `@MainActor` 的 `@Observable` 类里。
+- 跨隔离边界传递的模型类型必须是 `Sendable` 值类型。
+
+## 文案
+
+- 界面文案用简体中文，写成 `Text("全部任务")` 这样的字面量，后续统一抽取到 String Catalog 做多语言。
+- 语气：冷门资源下不动不叫失败。规范见 `Design/BRAND.md`。
+
+## 提交
+
+- 每个提交只做一件事，提交信息用英文祈使句（`feat(main-window): ...`）。

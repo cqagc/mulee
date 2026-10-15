@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Mulee App 图标母版：M 的两个尖顶是驴耳，中间的 V 是下载箭头，下方托盘表示落盘 -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3D8BF0"/>
+      <stop offset="1" stop-color="#2356C8"/>
+    </linearGradient>
+    <filter id="sh" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="12" stdDeviation="14" flood-opacity=".28"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)" filter="url(#sh)"/>
+  <path d="M298 686 L334 312 L512 590 L690 312 L726 686" fill="none" stroke="#fff" stroke-width="104" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M352 808 H672" stroke="#fff" stroke-width="72" stroke-linecap="round"/>
+</svg>

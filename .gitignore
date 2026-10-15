@@ -1,17 +1,12 @@
-# macOS
 .DS_Store
-
-# Xcode
+# XcodeGen 生成，不进仓库
+Mulee.xcodeproj/
 xcuserdata/
 *.xcuserstate
-*.xcscmblueprint
 DerivedData/
 build/
-
-# Swift Package Manager
 .build/
 .swiftpm/
-
-# Runtime-downloaded engines (never commit)
+# 运行时下载的引擎（不进仓库）
 /bin/
 *.dmg
