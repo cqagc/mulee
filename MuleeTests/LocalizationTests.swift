@@ -26,9 +26,9 @@ import Testing
                 let source = try #require(localizations["zh-Hans"])
                 let sourceValue = try #require((source["stringUnit"] as? [String: String])?["value"])
                 let expected = try placeholders(in: sourceValue)
-                for language in ["en", "zh-Hant"] {
+                for language in ["en", "zh-Hant", "ja"] {
                     let localization = try #require(localizations[language], "\(path): \(key) missing \(language)")
-                    let values = try expandedValues(localization)
+                    let values = try expandedValues(localization, language: language)
                     #expect(!values.isEmpty)
                     for value in values {
                         #expect(try placeholders(in: value) == expected, "\(path): \(key) [\(language)] \(value)")
@@ -44,7 +44,7 @@ import Testing
             let cells = row.split(separator: "|", omittingEmptySubsequences: false).map {
                 $0.trimmingCharacters(in: .whitespaces)
             }
-            guard cells.count == 6, cells[1] != cells[3], cells[1] != "简体中文",
+            guard cells.count == 7, cells[1] != cells[3], cells[1] != "简体中文",
                   cells[1].range(of: #"[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]"#, options: .regularExpression) != nil else { return nil }
             return cells[1]
         }
@@ -58,6 +58,10 @@ import Testing
                 let localizations = try #require(entry["localizations"] as? [String: [String: Any]])
                 for value in try expandedValues(try #require(localizations["en"])) {
                     #expect(value.range(of: #"[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]"#, options: .regularExpression) == nil, "\(path): \(key): \(value)")
+                }
+                for value in try expandedValues(try #require(localizations["ja"])) {
+                    let simplifiedOnly = Set("载设义链软网视频压缩钥夹传档认误码动连显复读写损坏览删选进暂种绪启关开备实级队拥护储译线绐")
+                    #expect(simplifiedOnly.isDisjoint(with: value), "\(path): \(key): \(value)")
                 }
                 for value in try expandedValues(try #require(localizations["zh-Hant"])) {
                     for term in forbidden {
@@ -87,6 +91,28 @@ import Testing
                 == "1 file, 3 selected · 2 peers")
     }
 
+    @Test func compiledJapaneseCatalogsRender() throws {
+        let path = try #require(Bundle.main.path(forResource: "ja", ofType: "lproj"))
+        let japanese = try #require(Bundle(path: path))
+        let locale = Locale(identifier: "ja")
+        #expect(String(localized: "全部任务", bundle: japanese, locale: locale) == "すべてのタスク")
+        #expect(String(localized: "新建下载", bundle: japanese, locale: locale) == "新規ダウンロード")
+        #expect(String(localized: "网络", bundle: japanese, locale: locale) == "ネットワーク")
+        for days in [0, 1, 2] {
+            #expect(String(localized: "已挂 \(days) 天", bundle: japanese, locale: locale) == "\(days)日待機中")
+        }
+        let size = "612 MB"
+        let sources = 1
+        let queue = "、待ち順14番目"
+        #expect(String(localized: "\(size) · \(sources) 个来源\(queue)", bundle: japanese, locale: locale)
+                == "612 MB · ソース1件、待ち順14番目")
+        let coreURL = try #require(Bundle.main.url(forResource: "MuleeCore_MuleeCore", withExtension: "bundle"))
+        let core = try #require(Bundle(url: coreURL))
+        let corePath = try #require(core.path(forResource: "ja", ofType: "lproj"))
+        let localizedCore = try #require(Bundle(path: corePath))
+        #expect(String(localized: "压缩包损坏", bundle: localizedCore, locale: locale) == "アーカイブが破損しています")
+    }
+
     @Test func compiledAppAndCoreCatalogsUseTaiwanTerminology() throws {
         let coreURL = try #require(Bundle.main.url(forResource: "MuleeCore_MuleeCore", withExtension: "bundle"))
         let core = try #require(Bundle(url: coreURL))
@@ -107,13 +133,13 @@ import Testing
         return try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 
-    private func expandedValues(_ node: [String: Any]) throws -> [String] {
+    private func expandedValues(_ node: [String: Any], language: String? = nil) throws -> [String] {
         if let unit = node["stringUnit"] as? [String: String] {
             #expect(unit["state"] == "translated")
             var values = [try #require(unit["value"])]
             if let substitutions = node["substitutions"] as? [String: [String: Any]] {
                 for (name, substitution) in substitutions {
-                    let variants = try expandedValues(substitution)
+                    let variants = try expandedValues(substitution, language: language)
                     values = values.flatMap { value in
                         variants.map { value.replacingOccurrences(of: "%#@\(name)@", with: $0) }
                     }
@@ -123,11 +149,13 @@ import Testing
         }
         let variations = try #require(node["variations"] as? [String: [String: [String: Any]]])
         if let plural = variations["plural"] {
-            #expect(plural["one"] != nil)
+            if language == "en" {
+                #expect(plural["one"] != nil)
+            }
             #expect(plural["other"] != nil)
         }
         return try variations.values.flatMap { variants in
-            try variants.values.flatMap { try expandedValues($0) }
+            try variants.values.flatMap { try expandedValues($0, language: language) }
         }
     }
 

@@ -1,0 +1,77 @@
+{
+    "name": {
+        "message": "Muleeブラウザ拡張機能"
+    },
+    "description": {
+        "message": "選択したダウンロードリンクをこのMacのMuleeに送り、確認してからダウンロードします。"
+    },
+    "downloadLink": {
+        "message": "Muleeでダウンロード"
+    },
+    "downloadSelection": {
+        "message": "選択したリンクをMuleeでダウンロード"
+    },
+    "chooseLinks": {
+        "message": "Muleeに送るリンクを選択してください。"
+    },
+    "pageLinks": {
+        "message": "このページのダウンロードリンク"
+    },
+    "empty": {
+        "message": "ダウンロードリンクが見つかりません。リンクを右クリックしてMuleeでダウンロードすることもできます。"
+    },
+    "send": {
+        "message": "Muleeに送信"
+    },
+    "options": {
+        "message": "ダウンロードの引き継ぎ設定"
+    },
+    "takeover": {
+        "message": "ブラウザのダウンロードを引き継ぐ"
+    },
+    "takeoverHint": {
+        "message": "デフォルトではオフです。対象のブラウザダウンロードをキャンセルし、Muleeに送って確認します。ログイン用Cookieが必要な場合はダウンロードできないことがあります。その場合は引き継ぎを一時的にオフにしてください。Cookieの読み取りや転送は行いません。"
+    },
+    "takeoverUnavailable": {
+        "message": "このブラウザはダウンロードの引き継ぎに対応していません。右クリックメニューを使うか、リンクを選択してMuleeに送ってください。"
+    },
+    "extensions": {
+        "message": "引き継ぐファイルの拡張子（スペースまたはカンマ区切り）"
+    },
+    "save": {
+        "message": "拡張子を保存"
+    },
+    "saved": {
+        "message": "拡張子を保存しました。"
+    },
+    "confirmHint": {
+        "message": "リンクはこのMacのMuleeで開きます。確認するとダウンロードが始まります。"
+    },
+    "sent": {
+        "message": "Muleeに送りました。Muleeでダウンロードを確認してください。"
+    },
+    "sendFailed": {
+        "message": "Muleeを開けませんでした。Muleeがインストールされ、起動しているか確認してください。または引き継ぎを一時的にオフにして再試行してください。"
+    },
+    "invalidLinks": {
+        "message": "有効なリモートダウンロードリンクがありません。"
+    },
+    "tooLarge": {
+        "message": "リンクまたは選択したテキストが1 MiBを超えています。選択範囲を減らして再試行してください。"
+    },
+    "restrictedPage": {
+        "message": "このページでは拡張機能による読み取りが許可されていません。通常のWebページで試してください。"
+    },
+    "permissionDenied": {
+        "message": "ダウンロードの権限が許可されなかったため、引き継ぎはオフのままです。"
+    },
+    "externalPrompt": {
+        "message": "ブラウザの確認画面で「Muleeを開く」を選んでください。「常に許可」も選択できます。この一時タブはブラウザに戻ると閉じます。キャンセルした場合は手動で閉じてください。"
+    },
+    "openMulee": {
+        "message": "Muleeを開く"
+    },
+    "closeTab": {
+        "message": "このタブを閉じる"
+    }
+}

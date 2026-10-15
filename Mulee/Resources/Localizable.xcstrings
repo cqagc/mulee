@@ -21,6 +21,12 @@
             "state": "translated",
             "value": " · 彈幕轉 ASS"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · 弾幕をASSに変換"
+          }
         }
       }
     },
@@ -40,6 +46,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ %@"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ %@"
@@ -67,6 +79,12 @@
             "state": "translated",
             "value": "%@ MB/s"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ MB/s"
+          }
         }
       }
     },
@@ -86,6 +104,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · %@"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ · %@"
@@ -135,6 +159,28 @@
             "state": "translated",
             "value": "%@ · %lld 個來源%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · ソース%#@count2@件%3$@"
+          },
+          "substitutions": {
+            "count2": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -180,6 +226,28 @@
             "state": "translated",
             "value": "%@ · %lld 連線"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %#@count2@接続"
+          },
+          "substitutions": {
+            "count2": {
+              "argNum": 2,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -202,6 +270,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ · 分享率 %@ / 1.00"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 共有比 %@ / 1.00"
           }
         }
       }
@@ -226,6 +300,12 @@
             "state": "translated",
             "value": "%@ · 合併音訊與影片"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 映像と音声を結合"
+          }
         }
       }
     },
@@ -248,6 +328,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ · 符合解壓縮規則「%@」"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 展開ルール「%@」に一致"
           }
         }
       }
@@ -272,6 +358,12 @@
             "state": "translated",
             "value": "%@ · 已收到 %@，剩餘 %@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 受信済み%@、残り%@"
+          }
         }
       }
     },
@@ -294,6 +386,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ · 暫無來源%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · ソースなし%@"
           }
         }
       }
@@ -318,6 +416,12 @@
             "state": "translated",
             "value": "%@ · 影片連結"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 動画リンク"
+          }
         }
       }
     },
@@ -340,6 +444,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@。原始壓縮檔已保留"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@。元のアーカイブは保持されています"
           }
         }
       }
@@ -364,6 +474,12 @@
             "state": "translated",
             "value": "%@。備份失敗，已保留原始檔案並停用歷史寫入：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@。バックアップできなかったため、元のファイルを保持し、履歴の保存を停止しました：%@"
+          }
         }
       }
     },
@@ -386,6 +502,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@。已備份為 %@，從空白清單開始。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@。%@にバックアップし、空のリストで開始しました。"
           }
         }
       }
@@ -410,6 +532,12 @@
             "state": "translated",
             "value": "%lld"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
         }
       }
     },
@@ -429,6 +557,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld MB"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld MB"
@@ -477,6 +611,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 個任務 · %lld 個進行中"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスク%#@count1@件 · 実行中%2$lld件"
+          },
+          "substitutions": {
+            "count1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -543,6 +699,28 @@
             "state": "translated",
             "value": "%lld 個檔案，已選 %lld 個 · %lld 個節點"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル%#@count1@個、選択済み%2$lld個 · ピア%3$lld件"
+          },
+          "substitutions": {
+            "count1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -587,6 +765,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 個來源"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソース%#@count1@件"
+          },
+          "substitutions": {
+            "count1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -633,6 +833,28 @@
             "state": "translated",
             "value": "%lld 個電驢任務正在等待來源，繼續等待即可"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k %#@count1@件がソース待ちです"
+          },
+          "substitutions": {
+            "count1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -677,6 +899,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 個（%lld 個完整）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count1@件（完全なソース%2$lld件）"
+          },
+          "substitutions": {
+            "count1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -723,6 +967,28 @@
             "state": "translated",
             "value": "%lld 天"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count1@日"
+          },
+          "substitutions": {
+            "count1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -768,6 +1034,28 @@
             "state": "translated",
             "value": "%lld 天前"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count1@日前"
+          },
+          "substitutions": {
+            "count1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -790,6 +1078,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "1080P 高位元率"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1080P 高ビットレート"
           }
         }
       }
@@ -814,6 +1108,12 @@
             "state": "translated",
             "value": "2160p HEVC，相容性優先"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2160p HEVC、互換性優先"
+          }
         }
       }
     },
@@ -836,6 +1136,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "32pt / 16pt · 下載中與已完成"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "32pt / 16pt · ダウンロード中と完了"
           }
         }
       }
@@ -860,6 +1166,12 @@
             "state": "translated",
             "value": "B 站"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilibili"
+          }
         }
       }
     },
@@ -879,6 +1191,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "BT"
@@ -906,6 +1224,12 @@
             "state": "translated",
             "value": "BT／磁力"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT / マグネット"
+          }
         }
       }
     },
@@ -928,6 +1252,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BT 資訊"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT情報"
           }
         }
       }
@@ -952,6 +1282,12 @@
             "state": "translated",
             "value": "BT 和電驢共用；電驢上傳越多，別人給你的排隊順位越前面"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTとeD2kで共通です。eD2kではアップロード量が多いほど、相手の待ち順が早くなります"
+          }
         }
       }
     },
@@ -974,6 +1310,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BT 和電驢的流量現在很可能被代理軟體接管。代理節點通常不支援這類連線，因此可能找不到來源、速度很慢。在代理規則中加上下列兩行，讓它們直接連線後再偵測。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTとeD2kの通信がプロキシソフトを経由している可能性があります。プロキシの接続先はこの通信に対応していないことが多く、ソースが見つからなかったり、速度が低下したりします。プロキシのルールに次の2行を追加し、直接接続にしてから再確認してください。"
           }
         }
       }
@@ -998,6 +1340,12 @@
             "state": "translated",
             "value": "BT 引擎"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTエンジン"
+          }
         }
       }
     },
@@ -1020,6 +1368,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BT 種子檔"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT Torrentファイル"
           }
         }
       }
@@ -1066,6 +1420,28 @@
             "state": "translated",
             "value": "BT 種子檔 · %lld 個檔案"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT Torrentファイル · ファイル%#@count1@個"
+          },
+          "substitutions": {
+            "count1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -1088,6 +1464,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "BT 連接埠"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTポート"
           }
         }
       }
@@ -1112,6 +1494,12 @@
             "state": "translated",
             "value": "BT 自動連接埠對應"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTの自動ポートマッピング"
+          }
         }
       }
     },
@@ -1131,6 +1519,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT：TCP / UDP %@"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "BT：TCP / UDP %@"
@@ -1158,6 +1552,12 @@
             "state": "translated",
             "value": "Big5"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Big5"
+          }
         }
       }
     },
@@ -1180,6 +1580,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "CC 字幕"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CC字幕"
           }
         }
       }
@@ -1204,6 +1610,12 @@
             "state": "translated",
             "value": "Clash Verge / mihomo 需要開啟行程辨識（find-process-mode），讓依行程名稱比對的規則生效。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clash Verge / mihomoでは、プロセス名のルールが適用されるようにプロセス認識（find-process-mode）を有効にしてください。"
+          }
         }
       }
     },
@@ -1223,6 +1635,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GBK"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "GBK"
@@ -1250,6 +1668,12 @@
             "state": "translated",
             "value": "H.264/HEVC MP4，系統播放器和 iPhone 都能播放"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "H.264/HEVC MP4。標準プレーヤーとiPhoneで再生できます"
+          }
         }
       }
     },
@@ -1272,6 +1696,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "HTTP 就緒"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTP準備完了"
           }
         }
       }
@@ -1296,6 +1726,12 @@
             "state": "translated",
             "value": "HTTP 每任務連線數"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPのタスクあたりの接続数"
+          }
         }
       }
     },
@@ -1315,6 +1751,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kad · %@"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Kad · %@"
@@ -1342,6 +1784,12 @@
             "state": "translated",
             "value": "Mulee"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulee"
+          }
         }
       }
     },
@@ -1364,6 +1812,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mulee 正在下載"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muleeでダウンロード中"
           }
         }
       }
@@ -1388,6 +1842,12 @@
             "state": "translated",
             "value": "PT 站有做種時間要求，依分享率自動停止可能被記 H&R"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライベートトラッカーではシード時間の条件があり、共有比で自動停止するとH&Rとみなされることがあります"
+          }
         }
       }
     },
@@ -1407,6 +1867,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Safari"
@@ -1434,6 +1900,12 @@
             "state": "translated",
             "value": "Shift-JIS"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shift-JIS"
+          }
         }
       }
     },
@@ -1456,6 +1928,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "TCP 連接埠"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TCPポート"
           }
         }
       }
@@ -1480,6 +1958,12 @@
             "state": "translated",
             "value": "UDP 連接埠"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UDPポート"
+          }
         }
       }
     },
@@ -1499,6 +1983,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "yt-dlp"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "yt-dlp"
@@ -1526,6 +2016,12 @@
             "state": "translated",
             "value": "↑ %@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "↑ %@"
+          }
         }
       }
     },
@@ -1545,6 +2041,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "↓ %@"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "↓ %@"
@@ -1572,6 +2074,12 @@
             "state": "translated",
             "value": "上傳速度 %@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップロード速度 %@"
+          }
         }
       }
     },
@@ -1594,6 +2102,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "上次解壓縮已中斷，原始壓縮檔已保留"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回の展開は中断されました。元のアーカイブは保持されています"
           }
         }
       }
@@ -1618,6 +2132,12 @@
             "state": "translated",
             "value": "上次結束前的進度無法還原，可以重新下載"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回終了時の進捗を復元できませんでした。再ダウンロードできます"
+          }
         }
       }
     },
@@ -1640,6 +2160,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "上次結束時影片工具尚未準備好，可以重新下載"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回終了時に動画ツールの準備ができていませんでした。再ダウンロードできます"
           }
         }
       }
@@ -1664,6 +2190,12 @@
             "state": "translated",
             "value": "下載"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード"
+          }
         }
       }
     },
@@ -1686,6 +2218,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載中"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード中"
           }
         }
       }
@@ -1710,6 +2248,12 @@
             "state": "translated",
             "value": "下載中 40%"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード中 40%"
+          }
         }
       }
     },
@@ -1732,6 +2276,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載中的分塊仍會分享，協助彼此找到稀有資源"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード中のピースも共有し、入手しにくいデータを互いに補います"
           }
         }
       }
@@ -1756,6 +2306,12 @@
             "state": "translated",
             "value": "下載失敗時先更新 yt-dlp 再試一次"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードできない場合は、yt-dlpを更新してから再試行してください"
+          }
         }
       }
     },
@@ -1778,6 +2334,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載完成後自動解壓縮"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード完了後に自動展開"
           }
         }
       }
@@ -1802,6 +2364,12 @@
             "state": "translated",
             "value": "下載引擎"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードエンジン"
+          }
         }
       }
     },
@@ -1824,6 +2392,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載引擎未執行"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードエンジンが動作していません"
           }
         }
       }
@@ -1848,6 +2422,12 @@
             "state": "translated",
             "value": "下載檔案"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルをダウンロード"
+          }
         }
       }
     },
@@ -1870,6 +2450,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載時防止睡眠"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード中はスリープしない"
           }
         }
       }
@@ -1894,6 +2480,12 @@
             "state": "translated",
             "value": "下載時防止睡眠 · 全部完成後允許睡眠"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了までスリープしません"
+          }
         }
       }
     },
@@ -1916,6 +2508,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載連線出口：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードの接続先：%@"
           }
         }
       }
@@ -1940,6 +2538,12 @@
             "state": "translated",
             "value": "下載速度 %@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード速度 %@"
+          }
         }
       }
     },
@@ -1962,6 +2566,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法連線"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "到達不可"
           }
         }
       }
@@ -1986,6 +2596,12 @@
             "state": "translated",
             "value": "不支援的任務歷史版本：%lld"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未対応のタスク履歴バージョン：%lld"
+          }
         }
       }
     },
@@ -2008,6 +2624,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無速度限制"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無制限"
           }
         }
       }
@@ -2032,6 +2654,12 @@
             "state": "translated",
             "value": "今天"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今日"
+          }
         }
       }
     },
@@ -2054,6 +2682,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "從下載網頁的文字中辨識「解壓縮密碼：xxx」"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードページの「解凍パスワード：xxx」などの記載から読み取ります"
           }
         }
       }
@@ -2078,6 +2712,12 @@
             "state": "translated",
             "value": "代理狀態尚未確認"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロキシの状態は未確認です"
+          }
         }
       }
     },
@@ -2100,6 +2740,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "代理軟體可能接管了下載連線"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードの通信がプロキシソフトを経由している可能性があります"
           }
         }
       }
@@ -2124,6 +2770,12 @@
             "state": "translated",
             "value": "以上都未符合時，依序嘗試密碼本"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どのルールにも一致しない場合は、パスワード帳を順に試します"
+          }
         }
       }
     },
@@ -2146,6 +2798,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "任務資訊"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスク情報"
           }
         }
       }
@@ -2170,6 +2828,12 @@
             "state": "translated",
             "value": "任務歷史檔案損壞：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスク履歴ファイルが破損しています：%@"
+          }
         }
       }
     },
@@ -2192,6 +2856,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "你的電腦和路由器不在同一子網路，自動對應無法生效。需要由網路管理員手動轉送連接埠。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacとルーターのアドレス範囲が異なるため、自動マッピングは利用できません。ネットワーク管理者によるポート転送の設定が必要です。"
           }
         }
       }
@@ -2216,6 +2886,12 @@
             "state": "translated",
             "value": "使用全域影片設定，後續版本將支援個別設定"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共通の動画設定を使用します。個別の設定には今後対応予定です"
+          }
         }
       }
     },
@@ -2238,6 +2914,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "例如 rar 內含 zip"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "例：rarの中にzipがある場合"
           }
         }
       }
@@ -2262,6 +2944,12 @@
             "state": "translated",
             "value": "儲存"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
         }
       }
     },
@@ -2284,6 +2972,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "儲存至"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存先"
           }
         }
       }
@@ -2308,6 +3002,12 @@
             "state": "translated",
             "value": "保留"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持"
+          }
         }
       }
     },
@@ -2330,6 +3030,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "修復 GBK／Big5／Shift-JIS 的亂碼檔名"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GBK / Big5 / Shift-JISによるファイル名の文字化けを修正します"
           }
         }
       }
@@ -2354,6 +3060,12 @@
             "state": "translated",
             "value": "做種 %@ · 到 1:1 後%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シード%@ · 1:1で%@"
+          }
         }
       }
     },
@@ -2376,6 +3088,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "做種中"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シード中"
           }
         }
       }
@@ -2400,6 +3118,12 @@
             "state": "translated",
             "value": "做種至分享率 1:1 後"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有比1:1に達した後"
+          }
         }
       }
     },
@@ -2423,6 +3147,12 @@
             "state": "translated",
             "value": "做種者"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シーダー"
+          }
         }
       }
     },
@@ -2442,6 +3172,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "停止"
@@ -2469,6 +3205,12 @@
             "state": "translated",
             "value": "先在記憶體中累積較大的區塊再寫入磁碟，減少 SSD 寫入"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリにまとめてからディスクに書き込み、SSDへの書き込み回数を減らします"
+          }
         }
       }
     },
@@ -2491,6 +3233,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "光碟映像檔"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスクイメージ"
           }
         }
       }
@@ -2515,6 +3263,12 @@
             "state": "translated",
             "value": "全域上傳速度限制"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全体のアップロード速度制限"
+          }
         }
       }
     },
@@ -2537,6 +3291,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "全域下載速度限制"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全体のダウンロード速度制限"
           }
         }
       }
@@ -2561,6 +3321,12 @@
             "state": "translated",
             "value": "全部"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて"
+          }
         }
       }
     },
@@ -2583,6 +3349,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部任務"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのタスク"
           }
         }
       }
@@ -2607,6 +3379,12 @@
             "state": "translated",
             "value": "全部完成後允許睡眠"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて完了後にスリープを許可"
+          }
         }
       }
     },
@@ -2629,6 +3407,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部暫停"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて一時停止"
           }
         }
       }
@@ -2653,6 +3437,12 @@
             "state": "translated",
             "value": "全部暫停／繼續"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて一時停止 / 再開"
+          }
         }
       }
     },
@@ -2675,6 +3465,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "全部繼續"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて再開"
           }
         }
       }
@@ -2699,6 +3495,12 @@
             "state": "translated",
             "value": "全部設為 Mulee"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてMuleeに設定"
+          }
         }
       }
     },
@@ -2721,6 +3523,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "分享已下載檔案"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード済みファイルを共有"
           }
         }
       }
@@ -2745,6 +3553,12 @@
             "state": "translated",
             "value": "關"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフ"
+          }
         }
       }
     },
@@ -2767,6 +3581,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "關閉視窗後繼續在選單列執行"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウインドウを閉じた後もメニューバーで実行"
           }
         }
       }
@@ -2791,6 +3611,12 @@
             "state": "translated",
             "value": "其他"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他"
+          }
         }
       }
     },
@@ -2813,6 +3639,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "其餘分卷下載完成後繼續"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残りの分割ファイルのダウンロード完了後に続行します"
           }
         }
       }
@@ -2837,6 +3669,12 @@
             "state": "translated",
             "value": "相容性優先"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "互換性優先"
+          }
         }
       }
     },
@@ -2859,6 +3697,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "相容性優先：1080P 高位元率 · H.264 MP4"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "互換性優先：1080P 高ビットレート · H.264 MP4"
           }
         }
       }
@@ -2883,6 +3727,12 @@
             "state": "translated",
             "value": "冷門資源會慢慢來。沒有來源不算失敗，Mulee 會持續等待，有人上線就自動開始。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "古いファイルや利用者の少ないファイルは、時間がかかることがあります。ソースがなくても失敗ではありません。Muleeは待機を続け、ソースが接続すると自動で開始します。"
+          }
         }
       }
     },
@@ -2905,6 +3755,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "分享率"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有比"
           }
         }
       }
@@ -2929,6 +3785,12 @@
             "state": "translated",
             "value": "刪除"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
+          }
         }
       }
     },
@@ -2951,6 +3813,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "刪除「%@」？"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を削除しますか？"
           }
         }
       }
@@ -2975,6 +3843,12 @@
             "state": "translated",
             "value": "刪除規則"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールを削除"
+          }
         }
       }
     },
@@ -2997,6 +3871,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "剩 %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残り%@"
           }
         }
       }
@@ -3021,6 +3901,12 @@
             "state": "translated",
             "value": "比對方式"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一致方法"
+          }
         }
       }
     },
@@ -3043,6 +3929,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "通訊協定混淆"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロトコル難読化"
           }
         }
       }
@@ -3067,6 +3959,12 @@
             "state": "translated",
             "value": "即將完成"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "まもなく完了"
+          }
         }
       }
     },
@@ -3089,6 +3987,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "壓縮檔"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブ"
           }
         }
       }
@@ -3113,6 +4017,12 @@
             "state": "translated",
             "value": "原始壓縮檔已保留"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "元のアーカイブは保持されています"
+          }
         }
       }
     },
@@ -3135,6 +4045,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "取消"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル"
           }
         }
       }
@@ -3159,6 +4075,12 @@
             "state": "translated",
             "value": "受限"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "制限あり"
+          }
         }
       }
     },
@@ -3181,6 +4103,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "只刪除任務"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスクのみ削除"
           }
         }
       }
@@ -3205,6 +4133,12 @@
             "state": "translated",
             "value": "只把你點選的連結交給本機 Mulee，在新增下載面板確認後才開始下載。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択したリンクだけをこのMacのMuleeに送ります。「新規ダウンロード」で確認するとダウンロードが始まります。"
+          }
         }
       }
     },
@@ -3227,6 +4161,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "可從外部連入"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外部から接続可能"
           }
         }
       }
@@ -3251,6 +4191,12 @@
             "state": "translated",
             "value": "可以只移除任務，或同時刪除已下載的檔案。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスクのみ削除するか、ダウンロード済みファイルも削除できます。"
+          }
         }
       }
     },
@@ -3273,6 +4219,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "可稍後再試"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "後で再試行できます"
           }
         }
       }
@@ -3297,6 +4249,12 @@
             "state": "translated",
             "value": "可達"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "到達可能"
+          }
         }
       }
     },
@@ -3319,6 +4277,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "可連入"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続可能"
           }
         }
       }
@@ -3343,6 +4307,12 @@
             "state": "translated",
             "value": "合併中"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結合中"
+          }
         }
       }
     },
@@ -3365,6 +4335,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "同時刪除檔案"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルも削除"
           }
         }
       }
@@ -3389,6 +4365,12 @@
             "state": "translated",
             "value": "同時進行的任務數：%lld"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同時実行タスク数：%lld"
+          }
         }
       }
     },
@@ -3411,6 +4393,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "否"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "いいえ"
           }
         }
       }
@@ -3435,6 +4423,12 @@
             "state": "translated",
             "value": "無法啟動：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起動できませんでした：%@"
+          }
         }
       }
     },
@@ -3457,6 +4451,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "符合次數"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一致"
           }
         }
       }
@@ -3481,6 +4481,12 @@
             "state": "translated",
             "value": "符合規則"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一致したルール"
+          }
         }
       }
     },
@@ -3503,6 +4509,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "圖片"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像"
           }
         }
       }
@@ -3527,6 +4539,12 @@
             "state": "translated",
             "value": "在 Safari 中啟用"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safariで有効にする"
+          }
         }
       }
     },
@@ -3549,6 +4567,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "在 Finder 中顯示"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finderに表示"
           }
         }
       }
@@ -3573,6 +4597,12 @@
             "state": "translated",
             "value": "網域、前綴或規則運算式"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドメイン、接頭辞、正規表現"
+          }
         }
       }
     },
@@ -3595,6 +4625,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "網域解析使用了代理軟體的虛擬位址。某些組態下，僅加直接連線規則仍無法連線至來源；可在代理軟體中為下載來源網域關閉虛擬位址解析，再重新偵測。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドメイン名の解決にプロキシソフトの仮想アドレスが使われています。設定によっては、直接接続のルールだけではソースに接続できません。プロキシソフトでダウンロード元のドメインに対する仮想アドレスの使用をオフにして、再確認してください。"
           }
         }
       }
@@ -3619,6 +4655,12 @@
             "state": "translated",
             "value": "處理中"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "処理中"
+          }
         }
       }
     },
@@ -3641,6 +4683,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "複製 Stash / Clash 規則"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stash / Clashルールをコピー"
           }
         }
       }
@@ -3665,6 +4713,12 @@
             "state": "translated",
             "value": "複製連接埠轉送說明"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポート転送の説明をコピー"
+          }
         }
       }
     },
@@ -3687,6 +4741,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "複製連結"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクをコピー"
           }
         }
       }
@@ -3711,6 +4771,12 @@
             "state": "translated",
             "value": "複製連結後自動詢問是否下載"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクをコピーしたらダウンロードするか確認"
+          }
         }
       }
     },
@@ -3733,6 +4799,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "外部暫時無法主動連入時，仍可嘗試連線至其他來源，但能找到的來源可能較少，速度也可能較慢。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外部から接続できなくても、ほかのソースへの接続は試みます。ただし、見つかるソースが少なくなり、速度が低下する場合があります。"
           }
         }
       }
@@ -3757,6 +4829,12 @@
             "state": "translated",
             "value": "外部連接埠與電腦連接埠填寫相同的連接埠號碼。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外部ポートとこのMacのポートには、同じ番号を指定してください。"
+          }
         }
       }
     },
@@ -3779,6 +4857,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "大小"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイズ"
           }
         }
       }
@@ -3803,6 +4887,12 @@
             "state": "translated",
             "value": "大小未知"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイズ不明"
+          }
         }
       }
     },
@@ -3825,6 +4915,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "好"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
           }
         }
       }
@@ -3849,6 +4945,12 @@
             "state": "translated",
             "value": "安裝 Chrome 延伸功能"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chrome拡張機能をインストール"
+          }
         }
       }
     },
@@ -3871,6 +4973,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "安裝 Chrome 延伸功能…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chrome拡張機能をインストール…"
           }
         }
       }
@@ -3895,6 +5003,12 @@
             "state": "translated",
             "value": "安裝套件"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストーラ"
+          }
         }
       }
     },
@@ -3917,6 +5031,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "完成後"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了後"
           }
         }
       }
@@ -3941,6 +5061,12 @@
             "state": "translated",
             "value": "完成後自動解壓縮"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了後に自動展開"
+          }
         }
       }
     },
@@ -3963,6 +5089,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "完整來源最後出現"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完全なソースの最終確認"
           }
         }
       }
@@ -3987,6 +5119,12 @@
             "state": "translated",
             "value": "實際傳輸時間"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実際の転送時間"
+          }
         }
       }
     },
@@ -4009,6 +5147,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "密碼"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワード"
           }
         }
       }
@@ -4033,6 +5177,12 @@
             "state": "translated",
             "value": "密碼 %lld · %@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワード%lld · %@"
+          }
         }
       }
     },
@@ -4055,6 +5205,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "密碼儲存在鑰匙圈中，規則只保留在本機"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワードはキーチェーンに、ルールはこのMacにのみ保存します"
           }
         }
       }
@@ -4079,6 +5235,12 @@
             "state": "translated",
             "value": "密碼本"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワード帳"
+          }
         }
       }
     },
@@ -4101,6 +5263,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "密碼規則 · 依序比對，符合即停止"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワードルール · 上から順に確認し、一致したら終了します"
           }
         }
       }
@@ -4125,6 +5293,12 @@
             "state": "translated",
             "value": "將 %@ 設為 Mulee"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@をMuleeに設定"
+          }
         }
       }
     },
@@ -4147,6 +5321,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚未見到"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未確認"
           }
         }
       }
@@ -4171,6 +5351,12 @@
             "state": "translated",
             "value": "尚未設定"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未設定"
+          }
         }
       }
     },
@@ -4193,6 +5379,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚未連線或未確認的連接埠暫時無法判斷，等待連線後再查看。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未接続または未確認のポートは、まだ状態を判断できません。接続後に確認してください。"
           }
         }
       }
@@ -4217,6 +5409,12 @@
             "state": "translated",
             "value": "尚未連線，暫時無法判斷"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未接続のため確認できません"
+          }
         }
       }
     },
@@ -4239,6 +5437,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "就緒"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "準備完了"
           }
         }
       }
@@ -4263,6 +5467,12 @@
             "state": "translated",
             "value": "同時解壓縮巢狀壓縮檔"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入れ子のアーカイブも展開"
+          }
         }
       }
     },
@@ -4285,6 +5495,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "巢狀壓縮檔：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入れ子のアーカイブ：%@"
           }
         }
       }
@@ -4309,6 +5525,12 @@
             "state": "translated",
             "value": "平日 9:00–18:00 下載限制為 5 MB/s"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平日9:00〜18:00はダウンロードを5 MB/sに制限"
+          }
         }
       }
     },
@@ -4331,6 +5553,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已修復檔名編碼"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文字コード修正済み"
           }
         }
       }
@@ -4355,6 +5583,12 @@
             "state": "translated",
             "value": "已在 Finder 中顯示延伸功能資料夾。請先把 chrome 資料夾複製到固定位置，再開啟 chrome://extensions，啟用「開發人員模式」，點「載入未封裝項目」，選擇複製後的 chrome 資料夾。第一次交接時選擇「開啟 Mulee」，可勾選「一律允許」。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拡張機能のフォルダをFinderに表示しました。chromeフォルダを固定の場所にコピーし、chrome://extensionsを開いて「デベロッパーモード」を有効にします。「パッケージ化されていない拡張機能を読み込む」でコピー先のchromeフォルダを選択してください。初回は「Muleeを開く」を選びます。「常に許可」も選択できます。"
+          }
         }
       }
     },
@@ -4377,6 +5611,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已完成"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了"
           }
         }
       }
@@ -4423,6 +5663,28 @@
             "state": "translated",
             "value": "已等待 %lld 天"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count1@日待機中"
+          },
+          "substitutions": {
+            "count1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -4445,6 +5707,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已收到 %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "受信済み%@"
           }
         }
       }
@@ -4469,6 +5737,12 @@
             "state": "translated",
             "value": "已對應"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マッピング済み"
+          }
         }
       }
     },
@@ -4491,6 +5765,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已暫停"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時停止中"
           }
         }
       }
@@ -4515,6 +5795,12 @@
             "state": "translated",
             "value": "已等待"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機時間"
+          }
         }
       }
     },
@@ -4537,6 +5823,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已解壓縮"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開済み"
           }
         }
       }
@@ -4561,6 +5853,12 @@
             "state": "translated",
             "value": "已連線"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続済み"
+          }
         }
       }
     },
@@ -4583,6 +5881,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已連線節點"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続中のピア"
           }
         }
       }
@@ -4607,6 +5911,12 @@
             "state": "translated",
             "value": "已連線，但外部暫時無法主動連入"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続済みですが、外部からは接続できません"
+          }
         }
       }
     },
@@ -4629,6 +5939,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "常用密碼只儲存在本機鑰匙圈中；沒有符合規則時依序嘗試"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "よく使うパスワードは、このMacのキーチェーンにのみ保存します。ルールに一致しない場合は順に試します"
           }
         }
       }
@@ -4653,6 +5969,12 @@
             "state": "translated",
             "value": "開"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オン"
+          }
         }
       }
     },
@@ -4675,6 +5997,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已開啟系統網頁代理"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムのWebプロキシが有効です"
           }
         }
       }
@@ -4721,6 +6049,28 @@
             "state": "translated",
             "value": "開始下載 %lld 個任務"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@count1@件のダウンロードを開始"
+          },
+          "substitutions": {
+            "count1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -4744,6 +6094,12 @@
             "state": "translated",
             "value": "開始後可在詳細資訊中選擇要下載的檔案"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始後、詳細でダウンロードするファイルを選べます"
+          }
         }
       }
     },
@@ -4763,6 +6119,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開放"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "開放"
@@ -4790,6 +6152,12 @@
             "state": "translated",
             "value": "登入時啟動"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログイン時に起動"
+          }
         }
       }
     },
@@ -4812,6 +6180,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "引擎不支援此連結"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このリンクはエンジンに対応していません"
           }
         }
       }
@@ -4836,6 +6210,12 @@
             "state": "translated",
             "value": "引擎無法啟動：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エンジンを起動できませんでした：%@"
+          }
         }
       }
     },
@@ -4858,6 +6238,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "引擎回應異常：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エンジンの応答に問題があります：%@"
           }
         }
       }
@@ -4882,6 +6268,12 @@
             "state": "translated",
             "value": "引擎尚未接入"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エンジン未接続"
+          }
         }
       }
     },
@@ -4904,6 +6296,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "彈幕轉 ASS"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "弾幕をASSに変換"
           }
         }
       }
@@ -4928,6 +6326,12 @@
             "state": "translated",
             "value": "目前未發現代理接管的跡象。BT 和電驢仍需要可用來源，連接埠是否可連入可在下方查看。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在、プロキシソフトを経由している形跡はありません。BTとeD2kのダウンロードには、利用可能なソースが必要です。外部から接続できるポートは、下で確認できます。"
+          }
         }
       }
     },
@@ -4950,6 +6354,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "開啟 Mulee"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muleeを開く"
           }
         }
       }
@@ -4974,6 +6384,12 @@
             "state": "translated",
             "value": "開啟種子檔"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrentファイルを開く"
+          }
         }
       }
     },
@@ -4996,6 +6412,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "開啟種子檔…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrentファイルを開く…"
           }
         }
       }
@@ -5020,6 +6442,12 @@
             "state": "translated",
             "value": "開啟路由器管理頁面，找到連接埠轉送設定；閘道位址暫時無法讀取。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルーターの管理ページでポート転送の設定を開いてください。現在、ゲートウェイのアドレスを取得できません。"
+          }
         }
       }
     },
@@ -5042,6 +6470,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "開啟路由器（%@）的管理頁面，找到連接埠轉送設定。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルーター（%@）の管理ページでポート転送の設定を開いてください。"
           }
         }
       }
@@ -5066,6 +6500,12 @@
             "state": "translated",
             "value": "開啟連結或種子檔後，在「新增下載」面板確認才會開始下載。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクやTorrentファイルを開いた後、「新規ダウンロード」で確認するとダウンロードが始まります。"
+          }
         }
       }
     },
@@ -5088,6 +6528,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "排隊中"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中"
           }
         }
       }
@@ -5112,6 +6558,12 @@
             "state": "translated",
             "value": "排隊中，第 %lld 位"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中、%lld番目"
+          }
         }
       }
     },
@@ -5134,6 +6586,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜尋任務"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスクを検索"
           }
         }
       }
@@ -5158,6 +6616,12 @@
             "state": "translated",
             "value": "支援 zip／rar／7z 及分卷；分卷會等全部下載完成再解壓縮"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zip / rar / 7zと分割アーカイブに対応しています。分割ファイルがすべてそろってから展開します"
+          }
         }
       }
     },
@@ -5180,6 +6644,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "檔案下載進度"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルのダウンロード進捗"
           }
         }
       }
@@ -5204,6 +6674,12 @@
             "state": "translated",
             "value": "檔名前綴"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル名の接頭辞"
+          }
         }
       }
     },
@@ -5226,6 +6702,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "檔名編碼"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル名の文字コード"
           }
         }
       }
@@ -5250,6 +6732,12 @@
             "state": "translated",
             "value": "檔名規則"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル名ルール"
+          }
         }
       }
     },
@@ -5272,6 +6760,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "資料夾"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダ"
           }
         }
       }
@@ -5296,6 +6790,12 @@
             "state": "translated",
             "value": "檔案已準備好"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルの準備ができました"
+          }
         }
       }
     },
@@ -5318,6 +6818,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "檔案圖示總覽"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルの種類別アイコン一覧"
           }
         }
       }
@@ -5342,6 +6848,12 @@
             "state": "translated",
             "value": "文字檔案"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト書類"
+          }
         }
       }
     },
@@ -5364,6 +6876,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "文字與程式碼"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキストとコード"
           }
         }
       }
@@ -5388,6 +6906,12 @@
             "state": "translated",
             "value": "新增密碼"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワードを追加"
+          }
         }
       }
     },
@@ -5410,6 +6934,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新增規則"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールを追加"
           }
         }
       }
@@ -5434,6 +6964,12 @@
             "state": "translated",
             "value": "新增下載"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ダウンロード"
+          }
         }
       }
     },
@@ -5456,6 +6992,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新增下載後，任務會顯示在這裡。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ダウンロードを追加すると、ここに表示されます。"
           }
         }
       }
@@ -5480,6 +7022,12 @@
             "state": "translated",
             "value": "新增下載（⌘N）"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ダウンロード（⌘N）"
+          }
         }
       }
     },
@@ -5502,6 +7050,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法暫存網頁解壓縮密碼：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページの展開パスワードを一時保存できません：%@"
           }
         }
       }
@@ -5526,6 +7080,12 @@
             "state": "translated",
             "value": "無法儲存任務歷史：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスク履歴を保存できません：%@"
+          }
         }
       }
     },
@@ -5548,6 +7108,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法開啟連結"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクを開けません"
           }
         }
       }
@@ -5572,6 +7138,12 @@
             "state": "translated",
             "value": "無法移除暫存解壓縮密碼：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時的な展開パスワードを削除できません：%@"
+          }
         }
       }
     },
@@ -5594,6 +7166,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法讀取任務歷史：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスク履歴を読み込めません：%@"
           }
         }
       }
@@ -5618,6 +7196,12 @@
             "state": "translated",
             "value": "無法讀取拖入的連結：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドロップされたリンクを読み込めません：%@"
+          }
         }
       }
     },
@@ -5640,6 +7224,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法讀取種子檔，請重新選擇完整的 .torrent 檔案"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrentファイルを読み込めません。完全な.torrentファイルを選び直してください"
           }
         }
       }
@@ -5664,6 +7254,12 @@
             "state": "translated",
             "value": "無法連入"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続不可"
+          }
         }
       }
     },
@@ -5686,6 +7282,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法選擇儲存目錄：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存先フォルダを選択できません：%@"
           }
         }
       }
@@ -5710,6 +7312,12 @@
             "state": "translated",
             "value": "日期"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日付"
+          }
         }
       }
     },
@@ -5732,6 +7340,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "是"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "はい"
           }
         }
       }
@@ -5756,6 +7370,12 @@
             "state": "translated",
             "value": "是否透過代理"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロキシの使用"
+          }
         }
       }
     },
@@ -5778,6 +7398,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "顯示詳細資訊"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詳細を表示"
           }
         }
       }
@@ -5802,6 +7428,12 @@
             "state": "translated",
             "value": "暫停"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時停止"
+          }
         }
       }
     },
@@ -5824,6 +7456,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚無任務"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスクなし"
           }
         }
       }
@@ -5848,6 +7486,12 @@
             "state": "translated",
             "value": "暫時只記錄連結"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在はリンクのみ記録します"
+          }
         }
       }
     },
@@ -5870,6 +7514,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "暫時無法從外部連入"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在、外部から接続できません"
           }
         }
       }
@@ -5894,6 +7544,12 @@
             "state": "translated",
             "value": "暫時無法儲存密碼本，請稍後再試"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワード帳を保存できません。後で再試行してください"
+          }
         }
       }
     },
@@ -5916,6 +7572,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "暫時無法儲存密碼，規則尚未新增"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワードを保存できなかったため、ルールは追加されていません"
           }
         }
       }
@@ -5940,6 +7602,12 @@
             "state": "translated",
             "value": "暫時無法儲存解壓縮規則：%@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開ルールを保存できません：%@"
+          }
         }
       }
     },
@@ -5962,6 +7630,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "暫時無法刪除鑰匙圈密碼，規則已保留"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーチェーンのパスワードを削除できなかったため、ルールを保持しました"
           }
         }
       }
@@ -5986,6 +7660,12 @@
             "state": "translated",
             "value": "暫時無法確認電腦和路由器是否在同一子網路。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacとルーターのアドレス範囲が同じか、現在は確認できません。"
+          }
         }
       }
     },
@@ -6008,6 +7688,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "暫時無法讀取壓縮檔所在資料夾"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブのあるフォルダを読み込めません"
           }
         }
       }
@@ -6032,6 +7718,12 @@
             "state": "translated",
             "value": "暫時無法讀取密碼本，現有密碼已保留"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワード帳を読み込めません。既存のパスワードは保持されています"
+          }
         }
       }
     },
@@ -6054,6 +7746,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "暫時無法讀取解壓縮規則：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開ルールを読み込めません：%@"
           }
         }
       }
@@ -6078,6 +7776,12 @@
             "state": "translated",
             "value": "暫時無法讀取本機區域網路位址，請連接區域網路後重新偵測，再確認轉送目標。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacのローカルネットワークのアドレスを取得できません。接続後に再確認し、転送先を確認してください。"
+          }
         }
       }
     },
@@ -6100,6 +7804,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "暫時無法解壓縮，原始壓縮檔已保留"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開できませんでした。元のアーカイブは保持されています"
           }
         }
       }
@@ -6124,6 +7834,12 @@
             "state": "translated",
             "value": "尚未自動開啟連接埠"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポートは自動で開かれていません"
+          }
         }
       }
     },
@@ -6146,6 +7862,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "更新頻道"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新チャンネル"
           }
         }
       }
@@ -6170,6 +7892,12 @@
             "state": "translated",
             "value": "最近下載速度曲線"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近のダウンロード速度"
+          }
         }
       }
     },
@@ -6192,6 +7920,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "最高畫質 MKV"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最高画質 MKV"
           }
         }
       }
@@ -6216,6 +7950,12 @@
             "state": "translated",
             "value": "未發現代理接管"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロキシ経由の形跡なし"
+          }
         }
       }
     },
@@ -6238,6 +7978,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "未啟用"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無効"
           }
         }
       }
@@ -6262,6 +8008,12 @@
             "state": "translated",
             "value": "未完成的電驢分塊會隨任務移除；已完成的檔案可以保留。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未完了のeD2kピースはタスクとともに削除されます。完了したファイルは保持できます。"
+          }
         }
       }
     },
@@ -6284,6 +8036,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "找不到 BT 下載工具"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTダウンロードツールが見つかりません"
           }
         }
       }
@@ -6308,6 +8066,12 @@
             "state": "translated",
             "value": "找不到 aria2"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2が見つかりません"
+          }
         }
       }
     },
@@ -6330,6 +8094,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "找不到任務"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスクが見つかりません"
           }
         }
       }
@@ -6354,6 +8124,12 @@
             "state": "translated",
             "value": "找不到電驢下載工具"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kダウンロードツールが見つかりません"
+          }
         }
       }
     },
@@ -6376,6 +8152,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚未接入"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未接続"
           }
         }
       }
@@ -6400,6 +8182,12 @@
             "state": "translated",
             "value": "尚未偵測"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未確認"
+          }
         }
       }
     },
@@ -6423,6 +8211,12 @@
             "state": "translated",
             "value": "未知"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不明"
+          }
         }
       }
     },
@@ -6442,6 +8236,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未確認"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "未確認"
@@ -6469,6 +8269,12 @@
             "state": "translated",
             "value": "未連線"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未接続"
+          }
         }
       }
     },
@@ -6491,6 +8297,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "條件"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "条件"
           }
         }
       }
@@ -6515,6 +8327,12 @@
             "state": "translated",
             "value": "來源"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソース"
+          }
         }
       }
     },
@@ -6537,6 +8355,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "來源網站"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード元サイト"
           }
         }
       }
@@ -6561,6 +8385,12 @@
             "state": "translated",
             "value": "查看進度、來源和完成後的處理資訊。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "進捗、ソース、完了後の処理を確認できます。"
+          }
         }
       }
     },
@@ -6583,6 +8413,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在下載"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード中"
           }
         }
       }
@@ -6607,6 +8443,12 @@
             "state": "translated",
             "value": "正在下載 · %lld"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード中 · %lld"
+          }
         }
       }
     },
@@ -6629,6 +8471,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在準備"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "準備中"
           }
         }
       }
@@ -6653,6 +8501,12 @@
             "state": "translated",
             "value": "正在準備影片工具"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画ツールを準備中"
+          }
         }
       }
     },
@@ -6675,6 +8529,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在處理其他壓縮檔"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかのアーカイブを処理中"
           }
         }
       }
@@ -6699,6 +8559,12 @@
             "state": "translated",
             "value": "正在偵測…"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認中…"
+          }
         }
       }
     },
@@ -6721,6 +8587,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在等待檔案資訊，取得後可選擇要下載的檔案。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル情報を待っています。取得後、ダウンロードするファイルを選べます。"
           }
         }
       }
@@ -6745,6 +8617,12 @@
             "state": "translated",
             "value": "正在解壓縮檔案"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを展開中"
+          }
         }
       }
     },
@@ -6767,6 +8645,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在讀取…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み込み中…"
           }
         }
       }
@@ -6791,6 +8675,12 @@
             "state": "translated",
             "value": "每日版"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ナイトリー版"
+          }
         }
       }
     },
@@ -6813,6 +8703,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "沒有來源的任務會持續等待，不會自動取消"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソースがないタスクは待機を続け、自動ではキャンセルしません"
           }
         }
       }
@@ -6837,6 +8733,12 @@
             "state": "translated",
             "value": "瀏覽器延伸功能"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザ拡張機能"
+          }
         }
       }
     },
@@ -6859,6 +8761,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "新增"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加"
           }
         }
       }
@@ -6883,6 +8791,12 @@
             "state": "translated",
             "value": "清除已完成的任務"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了したタスクを消去"
+          }
         }
       }
     },
@@ -6905,6 +8819,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "簡報"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレゼンテーション"
           }
         }
       }
@@ -6929,6 +8849,12 @@
             "state": "translated",
             "value": "狀態"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "状態"
+          }
         }
       }
     },
@@ -6951,6 +8877,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "電子書"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電子書籍"
           }
         }
       }
@@ -6975,6 +8907,12 @@
             "state": "translated",
             "value": "電腦和路由器在同一子網路。若自動對應未生效，可以手動轉送。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacとルーターのアドレス範囲は同じです。自動マッピングが機能しない場合は、手動でポート転送を設定できます。"
+          }
         }
       }
     },
@@ -6997,6 +8935,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "電驢"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k"
           }
         }
       }
@@ -7021,6 +8965,12 @@
             "state": "translated",
             "value": "電驢 TCP 連接埠"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k TCPポート"
+          }
         }
       }
     },
@@ -7043,6 +8993,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "電驢 UDP 連接埠"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k UDPポート"
           }
         }
       }
@@ -7067,6 +9023,12 @@
             "state": "translated",
             "value": "電驢 ed2k"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k ed2k"
+          }
         }
       }
     },
@@ -7089,6 +9051,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "電驢 · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k · %@"
           }
         }
       }
@@ -7113,6 +9081,12 @@
             "state": "translated",
             "value": "電驢引擎"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kエンジン"
+          }
         }
       }
     },
@@ -7135,6 +9109,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "電驢連結 · 冷門資源可能需要長時間等待來源"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kリンク · 利用者の少ないファイルは、ソースの確認に時間がかかる場合があります"
           }
         }
       }
@@ -7159,6 +9139,12 @@
             "state": "translated",
             "value": "電驢：TCP %@、UDP %@"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k：TCP %@、UDP %@"
+          }
         }
       }
     },
@@ -7181,6 +9167,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "畫質"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画質"
           }
         }
       }
@@ -7205,6 +9197,12 @@
             "state": "translated",
             "value": "畫質優先"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画質優先"
+          }
         }
       }
     },
@@ -7227,6 +9225,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "畫質優先：最高畫質 MKV"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画質優先：最高画質 MKV"
           }
         }
       }
@@ -7251,6 +9255,12 @@
             "state": "translated",
             "value": "介面語言"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示言語"
+          }
         }
       }
     },
@@ -7273,6 +9283,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "監看剪貼簿"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリップボードを監視"
           }
         }
       }
@@ -7297,6 +9313,12 @@
             "state": "translated",
             "value": "直接連線"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直接接続"
+          }
         }
       }
     },
@@ -7319,6 +9341,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "直接連結 · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直接リンク · %@"
           }
         }
       }
@@ -7343,6 +9371,12 @@
             "state": "translated",
             "value": "睡眠"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スリープ"
+          }
         }
       }
     },
@@ -7365,6 +9399,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "磁力連結 · 正在取得中繼資料"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マグネットリンク · メタデータを取得中"
           }
         }
       }
@@ -7389,6 +9429,12 @@
             "state": "translated",
             "value": "磁碟快取"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスクキャッシュ"
+          }
         }
       }
     },
@@ -7411,6 +9457,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "私有種子"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライベートTorrent"
           }
         }
       }
@@ -7435,6 +9487,12 @@
             "state": "translated",
             "value": "私有種子不依分享率自動停止"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライベートTorrentは共有比で自動停止しません"
+          }
         }
       }
     },
@@ -7457,6 +9515,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "移至垃圾桶"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゴミ箱に入れる"
           }
         }
       }
@@ -7481,6 +9545,12 @@
             "state": "translated",
             "value": "移除選取的密碼"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択したパスワードを削除"
+          }
         }
       }
     },
@@ -7503,6 +9573,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "穩定版"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安定版"
           }
         }
       }
@@ -7527,6 +9603,12 @@
             "state": "translated",
             "value": "連接埠"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポート"
+          }
         }
       }
     },
@@ -7549,6 +9631,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "連接埠能否從外部連入"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外部からの接続"
           }
         }
       }
@@ -7573,6 +9661,12 @@
             "state": "translated",
             "value": "等待其餘分卷"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残りの分割ファイルを待機中"
+          }
         }
       }
     },
@@ -7595,6 +9689,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "等待來源"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソース待ち"
           }
         }
       }
@@ -7619,6 +9719,12 @@
             "state": "translated",
             "value": "等待空位"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空きを待機中"
+          }
         }
       }
     },
@@ -7641,6 +9747,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "等待貼上連結"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクのペースト待ち"
           }
         }
       }
@@ -7665,6 +9777,12 @@
             "state": "translated",
             "value": "等待解壓縮"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開待ち"
+          }
         }
       }
     },
@@ -7687,6 +9805,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "類別"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カテゴリ"
           }
         }
       }
@@ -7711,6 +9835,12 @@
             "state": "translated",
             "value": "類型"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "種類"
+          }
         }
       }
     },
@@ -7733,6 +9863,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "貼上一個或多個連結，類型會自動辨識。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクを1つ以上ペーストしてください。種類は自動で判別します。"
           }
         }
       }
@@ -7757,6 +9893,12 @@
             "state": "translated",
             "value": "貼上下載連結，每行一個"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードリンクを1行に1つずつペースト"
+          }
         }
       }
     },
@@ -7779,6 +9921,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "貼上連結開始下載"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクをペーストしてダウンロード"
           }
         }
       }
@@ -7803,6 +9951,12 @@
             "state": "translated",
             "value": "貼上連結，按 Return 直接下載"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクをペーストし、Returnでダウンロード"
+          }
         }
       }
     },
@@ -7825,6 +9979,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "系統代理只影響網頁類連線，BT 和電驢不受這項設定影響。連接埠是否可連入可在下方查看。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムのプロキシ設定はWeb通信にのみ適用され、BTとeD2kには影響しません。外部から接続できるポートは、下で確認できます。"
           }
         }
       }
@@ -7849,6 +10009,12 @@
             "state": "translated",
             "value": "繼續"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再開"
+          }
         }
       }
     },
@@ -7871,6 +10037,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "編輯密碼本"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワード帳を編集"
           }
         }
       }
@@ -7895,6 +10067,12 @@
             "state": "translated",
             "value": "缺少 ffmpeg，無法合併音訊與影片"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ffmpegがないため、映像と音声を結合できません"
+          }
         }
       }
     },
@@ -7917,6 +10095,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "網站改版時每日版修正最快"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイトの仕様変更には、ナイトリー版が早く対応します"
           }
         }
       }
@@ -7941,6 +10125,12 @@
             "state": "translated",
             "value": "網路"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネットワーク"
+          }
         }
       }
     },
@@ -7963,6 +10153,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "網頁 HTTP"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Web HTTP"
           }
         }
       }
@@ -7987,6 +10183,12 @@
             "state": "translated",
             "value": "耐心等待"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "そのままお待ちください"
+          }
         }
       }
     },
@@ -8006,6 +10208,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "自動"
@@ -8033,6 +10241,12 @@
             "state": "translated",
             "value": "自動尋找密碼"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワードを自動検索"
+          }
         }
       }
     },
@@ -8055,6 +10269,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動偵測"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動検出"
           }
         }
       }
@@ -8079,6 +10299,12 @@
             "state": "translated",
             "value": "自動偵測（%@）"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動検出（%@）"
+          }
         }
       }
     },
@@ -8101,6 +10327,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動連接埠對應"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動ポートマッピング"
           }
         }
       }
@@ -8125,6 +10357,12 @@
             "state": "translated",
             "value": "自動解壓縮"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動展開"
+          }
         }
       }
     },
@@ -8147,6 +10385,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動解壓縮已關閉"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動展開はオフです"
           }
         }
       }
@@ -8171,6 +10415,12 @@
             "state": "translated",
             "value": "選單列面板預覽"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーパネルのプレビュー"
+          }
         }
       }
     },
@@ -8193,6 +10443,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "虛實 · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "塗りと輪郭 · %@"
           }
         }
       }
@@ -8217,6 +10473,12 @@
             "state": "translated",
             "value": "虛擬網路介面可能接管了下載連線"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードの通信が仮想ネットワークインターフェイスを経由している可能性があります"
+          }
         }
       }
     },
@@ -8239,6 +10501,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "試算表"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スプレッドシート"
           }
         }
       }
@@ -8263,6 +10531,12 @@
             "state": "translated",
             "value": "規則已複製"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルールをコピーしました"
+          }
         }
       }
     },
@@ -8285,6 +10559,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "影片"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画"
           }
         }
       }
@@ -8309,6 +10589,12 @@
             "state": "translated",
             "value": "影片引擎"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画エンジン"
+          }
         }
       }
     },
@@ -8331,6 +10617,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "解壓縮"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開"
           }
         }
       }
@@ -8355,6 +10647,12 @@
             "state": "translated",
             "value": "解壓縮中"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開中"
+          }
         }
       }
     },
@@ -8377,6 +10675,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "解壓縮中 · %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開中 · %@"
           }
         }
       }
@@ -8401,6 +10705,12 @@
             "state": "translated",
             "value": "解壓縮後"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開後"
+          }
         }
       }
     },
@@ -8423,6 +10733,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "解壓縮失敗時一律保留原始檔案"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開できなかった場合、元のファイルは変更しません"
           }
         }
       }
@@ -8447,6 +10763,12 @@
             "state": "translated",
             "value": "解壓縮已取消"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開をキャンセルしました"
+          }
         }
       }
     },
@@ -8469,6 +10791,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "解壓縮成功後的原始壓縮檔"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開成功後の元のアーカイブ"
           }
         }
       }
@@ -8493,6 +10821,12 @@
             "state": "translated",
             "value": "解壓縮未完成"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開未完了"
+          }
         }
       }
     },
@@ -8515,6 +10849,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "解壓縮狀態"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開の状態"
           }
         }
       }
@@ -8539,6 +10879,12 @@
             "state": "translated",
             "value": "排程速度限制"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時間帯別の速度制限"
+          }
         }
       }
     },
@@ -8561,6 +10907,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "設為 Mulee"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muleeに設定"
           }
         }
       }
@@ -8607,6 +10959,28 @@
             "state": "translated",
             "value": "辨識到 %lld 個連結"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンク%#@count1@件を検出"
+          },
+          "substitutions": {
+            "count1": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%lld"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -8629,6 +11003,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "試試其他任務名稱。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のタスク名を試してください。"
           }
         }
       }
@@ -8653,6 +11033,12 @@
             "state": "translated",
             "value": "說明已複製"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "説明をコピーしました"
+          }
         }
       }
     },
@@ -8675,6 +11061,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "讀取壓縮檔註解中的密碼"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アーカイブのコメントからパスワードを読み取る"
           }
         }
       }
@@ -8699,6 +11091,12 @@
             "state": "translated",
             "value": "透過代理"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロキシ経由"
+          }
         }
       }
     },
@@ -8721,6 +11119,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "跟隨系統"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムに合わせる"
           }
         }
       }
@@ -8745,6 +11149,12 @@
             "state": "translated",
             "value": "路由器支援時，BT 引擎會嘗試自動開啟連接埠；電驢連接埠需要在路由器中手動轉送。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルーターが対応している場合、BTエンジンはポートを自動で開きます。eD2kのポートは、ルーターで手動の転送設定が必要です。"
+          }
         }
       }
     },
@@ -8767,6 +11177,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "轉送至這台電腦的區域網路位址 %@。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacのローカルネットワークアドレス%@に転送してください。"
           }
         }
       }
@@ -8791,6 +11207,12 @@
             "state": "translated",
             "value": "轉送後等待來源連線，再查看連接埠狀態。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "転送の設定後、ソースの接続を待ってからポートの状態を確認してください。"
+          }
         }
       }
     },
@@ -8813,6 +11235,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "迅雷連結已解析為 %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thunderリンクを%@に変換しました"
           }
         }
       }
@@ -8837,6 +11265,12 @@
             "state": "translated",
             "value": "近 14 天來源出現情況"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "過去14日間のソースの確認状況"
+          }
         }
       }
     },
@@ -8859,6 +11293,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚無下載任務"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードタスクはまだありません"
           }
         }
       }
@@ -8883,6 +11323,12 @@
             "state": "translated",
             "value": "這些連線已確認可從外部連入，更容易找到來源。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外部から接続できることが確認できたため、ソースが見つかりやすくなります。"
+          }
         }
       }
     },
@@ -8905,6 +11351,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "連入受限"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外部からの接続に制限あり"
           }
         }
       }
@@ -8929,6 +11381,12 @@
             "state": "translated",
             "value": "連線至 Kad 網路"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kadネットワークに接続"
+          }
         }
       }
     },
@@ -8951,6 +11409,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "連線至電驢伺服器"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kサーバに接続"
           }
         }
       }
@@ -8975,6 +11439,12 @@
             "state": "translated",
             "value": "選擇…"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択…"
+          }
         }
       }
     },
@@ -8998,6 +11468,12 @@
             "state": "translated",
             "value": "選擇一個任務"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスクを選択"
+          }
         }
       }
     },
@@ -9017,6 +11493,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一般"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "一般"
@@ -9044,6 +11526,12 @@
             "state": "translated",
             "value": "速度"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "速度"
+          }
         }
       }
     },
@@ -9066,6 +11554,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "部分網路資訊暫時無法讀取。點選重新偵測，確認 BT 和電驢的連線是否受到代理影響。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一部のネットワーク情報を取得できません。「再確認」をクリックして、BTとeD2kがプロキシの影響を受けているか確認してください。"
           }
         }
       }
@@ -9090,6 +11584,12 @@
             "state": "translated",
             "value": "取樣"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サンプリング"
+          }
         }
       }
     },
@@ -9112,6 +11612,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新偵測"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再確認"
           }
         }
       }
@@ -9136,6 +11642,12 @@
             "state": "translated",
             "value": "連結無效、超出限制，或包含不允許的本機檔案。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクが無効か、上限を超えているか、許可されていないローカルファイルを含んでいます。"
+          }
         }
       }
     },
@@ -9158,6 +11670,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "長尾任務"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "長期待機タスク"
           }
         }
       }
@@ -9182,6 +11700,12 @@
             "state": "translated",
             "value": "降速"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "減速"
+          }
         }
       }
     },
@@ -9204,6 +11728,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "降速至 50 KB/s 繼續做種"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "50 KB/sに減速してシードを継続"
           }
         }
       }
@@ -9228,6 +11758,12 @@
             "state": "translated",
             "value": "隱藏詳細資訊"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "詳細を非表示"
+          }
         }
       }
     },
@@ -9250,6 +11786,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "需要處理"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対応が必要"
           }
         }
       }
@@ -9274,6 +11816,12 @@
             "state": "translated",
             "value": "需要安裝瀏覽器擴充功能"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザ拡張機能のインストールが必要です"
+          }
         }
       }
     },
@@ -9296,6 +11844,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "需要注意"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認が必要"
           }
         }
       }
@@ -9320,6 +11874,12 @@
             "state": "translated",
             "value": "需要登入才能觀看的畫質（例如 B 站大會員畫質）暫不支援。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログインが必要な画質（Bilibiliの有料会員向け画質など）には、現在対応していません。"
+          }
         }
       }
     },
@@ -9342,6 +11902,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "音訊"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オーディオ"
           }
         }
       }
@@ -9366,6 +11932,12 @@
             "state": "translated",
             "value": "預設儲存目錄"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルトの保存先"
+          }
         }
       }
     },
@@ -9388,6 +11960,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "預設開啟方式"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルトで開くアプリ"
           }
         }
       }
@@ -9412,6 +11990,12 @@
             "state": "translated",
             "value": "預設畫質"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルトの画質"
+          }
         }
       }
     },
@@ -9434,6 +12018,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "，完整來源最後出現於 %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "、完全なソースの最終確認：%@"
           }
         }
       }
@@ -9458,6 +12048,12 @@
             "state": "translated",
             "value": "，尚未見到完整來源"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "、完全なソースは未確認"
+          }
         }
       }
     },
@@ -9480,6 +12076,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "，排隊第 %lld 位"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "、待ち順%lld番目"
           }
         }
       }
