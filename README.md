@@ -1,9 +1,23 @@
+<p align="center"><img src="Design/Brand/mulee-icon-1024.png" width="128" alt="Mulee 图标"></p>
+
 # Mulee
 
 **一个纯粹的 macOS 下载器。** HTTP、BT / 磁力、ed2k、视频，一个软件全搞定。
 开源，免费，永不加广告。
 
-> 🚧 项目处于早期设计阶段，还没有可用版本。
+> 🚧 开发中。界面已经搭好，现在用示例数据运行；下载引擎（aria2、libtorrent、aMule、yt-dlp）还没有接入。
+
+![主窗口](docs/screenshots/main-light.png)
+
+<details>
+<summary>更多截图：暗色模式、新建下载、菜单栏、设置</summary>
+
+![暗色模式](docs/screenshots/main-dark.png)
+![新建下载](docs/screenshots/new-task.png)
+<img src="docs/screenshots/menu-bar.png" width="340" alt="菜单栏面板">
+<img src="docs/screenshots/settings-network.png" width="720" alt="设置 · 网络">
+
+</details>
 
 [English](#english)
 
@@ -45,6 +59,17 @@ Mulee 想把这些合成一个：**一个入口、一套设置、一个下载队
 - ❌ 迅雷加速网络（P2SP）。迅雷链接只做解析
 - ❌ Windows / Linux 版本
 
+## 从源码构建
+
+需要 macOS 26+、Xcode 27+ 和 [XcodeGen](https://github.com/yonaskolb/XcodeGen)（`brew install xcodegen`）。
+
+```sh
+xcodegen generate
+xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' build
+```
+
+参与开发前请先读 [docs/CONVENTIONS.md](docs/CONVENTIONS.md)。品牌与图标规范见 [Design/BRAND.md](Design/BRAND.md)、[Design/ICONS.md](Design/ICONS.md)。
+
 ## 许可证
 
 [GPL-3.0](LICENSE)
@@ -60,7 +85,7 @@ Mulee 只是一个下载工具，请只下载你有权获取的内容。
 **Mulee is a no-nonsense download manager for macOS.** HTTP, BitTorrent / magnet, ed2k and video sites, all in one native app.
 Open source, free, and never any ads.
 
-> 🚧 Early design stage. No usable release yet.
+> 🚧 Work in progress. The UI is in place and runs on sample data; download engines are not wired up yet.
 
 **Planned:** multi-connection HTTP/FTP, BitTorrent and magnet links, native ed2k, `thunder://` link decoding, video downloads powered by yt-dlp (YouTube and Bilibili first), and auto-extraction with password rules and filename encoding repair. Native Swift UI for Apple Silicon, a menu bar item, browser extensions, default handler for magnet / ed2k / thunder / .torrent, and sleep prevention while downloading.
 
