@@ -14,3 +14,6 @@
 	path = ThirdParty/wxWidgets
 	url = https://github.com/wxWidgets/wxWidgets.git
 	shallow = true
+[submodule "ThirdParty/aria2"]
+	path = ThirdParty/aria2
+	url = https://github.com/aria2/aria2.git
