@@ -4,6 +4,7 @@ import MuleeCore
 /// 菜单栏常驻，并在退出前给下载引擎最多五秒保存会话。
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+    let updates = AppUpdateController.shared
     var openURLRouter: OpenURLRouter?
     private var settingsRuntime: SettingsRuntime?
     private var coordinator: DownloadCoordinator?
@@ -20,6 +21,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         openURLRouter = OpenURLRouter(model: model, settings: settings)
         self.model = model
         self.settings = settings
+        updates.installation.hasActiveTransfers = { [weak model] in
+            guard let model else { return false }
+            return model.hasActiveTransfers || model.tasks.contains { [.queued, .waitingForSources].contains($0.status) }
+        }
+        updates.installation.confirm = Self.confirmUpdateInstallation
+        updates.installation.prepare = { [weak self] in
+            await self?.prepareForUpdate() ?? false
+        }
         // 示例数据模式和单元测试宿主都不启动真实引擎。
         guard !usesSampleData, !AppEnvironment.isRunningUnitTests, coordinator == nil else { return }
         NetworkDiagnosticsService.shared.start(model: model)
@@ -61,6 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if !AppEnvironment.isRunningUnitTests, !Self.wasLaunchedAtLogin {
             model?.mainWindowRequest += 1
         }
+        updates.startAutomaticChecks()
         guard let coordinator, let settings else { return }
         startupTask = Task {
             await coordinator.start(
@@ -97,6 +107,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if updates.installation.isPrepared { return .terminateNow }
+        if updates.installationPending {
+            guard updates.installation.mayInstall() else { return .terminateCancel }
+            guard !isTerminating else { return .terminateLater }
+            isTerminating = true
+            shutdownTask = Task {
+                let prepared = await updates.installation.prepareForInstallation()
+                isTerminating = false
+                sender.reply(toApplicationShouldTerminate: prepared)
+            }
+            return .terminateLater
+        }
+        guard let coordinator else { return .terminateNow }
         guard !isTerminating else { return .terminateLater }
         if let model, WindowClosePolicy.needsConfirmation(tasks: model.tasks) {
             let alert = NSAlert()
@@ -136,5 +159,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         model?.flushTaskHistory()
         timeoutTask?.cancel()
         application.reply(toApplicationShouldTerminate: true)
+    }
+
+    /// 更新不走普通退出的五秒兜底，必须等引擎保存会话并停止后才允许安装。
+    private func prepareForUpdate() async -> Bool {
+        NetworkDiagnosticsService.shared.stop()
+        startupTask?.cancel()
+        await startupTask?.value
+        extractionCoordinator?.cancel()
+        await extractionCoordinator?.stop()
+        await coordinator?.stop()
+        model?.flushTaskHistory()
+        return model?.taskHistoryIssue == nil
+    }
+
+    private static func confirmUpdateInstallation() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "仍有任务正在进行，要安装更新吗？")
+        alert.informativeText = String(localized: "Mulee 将保存下载进度并退出，安装更新后重新打开。")
+        alert.addButton(withTitle: String(localized: "安装并重新打开"))
+        alert.addButton(withTitle: String(localized: "稍后"))
+        return alert.runModal() == .alertFirstButtonReturn
     }
 }

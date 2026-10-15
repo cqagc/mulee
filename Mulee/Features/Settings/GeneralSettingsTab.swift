@@ -25,6 +25,7 @@ struct GeneralSettingsTab: View {
             }
             DefaultHandlerSection()
             BrowserExtensionSection()
+            AppUpdateSection()
             Section {
                 Toggle(isOn: $model.watchClipboard) {
                     Text("监听剪贴板")

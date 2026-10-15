@@ -1345,6 +1345,29 @@
         }
       }
     },
+    "Mulee 将保存下载进度并退出，安装更新后重新打开。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulee 将保存下载进度并退出，安装更新后重新打开。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulee will save download progress and quit, then reopen after installing the update."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulee 將儲存下載進度並結束，安裝更新後重新開啟。"
+          }
+        }
+      }
+    },
     "Mulee 正在下载": {
       "extractionState": "manual",
       "localizations": {
@@ -2031,6 +2054,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "今天"
+          }
+        }
+      }
+    },
+    "仍有任务正在进行，要安装更新吗？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍有任务正在进行，要安装更新吗？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasks are still in progress. Install the update?"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仍有任務正在進行，要安裝更新嗎？"
           }
         }
       }
@@ -3898,6 +3944,29 @@
         }
       }
     },
+    "安装并重新打开": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装并重新打开"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install and reopen"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安裝並重新開啟"
+          }
+        }
+      }
+    },
     "完成后": {
       "extractionState": "manual",
       "localizations": {
@@ -4931,6 +5000,29 @@
         }
       }
     },
+    "当前版本": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前版本"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current version"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前版本"
+          }
+        }
+      }
+    },
     "打开 Mulee": {
       "extractionState": "manual",
       "localizations": {
@@ -5502,6 +5594,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法暫存網頁解壓縮密碼：%@"
+          }
+        }
+      }
+    },
+    "无法保存下载进度，暂不安装更新。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法保存下载进度，暂不安装更新。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download progress could not be saved. The update will not be installed yet."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法儲存下載進度，暫不安裝更新。"
           }
         }
       }
@@ -6127,6 +6242,52 @@
         }
       }
     },
+    "更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新"
+          }
+        }
+      }
+    },
+    "更新暂不可用：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新暂不可用：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates are currently unavailable: %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前無法更新：%@"
+          }
+        }
+      }
+    },
     "更新通道": {
       "extractionState": "manual",
       "localizations": {
@@ -6564,6 +6725,29 @@
         }
       }
     },
+    "检查更新…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查更新…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for Updates…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "檢查更新⋯"
+          }
+        }
+      }
+    },
     "正在下载": {
       "extractionState": "manual",
       "localizations": {
@@ -6928,6 +7112,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "狀態"
+          }
+        }
+      }
+    },
+    "现在检查": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "现在检查"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check now"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即檢查"
           }
         }
       }
@@ -7484,6 +7691,29 @@
         }
       }
     },
+    "稍后": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "稍后"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "稍後"
+          }
+        }
+      }
+    },
     "稳定版": {
       "extractionState": "manual",
       "localizations": {
@@ -8013,6 +8243,29 @@
         }
       }
     },
+    "自动下载并安装更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动下载并安装更新"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatically download and install updates"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動下載並安裝更新"
+          }
+        }
+      }
+    },
     "自动找密码": {
       "extractionState": "manual",
       "localizations": {
@@ -8032,6 +8285,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動尋找密碼"
+          }
+        }
+      }
+    },
+    "自动检查更新": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动检查更新"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatically check for updates"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動檢查更新"
           }
         }
       }

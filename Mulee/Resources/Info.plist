@@ -55,6 +55,16 @@
 	<string>public.app-category.utilities</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 CQAGC. GPL-3.0.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUEnableSystemProfiling</key>
+	<false/>
+	<key>SUFeedURL</key>
+	<string>https://github.com/cqagc/mulee/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>REPLACE_WITH_SPARKLE_PUBLIC_ED_KEY</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 	<key>UTImportedTypeDeclarations</key>
 	<array>
 		<dict>

@@ -16,6 +16,9 @@ settings:
     ARCHS: arm64
     DEVELOPMENT_TEAM: LV69DG6R9Y
 packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.10.0
   MuleeCore:
     path: Packages/MuleeCore
 targets:
@@ -24,9 +27,13 @@ targets:
     platform: macOS
     sources:
       - path: Mulee
+        excludes: [Resources/Licenses]
+      - path: Mulee/Resources/Licenses
+        type: folder
       - path: MuleeSafariExtension/BrowserExtensionRequest.swift
     dependencies:
       - package: MuleeCore
+      - package: Sparkle
       - target: MuleeSafariExtension
         embed: true
     info:
@@ -51,6 +58,11 @@ targets:
               public.mime-type: [application/x-bittorrent]
         LSApplicationCategoryType: public.app-category.utilities
         NSHumanReadableCopyright: "© 2026 CQAGC. GPL-3.0."
+        SUFeedURL: https://github.com/cqagc/mulee/releases/latest/download/appcast.xml
+        SUPublicEDKey: REPLACE_WITH_SPARKLE_PUBLIC_ED_KEY
+        SUEnableAutomaticChecks: YES
+        SUScheduledCheckInterval: 86400
+        SUEnableSystemProfiling: NO
     postBuildScripts:
       - name: Bundle Chrome extension
         script: '"$SRCROOT"/scripts/package-extensions.sh --chrome'
@@ -66,6 +78,28 @@ targets:
         basedOnDependencyAnalysis: false
       - name: Bundle 7-Zip
         script: '"$SRCROOT"/scripts/build-7zip.sh'
+        basedOnDependencyAnalysis: false
+      - name: Sign Sparkle components
+        shell: /bin/bash
+        script: |
+          set -euo pipefail
+          FRAMEWORK="$TARGET_BUILD_DIR/$FRAMEWORKS_FOLDER_PATH/Sparkle.framework"
+          IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:--}"
+          SIGN_ARGS=(--force --sign "${IDENTITY:--}" --options runtime --preserve-metadata=entitlements)
+          if [ -n "$IDENTITY" ] && [ "$IDENTITY" != - ]; then
+            SIGN_ARGS+=(--timestamp)
+          fi
+          # SPM 的 Embed & Sign 只重签外层 Framework；里面的代码必须从内到外重签。
+          while IFS= read -r -d '' item; do
+            if file -b "$item" | grep -q 'Mach-O'; then
+              codesign "${SIGN_ARGS[@]}" "$item"
+            fi
+          done < <(find "$FRAMEWORK/Versions/Current"/ -type f -perm -u+x -print0)
+          while IFS= read -r -d '' item; do
+            codesign "${SIGN_ARGS[@]}" "$item"
+          done < <(find "$FRAMEWORK/Versions/Current"/ -depth -type d \( -name '*.xpc' -o -name '*.app' \) -print0)
+          codesign "${SIGN_ARGS[@]}" "$FRAMEWORK"
+          codesign --verify --deep --strict "$FRAMEWORK"
         basedOnDependencyAnalysis: false
     settings:
       base:
@@ -121,6 +155,7 @@ targets:
       - path: MuleeTests
     dependencies:
       - target: Mulee
+      - package: Sparkle
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cqagc.mulee.tests
