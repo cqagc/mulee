@@ -106,6 +106,23 @@ enum NetworkPresentation {
         }
     }
 
+    /// 侧边栏空间小，和「BT 端口」一样只用三个短词。
+    static func sidebarReachability(ed2k id: NetworkStatus.Ed2kID) -> String {
+        switch id {
+        case .high: String(localized: "可连入")
+        case .low: String(localized: "无法连入")
+        case .disconnected: String(localized: "未连接")
+        }
+    }
+
+    static func sidebarReachability(kad state: NetworkStatus.KadState) -> String {
+        switch state {
+        case .open: String(localized: "可连入")
+        case .firewalled: String(localized: "无法连入")
+        case .disconnected: String(localized: "未连接")
+        }
+    }
+
     /// Kad 右侧的简短标签。
     static func kadBadge(_ state: NetworkStatus.KadState) -> Line {
         switch state {

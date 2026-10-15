@@ -47,6 +47,9 @@ xcodebuild -project Mulee.xcodeproj -scheme Mulee -configuration Release \
 APP="$DERIVED/Build/Products/Release/Mulee.app"
 [ -d "$APP" ] || error "找不到 $APP"
 
+step "检查翻译"
+python3 -I scripts/check-l10n.py "$DERIVED" Release || error "有文案没翻译，见上面的列表"
+
 step "检查签名"
 codesign --verify --deep --strict --verbose=2 "$APP" 2>&1 | tail -2
 # 每个可执行部件都必须是 Developer ID 签名、带时间戳和硬化运行时，否则公证会被拒。

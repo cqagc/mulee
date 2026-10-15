@@ -29,8 +29,8 @@ struct NetworkStatusView: View {
                     .lineLimit(2)
                     .help(issue)
             }
-            NetworkStatusRow(title: String(localized: "电驴"), value: NetworkPresentation.ed2kID(status.ed2kID).text, isHealthy: status.ed2kID == .disconnected ? nil : status.ed2kID == .high)
-            NetworkStatusRow(title: String(localized: "电驴来源网络"), value: NetworkPresentation.kadBadge(status.kad).text, isHealthy: status.kad == .disconnected ? nil : status.kad == .open)
+            NetworkStatusRow(title: String(localized: "电驴"), value: NetworkPresentation.sidebarReachability(ed2k: status.ed2kID), isHealthy: status.ed2kID == .disconnected ? nil : status.ed2kID == .high)
+            NetworkStatusRow(title: "Kad", value: NetworkPresentation.sidebarReachability(kad: status.kad), isHealthy: status.kad == .disconnected ? nil : status.kad == .open)
             NetworkStatusRow(title: String(localized: "BT 端口"), value: NetworkPresentation.bittorrentPort(reachable: status.bittorrentPortReachable).text, isHealthy: status.bittorrentPortReachable)
             if status.p2pRoutedThroughProxy {
                 NetworkProxyWarningButton()

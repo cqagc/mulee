@@ -1391,6 +1391,29 @@
         }
       }
     },
+    "Safari": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari"
+          }
+        }
+      }
+    },
     "Shift-JIS": {
       "extractionState": "manual",
       "localizations": {
@@ -3162,6 +3185,29 @@
         }
       }
     },
+    "只把你点选的链接交给本机 Mulee，在新建下载面板确认后开始下载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只把你点选的链接交给本机 Mulee，在新建下载面板确认后开始下载。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only the links you pick are handed to Mulee on this Mac. Downloads start after you confirm them in New Download."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只把你點選的連結交給本機 Mulee，在新增下載面板確認後才開始下載。"
+          }
+        }
+      }
+    },
     "可从外部连入": {
       "extractionState": "manual",
       "localizations": {
@@ -3461,6 +3507,29 @@
         }
       }
     },
+    "在 Safari 中启用": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Safari 中启用"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable in Safari"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Safari 中啟用"
+          }
+        }
+      }
+    },
     "在访达中显示": {
       "extractionState": "manual",
       "localizations": {
@@ -3756,6 +3825,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "好"
+          }
+        }
+      }
+    },
+    "安装 Chrome 扩展": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装 Chrome 扩展"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install Chrome Extension"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安裝 Chrome 延伸功能"
+          }
+        }
+      }
+    },
+    "安装 Chrome 扩展…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装 Chrome 扩展…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install Chrome Extension…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安裝 Chrome 延伸功能…"
           }
         }
       }
@@ -4239,6 +4354,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "已修復檔名編碼"
+          }
+        }
+      }
+    },
+    "已在访达中显示扩展目录。请先把 chrome 文件夹复制到固定位置，再打开 chrome://extensions，启用「开发者模式」，点「加载已解压的扩展程序」，选择复制后的 chrome 文件夹。首次交接时选择「打开 Mulee」，可勾选「始终允许」。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已在访达中显示扩展目录。请先把 chrome 文件夹复制到固定位置，再打开 chrome://extensions，启用「开发者模式」，点「加载已解压的扩展程序」，选择复制后的 chrome 文件夹。首次交接时选择「打开 Mulee」，可勾选「始终允许」。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The extension folder is shown in Finder. Copy the chrome folder to a permanent location, open chrome://extensions, turn on Developer mode, click \"Load unpacked\" and choose the copied chrome folder. The first time links are handed over, choose \"Open Mulee\" and you can tick \"Always allow\"."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已在 Finder 中顯示延伸功能資料夾。請先把 chrome 資料夾複製到固定位置，再開啟 chrome://extensions，啟用「開發人員模式」，點「載入未封裝項目」，選擇複製後的 chrome 資料夾。第一次交接時選擇「開啟 Mulee」，可勾選「一律允許」。"
           }
         }
       }
@@ -6702,6 +6840,29 @@
         }
       }
     },
+    "浏览器扩展": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浏览器扩展"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browser Extensions"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "瀏覽器延伸功能"
+          }
+        }
+      }
+    },
     "添加": {
       "extractionState": "manual",
       "localizations": {
@@ -6974,29 +7135,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "電驢引擎"
-          }
-        }
-      }
-    },
-    "电驴来源网络": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "电驴来源网络"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "eD2k sources network"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "電驢來源網路"
           }
         }
       }
