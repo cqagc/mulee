@@ -158,9 +158,9 @@ struct TaskPresentation {
         if case .ed2k(let hash, _) = task.detail { "ED2K \(hash)" } else { nil }
     }
 
-    /// 示例数据和原型按 1024 换算，保留原型使用的 GB / MB 单位。
+    /// 文件大小与访达一致，按十进制换算（.file）。
     static func bytes(_ value: Int64) -> String {
-        let style = ByteCountFormatStyle(style: .binary, allowedUnits: .all, spellsOutZero: false,
+        let style = ByteCountFormatStyle(style: .file, allowedUnits: .all, spellsOutZero: false,
                                          includesActualByteCount: false, locale: Locale(identifier: "en_US"))
         return max(0, value).formatted(style)
             .replacing("kB", with: "KB")
@@ -179,8 +179,8 @@ struct TaskPresentation {
 
     private var receivedAndTotal: String {
         guard let total = task.totalBytes, total > 0 else { return "已收到 \(Self.bytes(task.receivedBytes))" }
-        let units: ByteCountFormatStyle.Units = total >= 1_073_741_824 ? .gb : total >= 1_048_576 ? .mb : .kb
-        let style = ByteCountFormatStyle(style: .binary, allowedUnits: units, spellsOutZero: false, includesActualByteCount: false, locale: Locale(identifier: "en_US"))
+        let units: ByteCountFormatStyle.Units = total >= 1_000_000_000 ? .gb : total >= 1_000_000 ? .mb : .kb
+        let style = ByteCountFormatStyle(style: .file, allowedUnits: units, spellsOutZero: false, includesActualByteCount: false, locale: Locale(identifier: "en_US"))
         let received = max(0, task.receivedBytes).formatted(style)
         let number = received.split(separator: " ").first.map(String.init) ?? received
         return "\(number) / \(total.formatted(style))"

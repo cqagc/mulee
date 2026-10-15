@@ -4,8 +4,9 @@ import Foundation
 /// 引擎接入之前，App 也用它启动。
 public enum MockData {
     private static let day: TimeInterval = 86_400
-    private static let gb: Int64 = 1_073_741_824
-    private static let mb: Int64 = 1_048_576
+    // 十进制单位，与访达和 App 的文件大小显示（.byteCount(style: .file)）一致。
+    private static let gb: Int64 = 1_000_000_000
+    private static let mb: Int64 = 1_000_000
 
     /// 原型里选中的那个电驴长尾任务。
     public static let longTailTask = DownloadTask(
@@ -28,7 +29,7 @@ public enum MockData {
             )
         ),
         postDownload: PostDownloadInfo(autoExtract: true, filenameEncoding: "Big5"),
-        sourceLink: "ed2k://|file|%E8%B6%85%E9%AD%94%E6%B3%95%E5%A4%A7%E6%88%B0%20%E7%B9%81%E4%B8%AD%E7%89%88.rar|641728512|9F3A0C5E7D21B84A6C0E93F15B71DC21|/"
+        sourceLink: "ed2k://|file|%E8%B6%85%E9%AD%94%E6%B3%95%E5%A4%A7%E6%88%B0%20%E7%B9%81%E4%B8%AD%E7%89%88.rar|612000000|9F3A0C5E7D21B84A6C0E93F15B71DC21|/"
     )
 
     public static let tasks: [DownloadTask] = [
@@ -37,9 +38,9 @@ public enum MockData {
             fileExtension: "iso",
             kind: .http,
             status: .downloading,
-            totalBytes: 6_549_825_536,
-            receivedBytes: 4_080_218_931,
-            downloadRate: 11_744_051,
+            totalBytes: 61 * gb / 10,
+            receivedBytes: 38 * gb / 10,
+            downloadRate: 11_200_000,
             estimatedTimeRemaining: .seconds(180),
             detail: .http(connections: 8),
             postDownload: PostDownloadInfo(autoExtract: false),
@@ -52,8 +53,8 @@ public enum MockData {
             status: .downloading,
             totalBytes: Int64(8.4 * Double(gb)),
             receivedBytes: Int64(2.9 * Double(gb)),
-            downloadRate: 6_081_741,
-            uploadRate: 31_744,
+            downloadRate: 5_800_000,
+            uploadRate: 31_000,
             estimatedTimeRemaining: .seconds(16 * 60),
             detail: .bittorrent(fileCount: 12, selectedFileCount: 3, peerCount: 46, shareRatio: 0.02),
             postDownload: PostDownloadInfo(autoExtract: false),
@@ -89,7 +90,7 @@ public enum MockData {
             status: .seeding,
             totalBytes: Int64(3.9 * Double(gb)),
             receivedBytes: Int64(3.9 * Double(gb)),
-            uploadRate: 389_120,
+            uploadRate: 380_000,
             detail: .bittorrent(fileCount: 1, selectedFileCount: 1, peerCount: 12, shareRatio: 0.64),
             postDownload: PostDownloadInfo(autoExtract: false),
             sourceLink: "magnet:?xt=urn:btih:6a9759bffd5c0af65319979fb7832189f4f3c35d&dn=debian-13.1.0-arm64-DVD-1.iso"
@@ -114,7 +115,7 @@ public enum MockData {
                 )
             ),
             postDownload: PostDownloadInfo(autoExtract: true),
-            sourceLink: "ed2k://|file|old-game-expansion-cd.bin|736100352|41C7E2D09A8B3F6E5D4C2B1A09F8E7D6|/"
+            sourceLink: "ed2k://|file|old-game-expansion-cd.bin|702000000|41C7E2D09A8B3F6E5D4C2B1A09F8E7D6|/"
         ),
         DownloadTask(
             name: "开发者大会主题演讲 2026",

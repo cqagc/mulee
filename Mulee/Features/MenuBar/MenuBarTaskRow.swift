@@ -18,11 +18,9 @@ struct MenuBarTaskRow: View {
                     .lineLimit(1)
             }
             .font(.callout)
-            ProgressView(value: task.fractionCompleted ?? 0)
-                .progressViewStyle(.linear)
-                .tint(task.status == .extracting ? Theme.success : Color.accentColor)
-                .controlSize(.mini)
-                .accessibilityLabel(task.name)
+            // 与主窗口共用进度规则：解压中显示解压进度、等待来源显示虚线等。
+            let presentation = TaskPresentation(task: task)
+            TaskProgressBar(progress: presentation.progress, style: presentation.progressStyle, height: 3)
         }
     }
 }

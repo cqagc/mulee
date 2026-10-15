@@ -46,7 +46,7 @@ Design/                     品牌、图标规范、原型
 - 用 `Form`、`LabeledContent` 做设置页，滑块等控件包在 `LabeledContent` 里。
 - 不用 `AnyView`；不用 `GeometryReader`，除非没有替代方案。
 - 用 `#Preview`，不用 `PreviewProvider`。
-- 数字、日期、文件大小用 FormatStyle（`.byteCount(style: .file)` 等），不用 `String(format:)`。
+- 数字、日期、文件大小用 FormatStyle，不用 `String(format:)`。**文件大小和速度一律用 `.byteCount(style: .file)`（十进制，和访达一致）**，不要用 `.binary` / `.memory`，否则同一个文件在 Mulee 和访达里显示的大小对不上。
 - 不用 GCD（`DispatchQueue`），用 async/await；`Task.sleep(for:)`，不用纳秒版本。
 - 不强制解包；错误不能静默吞掉。
 - 每个类型一个文件。

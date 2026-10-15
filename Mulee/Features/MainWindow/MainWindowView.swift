@@ -31,7 +31,8 @@ struct MainWindowView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("新建下载", systemImage: MuleeSymbol.add.name, action: showNewTask)
-                    .help("新建下载")
+                    .help("新建下载（⌘N）")
+                    .keyboardShortcut("n")
                 Button(canPauseAll ? "全部暂停" : "全部继续",
                        systemImage: canPauseAll ? MuleeSymbol.pause.name : MuleeSymbol.resume.name,
                        action: toggleAll)

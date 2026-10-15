@@ -1,0 +1,41 @@
+#if DEBUG
+import SwiftUI
+
+/// 仅 Debug 构建：用启动参数把 App 直接带到某个画面，方便截图和设计稿逐一比对。
+///
+///     open Mulee.app --args -MuleeAppearance dark -MuleeShowNewTask YES -MuleeOpenSettings YES -MuleeSettingsTab network
+enum DebugLaunchOptions {
+    private static let defaults = UserDefaults.standard
+
+    /// 强制亮色或暗色；nil 表示跟随系统。
+    static var colorScheme: ColorScheme? {
+        switch defaults.string(forKey: "MuleeAppearance") {
+        case "dark": .dark
+        case "light": .light
+        default: nil
+        }
+    }
+
+    /// 启动后自动弹出「新建下载」，并预填原型里的 4 种链接。
+    static var showsNewTask: Bool { defaults.bool(forKey: "MuleeShowNewTask") }
+
+    /// 启动后自动打开设置窗口。
+    static var opensSettings: Bool { defaults.bool(forKey: "MuleeOpenSettings") }
+
+    /// 启动时设置窗口停在哪个标签页（SettingsTab 的 rawValue）。
+    static var settingsTab: String? { defaults.string(forKey: "MuleeSettingsTab") }
+
+    /// 把菜单栏面板放进普通窗口里显示（菜单栏弹窗无法直接截图）。
+    static var showsMenuBarPanelWindow: Bool { defaults.bool(forKey: "MuleeShowMenuBarPanel") }
+
+    /// 用「P2P 走了代理」的网络状态启动，查看警告样式。
+    static var usesProxiedNetwork: Bool { defaults.bool(forKey: "MuleeProxiedNetwork") }
+
+    static let samplePasteText = """
+        magnet:?xt=urn:btih:dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c&dn=Big+Buck+Bunny
+        ed2k://|file|超魔法大戰 繁中版.rar|612000000|9F3A0C5E7D21B84A6C0E93F15B71DC21|/
+        thunder://QUFodHRwczovL2V4YW1wbGUuY29tL3NpbnRlbC1vc3QuemlwWlo=
+        https://www.bilibili.com/video/BV1xx411c7XX
+        """
+}
+#endif
