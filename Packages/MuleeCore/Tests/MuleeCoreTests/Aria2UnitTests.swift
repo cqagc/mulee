@@ -74,6 +74,10 @@ struct Aria2UnitTests {
         #expect(text.contains("rpc-listen-all=false\n"))
         #expect(text.contains("stop-with-process=\(ProcessInfo.processInfo.processIdentifier)\n"))
         #expect(!text.contains("input-file="))
+        #expect(text.contains("check-certificate=true\n"))
+        for option in ["ca-certificate", "follow-torrent", "enable-dht", "bt-enable-lpd", "max-overall-upload-limit"] {
+            #expect(!text.contains("\(option)="))
+        }
         let attributes = try FileManager.default.attributesOfItem(atPath: configuration.fileURL.path)
         #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
         try Data().write(to: configuration.sessionURL)
@@ -132,6 +136,9 @@ struct Aria2UnitTests {
         #expect(try Aria2BinaryLocator.locate(explicitURL: nil, bundleURL: bundle, environment: environment) == helper)
         try FileManager.default.removeItem(at: helper)
         #expect(try Aria2BinaryLocator.locate(explicitURL: nil, bundleURL: bundle, environment: environment) == environmentBinary)
+        #expect(throws: EngineError.binaryNotFound) {
+            try Aria2BinaryLocator.locate(explicitURL: nil, bundleURL: bundle, environment: [:])
+        }
     }
 
     @Test("URL 名称只解码一次且空名称有默认值", arguments: [

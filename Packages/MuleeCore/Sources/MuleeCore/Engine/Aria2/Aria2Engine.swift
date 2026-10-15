@@ -14,7 +14,7 @@ public actor Aria2Engine: DownloadEngine {
 
     /// - Parameters:
     ///   - stateDirectory: 存放 aria2 配置、会话、日志的目录（App 传 Application Support/Mulee/aria2）。
-    ///   - binaryURL: 指定 aria2c 路径；nil 时按 App 包内 Helpers、环境变量 MULEE_ARIA2C、Homebrew 路径依次查找。
+    ///   - binaryURL: 指定 aria2c 路径；nil 时按 App 包内 Helpers、环境变量 MULEE_ARIA2C 依次查找。
     public init(stateDirectory: URL, binaryURL: URL? = nil) {
         self.stateDirectory = stateDirectory
         self.binaryURL = binaryURL

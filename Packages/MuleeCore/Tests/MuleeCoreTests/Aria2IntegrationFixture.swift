@@ -14,7 +14,12 @@ struct Aria2IntegrationFixture: Sendable {
     let payload: Data
 
     static var binaryAvailable: Bool {
-        (try? Aria2BinaryLocator.locate(explicitURL: nil)) != nil
+        guard let path = ProcessInfo.processInfo.environment["MULEE_ARIA2C"], !path.isEmpty else {
+            return false
+        }
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
+            && !isDirectory.boolValue && FileManager.default.isExecutableFile(atPath: path)
     }
 
     static func withFixture(_ body: @Sendable (Self) async throws -> Void) async throws {
@@ -22,7 +27,8 @@ struct Aria2IntegrationFixture: Sendable {
         let state = root.appendingPathComponent("state")
         let downloads = root.appendingPathComponent("downloads")
         try FileManager.default.createDirectory(at: downloads, withIntermediateDirectories: true)
-        let engine = Aria2Engine(stateDirectory: state)
+        let binary = try #require(ProcessInfo.processInfo.environment["MULEE_ARIA2C"])
+        let engine = Aria2Engine(stateDirectory: state, binaryURL: URL(fileURLWithPath: binary))
         var generator = SystemRandomNumberGenerator()
         let words = (0..<(4 * 1024 * 1024 / 8)).map { _ in
             UInt64.random(in: .min ... .max, using: &generator)

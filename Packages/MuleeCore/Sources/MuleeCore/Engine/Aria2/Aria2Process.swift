@@ -11,10 +11,8 @@ struct Aria2Process: Sendable {
         let process = Process()
         self.process = process
         process.executableURL = binary
-        let bundleResources = Aria2BundleResources.resolve(binary: binary)
-        process.arguments = configuration.arguments + bundleResources.additionalArguments
+        process.arguments = configuration.arguments
         var environment = ProcessInfo.processInfo.environment
-        bundleResources.apply(to: &environment)
         environment["LANG"] = "en_US.UTF-8"
         environment["LC_ALL"] = "en_US.UTF-8"
         environment["no_proxy"] = "localhost,127.0.0.1,::1"

@@ -12,7 +12,7 @@
 >
 > BT、电驴引擎还在开发中。
 >
-> 开发构建需要先 `brew install aria2`：构建时会自动把 aria2c 及其依赖库打包进 App，只有构建机需要安装，运行方不需要。详见 [docs/BUILDING.md](docs/BUILDING.md)。
+> 开发构建从固定子模块源码编译 aria2（AppleTLS，仅依赖系统库），不需要安装 Homebrew aria2。构建机需 cmake、boost、autoconf、automake、libtool、gettext、pkgconf，并递归初始化子模块；运行方无需这些工具。详见 [docs/BUILDING.md](docs/BUILDING.md)。
 
 ![主窗口](docs/screenshots/main-light.png)
 
@@ -71,6 +71,8 @@ Mulee 想把这些合成一个：**一个入口、一套设置、一个下载队
 需要 macOS 26+、Xcode 27+ 和 [XcodeGen](https://github.com/yonaskolb/XcodeGen)（`brew install xcodegen`）。
 
 ```sh
+brew install cmake boost autoconf automake libtool gettext pkgconf
+git submodule update --init --recursive
 xcodegen generate
 xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' build
 ```
@@ -92,7 +94,16 @@ Mulee 只是一个下载工具，请只下载你有权获取的内容。
 **Mulee is a no-nonsense download manager for macOS.** HTTP, BitTorrent / magnet, ed2k and video sites, all in one native app.
 Open source, free, and never any ads.
 
-> 🚧 Work in progress. **Working now:** HTTP / HTTPS / FTP downloads (aria2 engine: multi-connection, resume, session restore), video downloads via yt-dlp (tested with Bilibili; merging audio and video currently needs a local ffmpeg), and auto-extraction with Keychain-stored rule passwords and GBK / Big5 / Shift-JIS filename repair. BitTorrent and ed2k engines are in progress. Development builds need `brew install aria2` on the build machine (aria2c is bundled into the app at build time; end users need nothing, see [docs/BUILDING.md](docs/BUILDING.md)).
+> 🚧 Work in progress. **Working now:** HTTP / HTTPS / FTP downloads (aria2 engine: multi-connection, resume, session restore), video downloads via yt-dlp (tested with Bilibili; merging audio and video currently needs a local ffmpeg), and auto-extraction with Keychain-stored rule passwords and GBK / Big5 / Shift-JIS filename repair. BitTorrent and ed2k engines are in progress. Development builds compile aria2 from pinned submodule source with AppleTLS and system libraries. The build machine needs cmake, boost, autoconf, automake, libtool, gettext and pkgconf, plus `git submodule update --init --recursive`; end users need none of these tools (see [docs/BUILDING.md](docs/BUILDING.md)).
+
+Build on Apple Silicon with macOS 26+, Xcode 27+ and XcodeGen:
+
+```sh
+brew install xcodegen cmake boost autoconf automake libtool gettext pkgconf
+git submodule update --init --recursive
+xcodegen generate
+xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' build
+```
 
 **Planned:** multi-connection HTTP/FTP, BitTorrent and magnet links, native ed2k, `thunder://` link decoding, video downloads powered by yt-dlp (YouTube and Bilibili first), and auto-extraction with password rules and filename encoding repair. Native Swift UI for Apple Silicon, a menu bar item, browser extensions, default handler for magnet / ed2k / thunder / .torrent, and sleep prevention while downloading.
 
