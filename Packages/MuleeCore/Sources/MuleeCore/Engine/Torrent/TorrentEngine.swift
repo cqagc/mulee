@@ -131,9 +131,13 @@ public actor TorrentEngine: DownloadEngine {
         try await add(link: link, directory: directory, filePriorities: nil)
     }
 
-    public func add(link: ParsedLink, directory: URL?, filePriorities: [Int]?) async throws -> String {
+    public func addQueued(link: ParsedLink, directory: URL?) async throws -> String {
+        try await add(link: link, directory: directory, filePriorities: nil, paused: true)
+    }
+
+    public func add(link: ParsedLink, directory: URL?, filePriorities: [Int]?, paused: Bool = false) async throws -> String {
         let client = try await runningClient()
-        var params = TorrentdAddParameters(savePath: directory?.path, source: link.original)
+        var params = TorrentdAddParameters(savePath: directory?.path, paused: paused, source: link.original)
         var temporary: URL?
         defer {
             if let temporary {

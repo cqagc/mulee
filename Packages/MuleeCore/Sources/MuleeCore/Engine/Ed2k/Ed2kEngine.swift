@@ -72,11 +72,13 @@ public actor Ed2kEngine: DownloadEngine {
     }
 
     /// 更改端口会保存队列并重启 amuled，使监听端口立即生效。
-    public func configure(_ settings: Ed2kEngineSettings) async throws {
+    public func configure(_ settings: Ed2kEngineSettings, preserveBandwidth: Bool = false) async throws {
         try await lock()
         defer { busy = false }
         let rpc = try runningClient()
         guard var updated = configuration else { throw EngineError.notRunning }
+        var settings = settings
+        if preserveBandwidth { settings.uploadLimit = updated.options.uploadLimit }
         updated.settings = settings
         updated.options.uploadLimit = settings.uploadLimit
         _ = try updated.managedValues()

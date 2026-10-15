@@ -25,6 +25,9 @@ struct DownloadSettingsTab: View {
                     value: $model.maxConcurrentTasks,
                     in: SettingsModel.maxConcurrentTasksRange
                 )
+                Text("所有引擎合计；电驴等待来源和 BT 做种不占名额")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Picker("HTTP 每任务线程数", selection: $model.httpThreads) {
                     ForEach(SettingsModel.httpThreadOptions, id: \.self) { count in
                         Text("\(count)").tag(count)

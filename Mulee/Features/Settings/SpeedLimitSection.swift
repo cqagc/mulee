@@ -7,7 +7,7 @@ struct SpeedLimitSection: View {
     var body: some View {
         @Bindable var model = model
         Section("速度") {
-            LabeledContent("全局下载限速") {
+            LabeledContent {
                 Picker("全局下载限速", selection: $model.downloadLimit) {
                     ForEach(SettingsModel.downloadLimitOptions, id: \.self) { limit in
                         Text(Self.title(for: Double(limit))).tag(limit)
@@ -15,6 +15,9 @@ struct SpeedLimitSection: View {
                 }
                 .labelsHidden()
                 .fixedSize()
+            } label: {
+                Text("全局下载限速")
+                Text("所有下载合计，按各引擎实际需求分配")
             }
             LabeledContent {
                 Picker("全局上传限速", selection: $model.uploadLimit) {
@@ -26,7 +29,7 @@ struct SpeedLimitSection: View {
                 .fixedSize()
             } label: {
                 Text("全局上传限速")
-                Text("BT 和电驴共用；电驴上传越多，别人给你排队越靠前")
+                Text("BT 和电驴上传合计；电驴上传越多，别人给你排队越靠前")
             }
             Toggle(isOn: $model.scheduledLimit) {
                 Text("计划限速")

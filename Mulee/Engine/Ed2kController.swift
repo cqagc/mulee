@@ -50,7 +50,7 @@ final class Ed2kController {
             await previous?.value
             guard let self, self.generation == token, !Task.isCancelled else { return }
             do {
-                try await self.engine.configure(configuration)
+                try await self.engine.configure(configuration, preserveBandwidth: true)
                 guard self.generation == token, !Task.isCancelled else { return }
                 self.issue = nil
             } catch {
