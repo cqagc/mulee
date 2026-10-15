@@ -96,7 +96,7 @@ struct TaskPresentation {
         case .paused: "已暂停"
         case .failed: "需要处理"
         case .queued: "排队中"
-        case .engineUnavailable: "引擎开发中"
+        case .engineUnavailable: "引擎未接入"
         }
     }
 
@@ -130,7 +130,7 @@ struct TaskPresentation {
     }
 
     var isStatusEmphasized: Bool { [.waitingForSources, .completed, .failed].contains(task.status) }
-    var canPauseOrResume: Bool { [.downloading, .waitingForSources, .paused].contains(task.status) }
+    var canPauseOrResume: Bool { [.downloading, .waitingForSources, .queued, .paused].contains(task.status) }
     var pauseTitle: String { task.status == .paused ? "继续" : "暂停" }
     var pauseSymbol: MuleeSymbol { task.status == .paused ? .resume : .pause }
 

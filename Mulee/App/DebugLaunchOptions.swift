@@ -7,6 +7,9 @@ import SwiftUI
 enum DebugLaunchOptions {
     private static let defaults = UserDefaults.standard
 
+    /// 截图核对时使用示例数据，并且不启动下载引擎。
+    static var usesSampleData: Bool { defaults.bool(forKey: "MuleeSampleData") }
+
     /// 强制亮色或暗色；nil 表示跟随系统。
     static var colorScheme: ColorScheme? {
         switch defaults.string(forKey: "MuleeAppearance") {

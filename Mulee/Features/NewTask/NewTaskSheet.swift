@@ -1,3 +1,4 @@
+import MuleeCore
 import SwiftUI
 
 /// 由主窗口作为 sheet 呈现的新建下载面板。
@@ -111,12 +112,12 @@ struct NewTaskSheet: View {
     NewTaskSheet(draft: NewTaskModel(inputText: NewTaskPreviewData.inputText, parser: { _ in
         NewTaskPreviewData.links
     }))
-    .environment(AppModel())
+    .environment(AppModel(tasks: MockData.tasks))
     .environment(SettingsModel())
 }
 
 #Preview("等待粘贴") {
     NewTaskSheet()
-        .environment(AppModel())
+        .environment(AppModel(tasks: MockData.tasks))
         .environment(SettingsModel())
 }

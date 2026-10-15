@@ -3,12 +3,12 @@ import SwiftUI
 struct NetworkStatusRow: View {
     let title: String
     let value: String
-    let isHealthy: Bool
+    let isHealthy: Bool?
 
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: MuleeSymbol.statusDot.name)
-                .foregroundStyle(isHealthy ? Theme.success : Theme.wait)
+                .foregroundStyle(isHealthy.map { $0 ? Theme.success : Theme.wait } ?? .secondary)
                 .imageScale(.small)
                 .accessibilityHidden(true)
             Text(title)
