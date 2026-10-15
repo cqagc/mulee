@@ -11,8 +11,9 @@
 #   MULEE_NOTARY_PROFILE  `xcrun notarytool store-credentials` 存的配置名
 #   或者直接用 App Store Connect API 密钥文件（不经过钥匙串，适合锁屏 / 无人值守）：
 #   MULEE_NOTARY_KEY=<AuthKey_XXXX.p8 路径> MULEE_NOTARY_KEY_ID=<Key ID> MULEE_NOTARY_ISSUER=<Issuer ID>
+#   MULEE_SPARKLE_KEY_FILE  可选的 EdDSA 私钥文件；未设时 sign_update 从钥匙串读取
 #
-# 产物：build/release/Mulee-<版本>.dmg
+# 产物：build/release/Mulee-<版本>.dmg、appcast.xml（有私钥且公证成功时）
 set -euo pipefail
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
@@ -24,6 +25,7 @@ error() { echo "error: $*" >&2; exit 1; }
 step() { echo; echo "==> $*"; }
 
 VERSION="$(awk -F'"' '/MARKETING_VERSION/ {print $2; exit}' project.yml)"
+BUILD_VERSION="$(awk -F'"' '/CURRENT_PROJECT_VERSION/ {print $2; exit}' project.yml)"
 TEAM="${MULEE_TEAM_ID:-$(awk '/DEVELOPMENT_TEAM:/ {print $2; exit}' project.yml)}"
 IDENTITY="${MULEE_SIGN_IDENTITY:-Developer ID Application}"
 PROFILE="${MULEE_NOTARY_PROFILE:-}"
@@ -68,8 +70,12 @@ while IFS= read -r -d '' item; do
   grep -q "Timestamp=" <<<"$info" || error "$item 没有安全时间戳"
   grep -q "flags=.*runtime" <<<"$info" || error "$item 没有启用硬化运行时"
   ! codesign -d --entitlements - "$item" 2>/dev/null | grep -q get-task-allow || error "$item 带有调试权限 get-task-allow，公证会被拒"
-done < <(find "$APP" \( -path '*/Contents/MacOS/*' -o -path '*/Contents/Helpers/*' -o -name '*.appex' \) -type f -perm -u+x -print0;
-         find "$APP/Contents/PlugIns" -maxdepth 1 -name '*.appex' -print0 2>/dev/null)
+done < <(find "$APP" -type f -perm -u+x -print0 | while IFS= read -r -d '' executable; do
+           # 包括 Sparkle Framework 主程序、Autoupdate、Updater.app、全部 XPC 服务。
+           if file -b "$executable" | grep -q 'Mach-O'; then
+             printf '%s\0' "$executable"
+           fi
+         done)
 echo "全部部件签名合格"
 
 notarize() {
@@ -113,6 +119,71 @@ if [ ${#NOTARY_AUTH[@]} -gt 0 ]; then
   step "Gatekeeper 检查"
   spctl -a -vvv -t install "$DMG" 2>&1 | tail -2
   spctl -a -vvv -t execute "$APP" 2>&1 | tail -2
+fi
+
+if [ ${#NOTARY_AUTH[@]} -gt 0 ]; then
+  step "生成 Sparkle appcast"
+  SIGN_UPDATE="$(find "$DERIVED/SourcePackages/artifacts/sparkle" -type f -path '*/bin/sign_update' -print -quit)"
+  [ -x "$SIGN_UPDATE" ] || error "找不到 SwiftPM Sparkle 的 bin/sign_update"
+  SPARKLE_ARGS=()
+  HAS_SPARKLE_KEY=1
+  if [ -n "${MULEE_SPARKLE_KEY_FILE:-}" ]; then
+    if [ -f "$MULEE_SPARKLE_KEY_FILE" ]; then
+      SPARKLE_ARGS+=(--ed-key-file "$MULEE_SPARKLE_KEY_FILE")
+    else
+      HAS_SPARKLE_KEY=0
+      echo "没有 Sparkle 私钥文件，跳过 appcast：$MULEE_SPARKLE_KEY_FILE"
+    fi
+  elif ! "$(dirname "$SIGN_UPDATE")/generate_keys" -p > /dev/null 2> "$OUT/sparkle-sign.log"; then
+    HAS_SPARKLE_KEY=0
+    echo "钥匙串没有可用 Sparkle 私钥，跳过 appcast，详见 $OUT/sparkle-sign.log"
+  fi
+  if [ "$HAS_SPARKLE_KEY" = 1 ]; then
+    if SIGNATURE="$("$SIGN_UPDATE" "${SPARKLE_ARGS[@]}" -p "$DMG" 2> "$OUT/sparkle-sign.log")"; then
+      python3 - "$APP" "$DMG" "$VERSION" "$BUILD_VERSION" "$SIGNATURE" "$OUT/appcast.xml" <<'PY'
+import base64
+import datetime
+import email.utils
+import pathlib
+import plistlib
+import sys
+import xml.etree.ElementTree as ET
+
+app, dmg, version, build, signature, output = sys.argv[1:]
+info = plistlib.loads((pathlib.Path(app) / "Contents/Info.plist").read_bytes())
+if info["CFBundleShortVersionString"] != version or info["CFBundleVersion"] != build:
+    raise SystemExit("App 版本与 project.yml 不一致，拒绝生成 appcast")
+if len(base64.b64decode(signature, validate=True)) != 64:
+    raise SystemExit("Sparkle 签名长度无效")
+namespace = "http://www.andymatuschak.org/xml-namespaces/sparkle"
+ET.register_namespace("sparkle", namespace)
+rss = ET.Element("rss", {"version": "2.0"})
+channel = ET.SubElement(rss, "channel")
+ET.SubElement(channel, "title").text = "Mulee"
+ET.SubElement(channel, "link").text = "https://github.com/cqagc/mulee/releases"
+item = ET.SubElement(channel, "item")
+ET.SubElement(item, "title").text = f"Mulee {version}"
+ET.SubElement(item, "pubDate").text = email.utils.format_datetime(datetime.datetime.now(datetime.timezone.utc))
+ET.SubElement(item, f"{{{namespace}}}version").text = build
+ET.SubElement(item, f"{{{namespace}}}shortVersionString").text = version
+ET.SubElement(item, f"{{{namespace}}}minimumSystemVersion").text = "26.0"
+ET.SubElement(item, f"{{{namespace}}}releaseNotesLink").text = f"https://github.com/cqagc/mulee/releases/tag/v{version}"
+ET.SubElement(item, "enclosure", {
+    "url": f"https://github.com/cqagc/mulee/releases/download/v{version}/Mulee-{version}.dmg",
+    "length": str(pathlib.Path(dmg).stat().st_size),
+    "type": "application/octet-stream",
+    f"{{{namespace}}}edSignature": signature,
+})
+ET.indent(rss, space="  ")
+ET.ElementTree(rss).write(output, encoding="utf-8", xml_declaration=True)
+PY
+      echo "已生成 $OUT/appcast.xml（DMG 装订后的最终字节签名）"
+    else
+      error "Sparkle 更新签名失败，见 $OUT/sparkle-sign.log"
+    fi
+  fi
+else
+  echo "DMG 未公证装订，跳过 Sparkle appcast"
 fi
 
 # 校验文件里只写文件名，不带构建机的绝对路径。

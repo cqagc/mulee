@@ -334,3 +334,87 @@ Riedl 静态构建的 `otool -L` 实测只引用系统库及系统 Framework，�
 ### 首次准备与退出恢复
 
 添加视频链接时立刻插入排队任务，副标题显示「正在准备视频工具」，就绪后再交给引擎。等待时删除不会再提交；暂停则保留至用户继续。准备失败会把等待任务标记为失败并显示原因。等待记录沿用现有任务历史保存，重启后标记为「上次退出时视频工具尚未准备好，可以重新下载」；选择明确失败而不自动重交，是因为尚未交给引擎的记录没有可靠的自定义保存目录，不能静默改用默认目录。
+
+## App 自动更新（Sparkle 2）
+
+SwiftPM 精确固定 Sparkle **2.10.0**（MIT），许可证及上游附带声明在
+`Contents/Resources/Licenses/sparkle/LICENSE`。包自带的 XPC 服务、Autoupdate、
+Updater.app 在 Xcode 的 `Sign Sparkle components` 阶段从内到外以当前身份重签，
+保留上游 entitlements，启用 hardened runtime；非 ad-hoc 身份附带安全时间戳。
+发版脚本检查包内每个 Mach-O 的 Developer ID、时间戳、runtime 与调试权限，
+并执行 `codesign --verify --deep --strict`。
+
+正式构建默认每日自动检查，用户的两个更新开关直接使用 Sparkle 偏好，不写 SettingsModel。
+Debug 启动不启动 updater，手动检查后也拒绝后台检查；单元测试宿主拒绝全部更新检查。
+安装时如有正在进行的任务会要求确认；确认后等待引擎退出并保存任务历史，再交回 Sparkle。
+自动下载的更新在退出时安装，也使用相同确认及保存流程，保存失败则不允许退出安装。
+不发送系统信息。生产 feed 固定为：
+`https://github.com/cqagc/mulee/releases/latest/download/appcast.xml`。
+
+### 首次配置生产公钥（由主控执行）
+
+当前 `project.yml` 中的 `SUPublicEDKey` 是占位值，发版前必须替换。
+先解析 SwiftPM 依赖，再执行以下命令；私钥由 Sparkle 存入登录钥匙串，工人不生成、读取或导出生产私钥：
+
+```sh
+SPARKLE_BIN="$(dirname "$(find build/dd/SourcePackages/artifacts/sparkle -type f -path '*/bin/generate_keys' -print -quit)")"
+"$SPARKLE_BIN/generate_keys"
+export MULEE_SPARKLE_PUBLIC_KEY="$("$SPARKLE_BIN/generate_keys" -p)"
+python3 - <<'PY'
+import base64
+import os
+import pathlib
+
+key = os.environ["MULEE_SPARKLE_PUBLIC_KEY"].strip()
+assert len(base64.b64decode(key, validate=True)) == 32
+path = pathlib.Path("project.yml")
+text = path.read_text()
+placeholder = "SUPublicEDKey: REPLACE_WITH_SPARKLE_PUBLIC_ED_KEY"
+assert placeholder in text, "占位值已被替换，请人工核对现有公钥"
+path.write_text(text.replace(placeholder, f'SUPublicEDKey: "{key}"'))
+PY
+unset MULEE_SPARKLE_PUBLIC_KEY
+```
+
+`generate_keys -x` 会导出钥匙串私钥、`-f` 会导入钥匙串，不能用于不写钥匙串的隔离测试。
+测试夹具应以 CryptoKit 生成一次性 Ed25519 seed / public key 文件，`sign_update --ed-key-file`
+读取测试 seed，结束删除密钥与临时 bundle；不把测试公钥填入正式 `project.yml`。
+
+### 发版与附件
+
+1. 主控更新 `MARKETING_VERSION` 与递增的 `CURRENT_PROJECT_VERSION`，确认生产公钥已填写。
+2. 设置 Developer ID 与公证凭据后运行 `scripts/release.sh`。仍按 Release 构建、签名、
+   App 公证装订、DMG 签名、公证装订的顺序执行。
+3. 脚本从本次 DerivedData 的 `SourcePackages/artifacts/sparkle/…/bin/sign_update`
+   定位 Sparkle 工具，对装订后的最终 DMG 字节生成 EdDSA 签名及 `build/release/appcast.xml`。
+   默认读取 Sparkle 钥匙串私钥，也可设置 `MULEE_SPARKLE_KEY_FILE=/安全路径/私钥文件`。
+   没有可用私钥时提示并跳过 appcast；已有密钥但签名失败时中止。未公证装订也不生成 appcast。
+4. 主控将 `Mulee-<版本>.dmg`、对应 `.sha256`、`appcast.xml` 一起上传到对应的
+   `v<版本>` GitHub Release，并把它设为最新正式版。脚本只生成本地产物，不上传。
+   缺少 appcast 的 Release 不应设为 latest，否则固定 feed 会返回 404。
+
+appcast 下载地址是 `https://github.com/cqagc/mulee/releases/download/v<版本>/Mulee-<版本>.dmg`，
+`sparkle:version` 来自构建号，`sparkle:shortVersionString` 来自版本号，最低系统为 26.0，
+发布说明指向 `https://github.com/cqagc/mulee/releases/tag/v<版本>`。
+
+### 本地发现更新验证
+
+`MuleeTests/AppUpdate*` 覆盖设置绑定、自动检查限制、安装确认与等待保存。
+`AppUpdateDiscoveryTests` 仅在传入 `MULEE_APP_UPDATE_TEST_BUNDLE` 时启用：该路径是一个
+临时 `.app` bundle，Info.plist 使用临时公钥、低构建号、关闭自动检查，并指向本机 HTTP appcast；
+appcast 的新版本构建号为 `999999`，附上由测试私钥签出的 enclosure。通过
+`TEST_RUNNER_MULEE_APP_UPDATE_TEST_BUNDLE` 把路径传给 xcodebuild 的测试宿主。
+探针调用 Sparkle `checkForUpdateInformation()`，断言 XML 已解析且发现新版本，不下载、不替换应用。
+启动任何 Mulee 实例或测试宿主前先 `mkdir /tmp/mulee-e2e.lock`；失败每 20 秒重试，
+最多 40 分钟。持锁后确认 `pgrep -x Mulee` 为空；结束仅按 PID 退出自己的实例并 `rmdir` 释放锁。
+
+2026-10-16 本 worktree 验收：App 197 项测试整体通过（既有 `systemProbe` 跳过），
+新增 8 项更新测试均运行通过；本机 HTTP appcast 返回 200，Sparkle 实际解析并发现构建号
+999999，未请求更新压缩包、未安装或替换应用。测试 seed / public key 仅写临时文件，
+结束已删除，未操作用户钥匙串；测试宿主正常退出后释放自己的 E2E 锁。
+另用同一测试签名验证 `release.sh` 的 appcast 版本、下载 URL、最低系统、发布说明与长度字段。
+Debug / Release 构建及 `check-l10n` 均通过；Release 包 11 个 Mach-O 全部通过公司
+Developer ID、时间戳、runtime、团队与无调试权限检查，深度严格签名验证通过，许可证回读一致。
+新增代码没有编译警告；Release 仍报告 `MuleeApp.swift` 未改动的四处示例数据不可达分支，
+Xcode 仍报告无 AppIntents.framework 的元数据抽取警告。本次未公证、未发版、未上传。
+验证工程、缓存副本及日志位于 `build/sparkle-verification/`，DerivedData 位于 `build/dd/`。

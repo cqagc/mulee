@@ -50,6 +50,7 @@ struct MuleeApp: App {
         .defaultSize(width: 1240, height: 780)
         .keyboardShortcut("n", modifiers: [.command, .shift])
         .commands {
+            AppUpdateCommands(updates: appDelegate.updates)
             TaskHistoryCommands(model: model)
         }
 
