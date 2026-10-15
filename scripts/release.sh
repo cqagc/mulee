@@ -173,7 +173,7 @@ ET.SubElement(item, "pubDate").text = email.utils.format_datetime(datetime.datet
 ET.SubElement(item, f"{{{namespace}}}version").text = build
 ET.SubElement(item, f"{{{namespace}}}shortVersionString").text = version
 ET.SubElement(item, f"{{{namespace}}}minimumSystemVersion").text = "26.0"
-ET.SubElement(item, f"{{{namespace}}}releaseNotesLink").text = f"https://github.com/cqagc/mulee/releases/tag/v{version}"
+ET.SubElement(item, f"{{{namespace}}}fullReleaseNotesLink").text = "https://github.com/cqagc/mulee/releases"
 ET.SubElement(item, "enclosure", {
     "url": f"https://github.com/cqagc/mulee/releases/download/v{version}/Mulee-{version}.dmg",
     "length": str(pathlib.Path(dmg).stat().st_size),
@@ -201,3 +201,4 @@ CHECK_FILES=(--file "$DMG.sha256")
 python3 -I scripts/privacy-check.py --app "$APP" "${CHECK_FILES[@]}" \
   || error "App 包或发布文件里有构建路径、内部地址等不能公开的内容"
 step "完成：${DMG}（$(du -h "$DMG" | cut -f1)）"
+echo "发版说明定稿后运行 scripts/appcast-notes.py <appcast> <notes.md>，再用 privacy-check.py --file 查 appcast"

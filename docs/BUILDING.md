@@ -389,13 +389,16 @@ unset MULEE_SPARKLE_PUBLIC_KEY
    定位 Sparkle 工具，对装订后的最终 DMG 字节生成 EdDSA 签名及 `build/release/appcast.xml`。
    默认读取 Sparkle 钥匙串私钥，也可设置 `MULEE_SPARKLE_KEY_FILE=/安全路径/私钥文件`。
    没有可用私钥时提示并跳过 appcast；已有密钥但签名失败时中止。未公证装订也不生成 appcast。
-4. 主控将 `Mulee-<版本>.dmg`、对应 `.sha256`、`appcast.xml` 一起上传到对应的
+4. 发版说明定稿后运行 `scripts/appcast-notes.py build/release/appcast.xml <notes.md>`，
+   再运行 `python3 -I scripts/privacy-check.py --file build/release/appcast.xml` 检查最终 appcast。
+5. 主控将 `Mulee-<版本>.dmg`、对应 `.sha256`、`appcast.xml` 一起上传到对应的
    `v<版本>` GitHub Release，并把它设为最新正式版。脚本只生成本地产物，不上传。
    缺少 appcast 的 Release 不应设为 latest，否则固定 feed 会返回 404。
 
 appcast 下载地址是 `https://github.com/cqagc/mulee/releases/download/v<版本>/Mulee-<版本>.dmg`，
 `sparkle:version` 来自构建号，`sparkle:shortVersionString` 来自版本号，最低系统为 26.0，
-发布说明指向 `https://github.com/cqagc/mulee/releases/tag/v<版本>`。
+发布说明以本地化 HTML 内嵌在 `description`（英文默认、`zh-Hans` 简体中文）中，
+`sparkle:fullReleaseNotesLink` 指向 `https://github.com/cqagc/mulee/releases`，用于版本历史按钮。
 
 ### 本地发现更新验证
 
