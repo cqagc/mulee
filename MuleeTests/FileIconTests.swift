@@ -59,3 +59,20 @@ import Testing
         #expect(FileCategory.video.badgeText(filenameExtension: "  ", size: 64) == nil)
     }
 }
+
+/// 「需要注意」用圆点描边，下载中用短线：形状本身就能区分状态。
+@Suite struct FileIconStrokeShapeTests {
+    @Test func attentionUsesRoundDots() {
+        let metrics = FileIconMetrics(size: 64)
+        let style = metrics.strokeStyle(for: .attention(progress: 0.4))
+        #expect(style.lineCap == .round)
+        #expect(style.dash.first == 0)
+    }
+
+    @Test func downloadingUsesDashes() {
+        let metrics = FileIconMetrics(size: 64)
+        let style = metrics.strokeStyle(for: .downloading(progress: 0.4))
+        #expect(style.lineCap == .butt)
+        #expect((style.dash.first ?? 0) > 0)
+    }
+}

@@ -16,7 +16,7 @@ struct FileIconSurface: View {
             }
             .clipShape(square)
             .overlay {
-                square.stroke(palette.stroke, style: metrics.strokeStyle)
+                square.stroke(palette.stroke, style: metrics.strokeStyle(for: state))
             }
             .opacity(state.isCompleted ? 0 : 1)
 

@@ -3,6 +3,9 @@ import MuleeCore
 
 /// 任务展示文案的唯一入口。日期依赖可注入，测试不受系统时间影响。
 struct TaskPresentation {
+    /// 数字和文件大小跟随系统语言（中文系统显示「893 字节」，英文系统显示「893 bytes」）。
+    static let displayLocale = Locale.autoupdatingCurrent
+
     let task: DownloadTask
     let now: Date
     let calendar: Calendar
@@ -168,7 +171,7 @@ struct TaskPresentation {
     /// 文件大小与访达一致，按十进制换算（.file）。
     static func bytes(_ value: Int64) -> String {
         let style = ByteCountFormatStyle(style: .file, allowedUnits: .all, spellsOutZero: false,
-                                         includesActualByteCount: false, locale: Locale(identifier: "en_US"))
+                                         includesActualByteCount: false, locale: Self.displayLocale)
         return max(0, value).formatted(style)
             .replacing("kB", with: "KB")
     }
@@ -181,13 +184,13 @@ struct TaskPresentation {
     }
 
     private var percent: String {
-        progress.formatted(.percent.precision(.fractionLength(0)).locale(Locale(identifier: "en_US")))
+        progress.formatted(.percent.precision(.fractionLength(0)).locale(Self.displayLocale))
     }
 
     private var receivedAndTotal: String {
         guard let total = task.totalBytes, total > 0 else { return "已收到 \(Self.bytes(task.receivedBytes))" }
         let units: ByteCountFormatStyle.Units = total >= 1_000_000_000 ? .gb : total >= 1_000_000 ? .mb : .kb
-        let style = ByteCountFormatStyle(style: .file, allowedUnits: units, spellsOutZero: false, includesActualByteCount: false, locale: Locale(identifier: "en_US"))
+        let style = ByteCountFormatStyle(style: .file, allowedUnits: units, spellsOutZero: false, includesActualByteCount: false, locale: Self.displayLocale)
         let received = max(0, task.receivedBytes).formatted(style)
         let number = received.split(separator: " ").first.map(String.init) ?? received
         return "\(number) / \(total.formatted(style))"

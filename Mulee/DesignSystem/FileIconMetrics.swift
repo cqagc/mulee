@@ -19,4 +19,14 @@ struct FileIconMetrics {
     var strokeStyle: StrokeStyle {
         StrokeStyle(lineWidth: lineWidth, lineCap: .butt, lineJoin: .round, dash: dash)
     }
+
+    /// 「需要注意」用圆点描边，和下载中的短线在形状上就能区分，
+    /// 不只依赖琥珀色（演示文稿的橙色和琥珀接近，色盲用户也需要形状差异）。
+    var dottedStrokeStyle: StrokeStyle {
+        StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round, dash: [0, lineWidth * 1.9])
+    }
+
+    func strokeStyle(for state: FileIconState) -> StrokeStyle {
+        state.needsAttention ? dottedStrokeStyle : strokeStyle
+    }
 }
