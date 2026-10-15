@@ -56,4 +56,33 @@ import Testing
         #expect(SidebarItem.subtitle(for: []) == "0 个任务 · 0 个进行中")
         #expect(SidebarItem.all.navigationTitle == "全部任务")
     }
+
+    @Test func singlePassCountsMatchFiltersAfterStatusChanges() {
+        var tasks = MockData.tasks
+        for status: TaskStatus in [.downloading, .postProcessing, .extracting, .waitingForSources,
+                                   .seeding, .completed, .paused, .queued, .failed, .engineUnavailable] {
+            tasks[0].status = status
+            let counts = SidebarItem.counts(in: tasks)
+            for item in SidebarItem.downloads {
+                #expect(counts[item, default: 0] == item.filter(tasks).count)
+            }
+        }
+        #expect(SidebarItem.counts(in: [])[.all] == 0)
+    }
+
+    @Test func unchangedRowsSkipRefreshWithoutHidingTaskOrClockChanges() throws {
+        let task = MockData.longTailTask
+        let info = try #require(TaskPresentation(task: task).longTail)
+        let now = info.waitingSince.addingTimeInterval(4 * 86_400 + 3600)
+        let row = TaskRowView(presentation: TaskPresentation(task: task, now: now))
+        let nextSecond = TaskRowView(presentation: TaskPresentation(task: task, now: now.addingTimeInterval(1)))
+        let nextDay = TaskRowView(presentation: TaskPresentation(task: task, now: now.addingTimeInterval(86_400)))
+        #expect(row == nextSecond)
+        #expect(row != nextDay)
+
+        var changed = task
+        changed.receivedBytes += 1
+        #expect(row != TaskRowView(presentation: TaskPresentation(task: changed, now: now)))
+        #expect(row != TaskRowView(presentation: TaskPresentation(task: task, now: now, seedingAction: .stop)))
+    }
 }

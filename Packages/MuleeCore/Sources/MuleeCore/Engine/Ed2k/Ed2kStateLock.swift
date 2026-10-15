@@ -16,5 +16,10 @@ struct Ed2kStateLock: Sendable {
         }
     }
 
-    func unlock() { close(descriptor) }
+    func unlock() {
+        // close 只释放当前描述符；并发启动的子进程可能暂时继承同一把锁。
+        // 显式解锁后，重新启动引擎无需等继承的描述符被 exec/close。
+        flock(descriptor, LOCK_UN)
+        close(descriptor)
+    }
 }

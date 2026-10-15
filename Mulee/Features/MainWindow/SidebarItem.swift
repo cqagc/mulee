@@ -57,10 +57,27 @@ enum SidebarItem: String, CaseIterable, Identifiable {
     }
 
     func filter(_ tasks: [DownloadTask], search: String = "") -> [DownloadTask] {
-        tasks.filter { includes($0) && (search.isEmpty || $0.name.localizedStandardContains(search)) }
+        if self == .all, search.isEmpty { return tasks }
+        return tasks.filter { includes($0) && (search.isEmpty || $0.name.localizedStandardContains(search)) }
+    }
+
+    /// 一次遍历完成侧边栏计数，避免为每个分类分配过滤后的任务数组。
+    static func counts(in tasks: [DownloadTask]) -> [Self: Int] {
+        var counts: [Self: Int] = [.all: tasks.count]
+        for task in tasks {
+            switch task.status {
+            case .downloading, .extracting, .postProcessing: counts[.downloading, default: 0] += 1
+            case .waitingForSources: counts[.waitingForSources, default: 0] += 1
+            case .seeding: counts[.seeding, default: 0] += 1
+            case .completed: counts[.completed, default: 0] += 1
+            default: break
+            }
+        }
+        return counts
     }
 
     static func subtitle(for tasks: [DownloadTask]) -> String {
-        String(localized: "\(tasks.count) 个任务 · \(downloading.filter(tasks).count) 个进行中")
+        let activeCount = tasks.count { downloading.includes($0) }
+        return String(localized: "\(tasks.count) 个任务 · \(activeCount) 个进行中")
     }
 }

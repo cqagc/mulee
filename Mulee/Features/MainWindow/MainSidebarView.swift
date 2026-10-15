@@ -5,13 +5,15 @@ struct MainSidebarView: View {
     @Binding var selection: SidebarItem?
 
     var body: some View {
+        let counts = SidebarItem.counts(in: model.tasks)
+
         List(selection: $selection) {
             Section("下载") {
                 ForEach(SidebarItem.downloads) { item in
                     HStack {
                         Label(item.title, systemImage: item.symbol.name)
                         Spacer()
-                        Text(item.filter(model.tasks).count, format: .number)
+                        Text(counts[item, default: 0], format: .number)
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                     }
