@@ -13,7 +13,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hasReplied = false
 
     func configure(model: AppModel, settings: SettingsModel, usesSampleData: Bool) {
-        guard !usesSampleData, coordinator == nil else { return }
+        // 示例数据模式和单元测试宿主都不启动真实引擎。
+        guard !usesSampleData, !AppEnvironment.isRunningUnitTests, coordinator == nil else { return }
         self.settings = settings
         let stateDirectory = URL.applicationSupportDirectory.appending(path: "Mulee/aria2", directoryHint: .isDirectory)
         coordinator = DownloadCoordinator(model: model, engines: [Aria2Engine(stateDirectory: stateDirectory)])

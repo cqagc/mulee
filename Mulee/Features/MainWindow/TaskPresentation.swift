@@ -30,6 +30,8 @@ struct TaskPresentation {
         }
         switch task.detail {
         case .http(let connections):
+            // 只有正在下载时连接数才有意义；排队、暂停、完成时只显示大小。
+            guard task.status == .downloading, connections > 0 else { return size }
             return "\(size) · \(connections.formatted()) 线程"
         case .bittorrent(let files, let selected, let peers, let ratio):
             if task.status == .seeding {

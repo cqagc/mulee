@@ -10,6 +10,9 @@ enum DebugLaunchOptions {
     /// 截图核对时使用示例数据，并且不启动下载引擎。
     static var usesSampleData: Bool { defaults.bool(forKey: "MuleeSampleData") }
 
+    /// 启动后自动添加的链接文本（端到端验证用），引擎就绪后提交。
+    static var linksToAdd: String? { defaults.string(forKey: "MuleeAddLinks") }
+
     /// 强制亮色或暗色；nil 表示跟随系统。
     static var colorScheme: ColorScheme? {
         switch defaults.string(forKey: "MuleeAppearance") {

@@ -31,6 +31,11 @@ struct DebugLaunchModifier: ViewModifier {
         if DebugLaunchOptions.showsMenuBarPanelWindow {
             openWindow(id: "menu-bar-panel-preview")
         }
+        if let text = DebugLaunchOptions.linksToAdd {
+            // 给引擎留出启动时间，再走和「新建下载」完全相同的入口。
+            try? await Task.sleep(for: .seconds(3))
+            model.addTasks(from: LinkParser.parse(text), autoExtract: false)
+        }
     }
     #endif
 }
