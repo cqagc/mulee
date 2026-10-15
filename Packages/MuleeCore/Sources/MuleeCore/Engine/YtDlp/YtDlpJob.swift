@@ -12,6 +12,8 @@ struct YtDlpJob: Codable, Sendable {
     var savePath: URL?
     var errorMessage: String?
     var retried = false
+    /// 完成后去掉任务前缀的文件名（成品与字幕、弹幕），删除任务时据此找到文件。旧记录没有这个字段。
+    var finalFiles: [String]?
 
     func snapshot(progress: YtDlpProgress?) -> EngineTaskSnapshot {
         EngineTaskSnapshot(

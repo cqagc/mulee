@@ -37,7 +37,9 @@ struct YtDlpIntegrationTests {
                 let done = try await YtDlpIntegrationFixture.waitFor(recovered, id: id) { $0.status == .completed }
                 let file = try #require(done.savePath)
                 #expect(file.pathExtension == "mp4")
-                #expect(part.lastPathComponent == file.lastPathComponent + ".part")
+                // 下载中的文件带任务前缀，完成后去掉前缀。
+                #expect(part.lastPathComponent == id + "-" + file.lastPathComponent + ".part")
+                #expect(!file.lastPathComponent.hasPrefix(id))
                 #expect(try Data(contentsOf: file) == fixture.payload)
                 #expect(await fixture.server.rangeRequests > 0)
                 try await recovered.remove(id, deleteFiles: true)

@@ -299,10 +299,18 @@ public actor YtDlpEngine: DownloadEngine {
             }
             guard tokens[id] == token, let index = jobs.firstIndex(where: { $0.id == id }) else { return }
             captureProgress(id)
-            jobs[index].savePath = url
+            var finalURL = url
+            do {
+                let renamed = try YtDlpFinalName.finalize(url, jobID: id)
+                finalURL = renamed.file
+                jobs[index].finalFiles = renamed.names
+            } catch {
+                Self.logger.error("去掉文件名前缀失败，保留原文件名：\(error.localizedDescription, privacy: .public)")
+            }
+            jobs[index].savePath = finalURL
             jobs[index].status = .completed
             jobs[index].errorMessage = nil
-            let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize
+            let size = try finalURL.resourceValues(forKeys: [.fileSizeKey]).fileSize
             jobs[index].totalBytes = size.map(Int64.init)
             jobs[index].receivedBytes = jobs[index].totalBytes ?? jobs[index].receivedBytes
             progress[id] = nil
