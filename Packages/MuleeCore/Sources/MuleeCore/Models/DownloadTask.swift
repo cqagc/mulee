@@ -25,6 +25,12 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
     public var postDownload: PostDownloadInfo
     /// 原始链接（用于「复制链接」）。
     public var sourceLink: String
+    /// 引擎内部的任务标识（例如 aria2 的 GID）；还没交给引擎时为 nil。
+    public var engineTaskID: String?
+    /// 文件在磁盘上的完整路径；引擎还没确定文件名时为 nil。
+    public var savePath: URL?
+    /// 引擎报告的错误信息（status 为 .failed 时显示）。
+    public var errorMessage: String?
 
     public init(
         id: UUID = UUID(),
@@ -40,7 +46,10 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
         completedAt: Date? = nil,
         detail: TaskDetail,
         postDownload: PostDownloadInfo,
-        sourceLink: String
+        sourceLink: String,
+        engineTaskID: String? = nil,
+        savePath: URL? = nil,
+        errorMessage: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -56,6 +65,9 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
         self.detail = detail
         self.postDownload = postDownload
         self.sourceLink = sourceLink
+        self.engineTaskID = engineTaskID
+        self.savePath = savePath
+        self.errorMessage = errorMessage
     }
 
     /// 下载进度 0...1；总大小未知时为 nil。

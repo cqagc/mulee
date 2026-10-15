@@ -95,6 +95,8 @@ struct TaskPresentation {
         case .completed: "已完成"
         case .paused: "已暂停"
         case .failed: "需要处理"
+        case .queued: "排队中"
+        case .engineUnavailable: "引擎开发中"
         }
     }
 
@@ -107,7 +109,9 @@ struct TaskPresentation {
         case .seeding: "做种中"
         case .completed: task.completedAt.map(time) ?? ""
         case .paused: ""
-        case .failed: "可稍后重试"
+        case .failed: task.errorMessage ?? "可稍后重试"
+        case .queued: "等待空位"
+        case .engineUnavailable: "暂时只记录链接"
         }
     }
 
@@ -119,8 +123,9 @@ struct TaskPresentation {
         case .extracting: .statusExtracting
         case .seeding: .statusSeeding
         case .completed: .statusCompleted
-        case .paused: .statusPaused
+        case .paused, .engineUnavailable: .statusPaused
         case .failed: .statusFailed
+        case .queued: .waitingForSources
         }
     }
 
