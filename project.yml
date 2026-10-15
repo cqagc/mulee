@@ -29,6 +29,10 @@ targets:
         CFBundleDisplayName: Mulee
         LSApplicationCategoryType: public.app-category.utilities
         NSHumanReadableCopyright: "© 2026 CQAGC. GPL-3.0."
+    postBuildScripts:
+      - name: Bundle aria2
+        script: '"$SRCROOT"/scripts/bundle-aria2.sh'
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cqagc.mulee
@@ -41,7 +45,8 @@ targets:
         SWIFT_APPROACHABLE_CONCURRENCY: YES
         SWIFT_STRICT_CONCURRENCY: complete
         ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
-        ENABLE_USER_SCRIPT_SANDBOXING: YES
+        # bundle-aria2.sh 要读 /opt/homebrew，且间接依赖事先不可知，无法逐个声明为输入
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
   MuleeTests:
     type: bundle.unit-test
     platform: macOS
