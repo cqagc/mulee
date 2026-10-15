@@ -1,0 +1,8 @@
+# gitleaks 配置：沿用默认规则，只放过两把核实过的公钥。
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Sparkle 更新校验公钥、Chrome 扩展固定 ID 公钥（都是公开的）"
+regexTarget = "line"
+regexes = ['''SUPublicEDKey:''', '''^\s*"key":\s*"MII''']
