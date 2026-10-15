@@ -603,7 +603,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%#@count1@ waiting for sources. Leave them running."
+            "value": "%#@count1@ waiting for sources"
           },
           "substitutions": {
             "count1": {
@@ -3220,7 +3220,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Incoming connections available"
+            "value": "Reachable"
           }
         },
         "zh-Hant": {
@@ -5863,7 +5863,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Incoming connections not available yet"
+            "value": "Not reachable from outside yet"
           }
         },
         "zh-Hant": {
