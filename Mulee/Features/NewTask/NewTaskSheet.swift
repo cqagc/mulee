@@ -3,11 +3,14 @@ import SwiftUI
 /// 由主窗口作为 sheet 呈现的新建下载面板。
 struct NewTaskSheet: View {
     @Environment(AppModel.self) private var model
+    @Environment(SettingsModel.self) private var settings
     @Environment(\.dismiss) private var dismiss
     @State private var draft: NewTaskModel
+    @State private var needsSettingsDefaults: Bool
 
-    init(draft: NewTaskModel = NewTaskModel()) {
-        _draft = State(initialValue: draft)
+    init(draft: NewTaskModel? = nil) {
+        _draft = State(initialValue: draft ?? NewTaskModel())
+        _needsSettingsDefaults = State(initialValue: draft == nil)
     }
 
     var body: some View {
@@ -72,7 +75,21 @@ struct NewTaskSheet: View {
             NewTaskFooterView(draft: draft, cancel: cancel, startDownload: startDownload)
         }
         .frame(width: 640)
-        .onAppear(perform: consumePendingText)
+        .onAppear(perform: prepareDraft)
+        .onChange(of: model.pendingNewTaskText) {
+            consumePendingText()
+        }
+    }
+
+    private func prepareDraft() {
+        if needsSettingsDefaults {
+            draft = NewTaskModel(
+                saveDirectory: URL(filePath: settings.saveDirectory, directoryHint: .isDirectory),
+                autoExtract: settings.autoExtract
+            )
+            needsSettingsDefaults = false
+        }
+        consumePendingText()
     }
 
     private func consumePendingText() {
@@ -95,9 +112,11 @@ struct NewTaskSheet: View {
         NewTaskPreviewData.links
     }))
     .environment(AppModel())
+    .environment(SettingsModel())
 }
 
 #Preview("等待粘贴") {
     NewTaskSheet()
         .environment(AppModel())
+        .environment(SettingsModel())
 }

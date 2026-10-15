@@ -36,4 +36,52 @@ import Testing
         #expect(model.isPreventingSleep)
         #expect(provider.created == 2)
     }
+
+    @Test func disablingPreferenceImmediatelyReleasesAndEnablingReacquires() {
+        let provider = CountingProvider()
+        let model = AppModel(sleepPreventer: SleepPreventer(provider: provider))
+        #expect(model.hasActiveTransfers)
+        #expect(provider.created == 1)
+
+        model.preventsSleepWhileDownloading = false
+
+        #expect(!model.isPreventingSleep)
+        #expect(provider.released == 1)
+
+        model.addTasks(from: LinkParserFixtures.oneHTTPLink, autoExtract: false)
+        #expect(!model.isPreventingSleep)
+        #expect(provider.created == 1)
+
+        model.preventsSleepWhileDownloading = true
+
+        #expect(model.isPreventingSleep)
+        #expect(provider.created == 2)
+        #expect(provider.released == 1)
+    }
+
+    @Test func disabledInitialPreferenceDoesNotAcquireAssertion() {
+        let provider = CountingProvider()
+        let model = AppModel(
+            preventsSleepWhileDownloading: false,
+            sleepPreventer: SleepPreventer(provider: provider)
+        )
+
+        #expect(model.hasActiveTransfers)
+        #expect(!model.isPreventingSleep)
+        #expect(provider.created == 0)
+    }
+
+    @Test func enablingWithoutActiveTransfersDoesNotAcquireAssertion() {
+        let provider = CountingProvider()
+        let model = AppModel(
+            tasks: [],
+            preventsSleepWhileDownloading: false,
+            sleepPreventer: SleepPreventer(provider: provider)
+        )
+
+        model.preventsSleepWhileDownloading = true
+
+        #expect(!model.isPreventingSleep)
+        #expect(provider.created == 0)
+    }
 }

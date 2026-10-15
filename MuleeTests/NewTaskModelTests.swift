@@ -143,4 +143,52 @@ import Testing
         #expect(draft.saveDirectory == URL.homeDirectory.appending(path: "Downloads/Mulee", directoryHint: .isDirectory))
         #expect(draft.saveDirectoryLabel == "~/Downloads/Mulee")
     }
+
+    @Test("草稿使用传入的目录和解压默认值", arguments: [true, false])
+    func injectedDefaults(autoExtract: Bool) {
+        let directory = URL(filePath: "/tmp/自定义下载", directoryHint: .isDirectory)
+        let draft = NewTaskModel(saveDirectory: directory, autoExtract: autoExtract)
+
+        #expect(draft.saveDirectory == directory)
+        #expect(draft.autoExtract == autoExtract)
+    }
+
+    @Test("合并预填文本保留草稿并按需补换行", arguments: [
+        ("", "新链接", "新链接"),
+        ("已有链接", "新链接", "已有链接\n新链接"),
+        ("已有链接\n", "新链接", "已有链接\n新链接"),
+        ("已有链接", "", "已有链接"),
+        ("已有链接", "链接一\n链接二", "已有链接\n链接一\n链接二")
+    ])
+    func mergingPrefill(_ existing: String, _ prefill: String, _ expected: String) {
+        let draft = NewTaskModel(inputText: existing)
+
+        draft.mergePrefillText(prefill)
+
+        #expect(draft.inputText == expected)
+    }
+
+    @Test func repeatedPendingTextAppendsAndPreservesExistingLinkOptions() throws {
+        let first = "https://example.com/first.zip"
+        let second = "https://example.com/second.zip"
+        let app = AppModel(tasks: [])
+        let draft = NewTaskModel(inputText: first)
+        let originalItem = try #require(draft.links.first)
+
+        app.showNewTask(prefill: second)
+        draft.consumePendingText(from: app)
+
+        #expect(draft.inputText == first + "\n" + second)
+        #expect(app.pendingNewTaskText.isEmpty)
+        #expect(draft.linkCount == 2)
+        #expect(draft.links.first === originalItem)
+
+        app.showNewTask(prefill: "https://example.com/third.zip")
+        draft.consumePendingText(from: app)
+        draft.consumePendingText(from: app)
+
+        #expect(draft.inputText == first + "\n" + second + "\nhttps://example.com/third.zip")
+        #expect(app.pendingNewTaskText.isEmpty)
+        #expect(draft.linkCount == 3)
+    }
 }

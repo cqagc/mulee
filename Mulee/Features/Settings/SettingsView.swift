@@ -2,7 +2,7 @@ import SwiftUI
 
 /// 设置窗口：七个标签页。
 struct SettingsView: View {
-    @State private var model = SettingsModel()
+    @Environment(SettingsModel.self) private var model
     @State private var selection = SettingsTab.general
 
     var body: some View {
@@ -50,4 +50,5 @@ struct SettingsView: View {
 #Preview {
     SettingsView()
         .environment(AppModel())
+        .environment(SettingsModel())
 }
