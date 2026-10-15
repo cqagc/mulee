@@ -7,7 +7,7 @@
 
 > 🚧 开发中。**HTTP / HTTPS / FTP 下载已经可用**（aria2 引擎，支持多线程、断点续传、重启后自动恢复）；BT、电驴、视频引擎还在开发中。
 >
-> 开发构建需要先安装 aria2：`brew install aria2`。正式版会把引擎打包进 App。
+> 开发构建需要先 `brew install aria2`：构建时会自动把 aria2c 及其依赖库打包进 App，只有构建机需要安装，运行方不需要。详见 [docs/BUILDING.md](docs/BUILDING.md)。
 
 ![主窗口](docs/screenshots/main-light.png)
 
@@ -87,7 +87,7 @@ Mulee 只是一个下载工具，请只下载你有权获取的内容。
 **Mulee is a no-nonsense download manager for macOS.** HTTP, BitTorrent / magnet, ed2k and video sites, all in one native app.
 Open source, free, and never any ads.
 
-> 🚧 Work in progress. **HTTP / HTTPS / FTP downloads work** (aria2 engine: multi-connection, resume, session restore). BitTorrent, ed2k and video engines are in progress. Development builds need `brew install aria2`.
+> 🚧 Work in progress. **HTTP / HTTPS / FTP downloads work** (aria2 engine: multi-connection, resume, session restore). BitTorrent, ed2k and video engines are in progress. Development builds need `brew install aria2` on the build machine (aria2c is bundled into the app at build time; end users need nothing, see [docs/BUILDING.md](docs/BUILDING.md)).
 
 **Planned:** multi-connection HTTP/FTP, BitTorrent and magnet links, native ed2k, `thunder://` link decoding, video downloads powered by yt-dlp (YouTube and Bilibili first), and auto-extraction with password rules and filename encoding repair. Native Swift UI for Apple Silicon, a menu bar item, browser extensions, default handler for magnet / ed2k / thunder / .torrent, and sleep prevention while downloading.
 

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- 仅用于 ad-hoc 签名的开发构建：ad-hoc 没有 Team ID，hardened runtime 下加载同包 dylib 需要它。
+         正式 Developer ID 签名不要使用这个文件。 -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>
