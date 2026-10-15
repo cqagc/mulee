@@ -1,5 +1,6 @@
 #!/bin/bash
-# 构建发布版：Release 编译 → Developer ID 签名 → 公证并装订 App → 打 DMG → 签名、公证并装订 DMG。
+# 构建发布版：安全与隐私检查 → Release 编译 → Developer ID 签名 → 公证并装订 App → 打 DMG
+# → 签名、公证并装订 DMG → 再查一遍 App 和发布文件。任何一步检查不过都不出包。
 #
 # 用法：
 #   MULEE_NOTARY_PROFILE=<notarytool 钥匙串配置名> scripts/release.sh
@@ -12,6 +13,7 @@
 #   或者直接用 App Store Connect API 密钥文件（不经过钥匙串，适合锁屏 / 无人值守）：
 #   MULEE_NOTARY_KEY=<AuthKey_XXXX.p8 路径> MULEE_NOTARY_KEY_ID=<Key ID> MULEE_NOTARY_ISSUER=<Issuer ID>
 #   MULEE_SPARKLE_KEY_FILE  可选的 EdDSA 私钥文件；未设时 sign_update 从钥匙串读取
+#   MULEE_PRIVACY_DENYLIST  私有屏蔽词文件，默认 ~/.config/mulee/privacy-denylist.txt（见 scripts/privacy-check.py）
 #
 # 产物：build/release/Mulee-<版本>.dmg、appcast.xml（有私钥且公证成功时）
 set -euo pipefail
@@ -45,6 +47,10 @@ security find-identity -v -p codesigning | grep -q "$IDENTITY" \
   || error "钥匙串里没有签名身份「${IDENTITY}」"
 
 step "Mulee $VERSION · 团队 $TEAM · 签名「${IDENTITY}」"
+
+step "安全与隐私检查（仓库全部历史）"
+[ -z "$(git status --porcelain --untracked-files=normal)" ] || error "工作区有未提交的改动，提交后再发版"
+python3 -I scripts/privacy-check.py || error "仓库里有不能公开的内容，见上面的列表"
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
@@ -188,4 +194,10 @@ fi
 
 # 校验文件里只写文件名，不带构建机的绝对路径。
 (cd "$OUT" && shasum -a 256 "$(basename "$DMG")" | tee "$(basename "$DMG").sha256")
+
+step "安全与隐私检查（App 包和发布文件）"
+CHECK_FILES=(--file "$DMG.sha256")
+[ -f "$OUT/appcast.xml" ] && CHECK_FILES+=(--file "$OUT/appcast.xml")
+python3 -I scripts/privacy-check.py --app "$APP" "${CHECK_FILES[@]}" \
+  || error "App 包或发布文件里有构建路径、内部地址等不能公开的内容"
 step "完成：${DMG}（$(du -h "$DMG" | cut -f1)）"
