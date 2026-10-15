@@ -28,6 +28,7 @@ struct VideoSettingsTab: View {
                     .foregroundStyle(.secondary)
                 Toggle("下载失败时先更新 yt-dlp 再重试", isOn: $model.updateBeforeRetry)
             }
+            VideoLoginSettingsView()
             Section("B 站") {
                 Toggle("弹幕转 ASS", isOn: $model.danmakuToASS)
                 Toggle("CC 字幕", isOn: $model.ccSubtitles)

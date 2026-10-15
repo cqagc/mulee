@@ -6,6 +6,8 @@ struct YtDlpJob: Codable, Sendable {
     let site: VideoSite
     let directory: URL
     var name: String
+    var playlistIndex: Int?
+    var playlistTitle: String?
     var status: TaskStatus = .queued
     var totalBytes: Int64?
     var receivedBytes: Int64 = 0

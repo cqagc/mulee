@@ -6,6 +6,7 @@ import OSLog
 public actor YtDlpEngine: DownloadEngine {
     public nonisolated let kind: TaskKind = .video
     public typealias Updater = @Sendable () async throws -> URL
+    public typealias CookieProvider = @Sendable (VideoSite) async throws -> [VideoCookie]
 
     private let stateDirectory: URL
     private var binaryURL: URL?
@@ -18,6 +19,7 @@ public actor YtDlpEngine: DownloadEngine {
     private let updater: Updater?
     private var quality: YtDlpQuality
     private var cookiesURL: URL?
+    private var cookieProvider: CookieProvider?
     private var subtitles: YtDlpSubtitles
     private var options: EngineOptions?
     private var resolvedBinary: URL?
@@ -84,6 +86,10 @@ public actor YtDlpEngine: DownloadEngine {
         configure(quality: quality, cookiesURL: cookiesURL, subtitles: subtitles)
     }
 
+    public func configureCookies(provider: CookieProvider?) {
+        cookieProvider = provider
+    }
+
     public func start(options: EngineOptions) async throws {
         if let stopping { await stopping.value }
         if let starting { return try await starting.value }
@@ -126,6 +132,10 @@ public actor YtDlpEngine: DownloadEngine {
     }
 
     public func add(link: ParsedLink, directory: URL? = nil) async throws -> String {
+        try await add(link: link, directory: directory, entry: nil)
+    }
+
+    public func add(link: ParsedLink, directory: URL?, entry: YtDlpPlaylistEntry?) async throws -> String {
         try requireRunning()
         guard case .video(let url, let site, _) = link,
               ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { throw EngineError.unsupportedLink }
@@ -133,7 +143,8 @@ public actor YtDlpEngine: DownloadEngine {
         let destination = directory ?? options.downloadDirectory
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
         let id = UUID().uuidString.lowercased()
-        jobs.append(YtDlpJob(id: id, url: url, site: site, directory: destination, name: url.lastPathComponent))
+        jobs.append(YtDlpJob(id: id, url: url, site: site, directory: destination, name: entry.map { "P\($0.index) \($0.title)" } ?? url.lastPathComponent,
+                                playlistIndex: entry?.index, playlistTitle: entry?.title))
         try persist()
         if options.downloadLimit > 0 { await requeueActive() }
         schedule()
@@ -239,6 +250,8 @@ public actor YtDlpEngine: DownloadEngine {
         let selectedSubtitles = subtitles
         let selectedChannel = channel
         let shouldUpdate = updatesEnabled
+        var cookieFile: YtDlpCookieFile?
+        defer { try? cookieFile?.remove() }
         do {
             guard let index = jobs.firstIndex(where: { $0.id == id }), tokens[id] == token else { return }
             jobs[index].status = .downloading
@@ -256,10 +269,15 @@ public actor YtDlpEngine: DownloadEngine {
             try Task.checkCancellation()
             guard tokens[id] == token, let current = jobs.first(where: { $0.id == id }),
                   let binary = resolvedBinary else { return }
+            let cookies = try await cookieProvider?(current.site) ?? []
+            try Task.checkCancellation()
+            guard tokens[id] == token else { return }
+            if !cookies.isEmpty { cookieFile = try YtDlpCookieFile(cookies: cookies, site: current.site) }
             let child = try YtDlpProcess(
                 binary: binary, arguments: arguments(
-                    for: current, deno: deno, quality: selectedQuality, subtitles: selectedSubtitles
-                )
+                    for: current, deno: deno, quality: selectedQuality, subtitles: selectedSubtitles,
+                    taskCookiesURL: cookieFile?.url
+                ), cleanupURL: cookieFile?.url
             )
             children[id] = child
             var pending = Data()
@@ -277,7 +295,8 @@ public actor YtDlpEngine: DownloadEngine {
             guard tokens[id] == token else { return }
             children[id] = nil
             if child.status != 0 {
-                let raw = errors.isEmpty ? String(localized: "yt-dlp 退出码 \(child.status)", bundle: .module) : errors
+                let raw = cookieFile != nil ? String(localized: "使用登录状态下载失败，请重新传递登录状态后重试", bundle: .module)
+                    : (errors.isEmpty ? String(localized: "yt-dlp 退出码 \(child.status)", bundle: .module) : errors)
                 if try await retry(id, token: token, raw: raw, channel: selectedChannel, updatesEnabled: shouldUpdate) { return }
                 throw EngineError.launchFailed(raw)
             }
@@ -368,7 +387,9 @@ public actor YtDlpEngine: DownloadEngine {
     private func consume(_ line: String, id: String, token: UUID, errors: inout String) {
         guard tokens[id] == token, let index = jobs.firstIndex(where: { $0.id == id }) else { return }
         if progress[id]?.consume(line) == true {
-            if let title = progress[id]?.title { jobs[index].name = title }
+            if let title = progress[id]?.title {
+                jobs[index].name = jobs[index].playlistIndex.map { "P\($0) " + (jobs[index].playlistTitle ?? title) } ?? title
+            }
             if progress[id]?.postProcessing == true, jobs[index].status != .postProcessing {
                 captureProgress(id)
                 jobs[index].status = .postProcessing
@@ -380,21 +401,21 @@ public actor YtDlpEngine: DownloadEngine {
     }
 
     private func arguments(
-        for job: YtDlpJob, deno: URL?, quality: YtDlpQuality, subtitles: YtDlpSubtitles
+        for job: YtDlpJob, deno: URL?, quality: YtDlpQuality, subtitles: YtDlpSubtitles, taskCookiesURL: URL?
     ) -> [String] {
         var result = [
-            "--ignore-config", "--no-playlist", "--no-simulate", "--newline", "--progress",
+            "--ignore-config", "--no-simulate", "--newline", "--progress",
             "--no-colors", "--continue", "--no-overwrites", "--no-cache-dir",
             "--paths", job.directory.path,
-            "--output", job.id + "-%(title).160B.%(ext)s",
+            "--output", job.id + "-" + (job.playlistIndex.map { "P\($0) " } ?? "") + "%(title).160B.%(ext)s",
             "--print", YtDlpProgress.metadataTemplate,
             "--print", YtDlpProgress.fileTemplate,
             "--progress-template", YtDlpProgress.downloadTemplate,
             "--progress-template", YtDlpProgress.postprocessTemplate
-        ] + quality.arguments
+        ] + YtDlpPlaylistEntry.arguments(for: job.url, site: job.site) + quality.arguments
         if let ffmpegURL { result += ["--ffmpeg-location", ffmpegURL.path] }
         if let deno { result += ["--js-runtimes", "deno:" + deno.path] }
-        if let cookiesURL { result += ["--cookies", cookiesURL.path] }
+        if let url = taskCookiesURL ?? cookiesURL { result += ["--cookies", url.path] }
         if job.site == .bilibili { result += subtitles.arguments }
         if let options, options.downloadLimit > 0 {
             result += ["--limit-rate", String(max(1, options.downloadLimit / Int64(max(1, workers.count))))]

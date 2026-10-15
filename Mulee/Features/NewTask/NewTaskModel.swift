@@ -72,11 +72,26 @@ final class NewTaskModel {
         inputText += separator + text
     }
 
+    var downloadLinks: [ParsedLink] {
+        links.flatMap { item in
+            item.selectedVideoEntries.isEmpty ? [item.link] : item.selectedVideoEntries.map(\.link)
+        }
+    }
+
+    var videoEntries: [ParsedLink: YtDlpPlaylistEntry] {
+        Dictionary(links.flatMap(\.selectedVideoEntries).map { ($0.link, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
     func createTasks(in model: AppModel) {
         guard canStartDownload else { return }
         // TODO: 把逐任务画质和字幕选项传给视频引擎；当前使用全局设置。
+        var expandedContexts = contexts
+        for item in links {
+            for entry in item.selectedVideoEntries { expandedContexts[entry.link] = contexts[item.link] }
+        }
         model.addTasks(
-            from: parsedLinks, autoExtract: autoExtract, directory: saveDirectory, filePriorities: filePriorities, contexts: contexts
+            from: downloadLinks, autoExtract: autoExtract, directory: saveDirectory,
+            filePriorities: filePriorities, videoEntries: videoEntries, contexts: expandedContexts
         )
     }
 

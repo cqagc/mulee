@@ -1,6 +1,6 @@
 "use strict";
 
-if (typeof importScripts === "function") importScripts("core.js");
+if (typeof importScripts === "function") importScripts("core.js", "video-login.js");
 const extensionAPI = globalThis.browser || globalThis.chrome;
 const linksAPI = globalThis.MuleeLinks;
 
@@ -24,6 +24,7 @@ async function openEntry(url) {
 
 async function sendLinks(links, referrer, text) {
     const batches = linksAPI.buildBatches(links, referrer, text);
+    if (globalThis.MuleeVideoLogin) await globalThis.MuleeVideoLogin.transfer(extensionAPI, links);
     for (const url of batches) await openEntry(url);
     return batches.length;
 }
@@ -52,7 +53,15 @@ extensionAPI.tabs.onRemoved.addListener(tabID => {
 });
 
 extensionAPI.runtime.onMessage.addListener((message, sender, respond) => {
-    if (sender.id !== extensionAPI.runtime.id || sender.tab || message?.type !== "sendLinks") return false;
+    if (sender.id !== extensionAPI.runtime.id || sender.tab) return false;
+    if (message?.type === "syncVideoLogin") {
+        globalThis.MuleeVideoLogin.transfer(extensionAPI, [], true).then(
+            () => respond({ ok: true }),
+            () => respond({ ok: false, error: "videoLoginFailed" })
+        );
+        return true;
+    }
+    if (message?.type !== "sendLinks") return false;
     sendLinks(message.links, message.referrer, message.text).then(
         batches => respond({ ok: true, batches }),
         error => respond({ ok: false, error: error.message })

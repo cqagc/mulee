@@ -1,7 +1,6 @@
 import MuleeCore
 import SwiftUI
 
-@main
 struct MuleeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model: AppModel

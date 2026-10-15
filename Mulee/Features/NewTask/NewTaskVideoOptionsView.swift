@@ -1,4 +1,5 @@
 import SwiftUI
+import MuleeCore
 
 struct NewTaskVideoOptionsView: View {
     @Environment(SettingsModel.self) private var settings
@@ -22,6 +23,7 @@ struct NewTaskVideoOptionsView: View {
                     .fixedSize()
             }
             .disabled(true)
+            NewTaskVideoPartsView(item: item)
             Text("使用全局视频设置，将在后续版本支持单独设置")
                 .foregroundStyle(.secondary)
         }
@@ -31,6 +33,13 @@ struct NewTaskVideoOptionsView: View {
         .padding(.leading, 68)
         .padding(.trailing, 14)
         .padding(.bottom, 12)
+        .task(id: item.id) {
+            await item.loadVideoParts { url in
+                try await VideoPlaylistProvider.shared.entries(
+                    for: url, channel: settings.ytDlpChannel == .stable ? .stable : .nightly
+                )
+            }
+        }
         .onChange(of: VideoEngineConfiguration.configuration(from: settings), initial: true) {
             item.videoQuality = settings.videoQuality == .compatible ? .compatible1080p : .bestQuality
             item.danmakuToASS = settings.danmakuToASS
