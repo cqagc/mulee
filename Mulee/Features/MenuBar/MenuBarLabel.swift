@@ -1,15 +1,24 @@
 import SwiftUI
 
-/// 菜单栏上常驻的图标 + 实时下载速度。
+/// 菜单栏上常驻的图标；有下载速度时右侧跟实时速度。
 struct MenuBarLabel: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        Label {
-            Text(model.totalDownloadRate, format: .byteCount(style: .file))
-        } icon: {
-            Image(.menuBarIcon)
+        if model.totalDownloadRate > 0 {
+            Label {
+                Text(model.totalDownloadRate, format: .byteCount(style: .file))
+            } icon: {
+                Image(.menuBarIcon)
+            }
+            .labelStyle(.titleAndIcon)
+        } else {
+            Label {
+                Text("Mulee")
+            } icon: {
+                Image(.menuBarIcon)
+            }
+            .labelStyle(.iconOnly)
         }
-        .labelStyle(.titleAndIcon)
     }
 }
