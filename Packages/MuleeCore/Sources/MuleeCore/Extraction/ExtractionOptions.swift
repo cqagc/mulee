@@ -1,6 +1,8 @@
 import Foundation
 
 public struct ExtractionOptions: Sendable {
+    public var readArchiveComment: Bool
+    public var pagePasswords: [String]
     public var encoding: ArchiveFilenameEncoding
     public var postAction: ExtractionPostAction
     public var recursivelyExtract: Bool
@@ -9,6 +11,8 @@ public struct ExtractionOptions: Sendable {
     public var timeout: Duration
 
     public init(
+        readArchiveComment: Bool = false,
+        pagePasswords: [String] = [],
         encoding: ArchiveFilenameEncoding = .automatic,
         postAction: ExtractionPostAction = .trash,
         recursivelyExtract: Bool = false,
@@ -16,6 +20,8 @@ public struct ExtractionOptions: Sendable {
         expectedVolumeCount: Int? = nil,
         timeout: Duration = .seconds(600)
     ) {
+        self.readArchiveComment = readArchiveComment
+        self.pagePasswords = pagePasswords
         self.encoding = encoding
         self.postAction = postAction
         self.recursivelyExtract = recursivelyExtract

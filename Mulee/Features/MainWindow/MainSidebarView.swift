@@ -27,7 +27,15 @@ struct MainSidebarView: View {
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            NetworkStatusView(status: model.networkStatus)
+            VStack(alignment: .leading) {
+                if model.isScheduledLimitActive {
+                    Text("计划限速中")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                }
+                NetworkStatusView(status: model.networkStatus)
+            }
         }
     }
 }

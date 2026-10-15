@@ -56,8 +56,7 @@ struct ProxyStatusCard: View {
     }
 
     private func copyRules() {
-        NSPasteboard.general.clearContents()
-        copied = NSPasteboard.general.setString(Self.rules, forType: .string)
+        copied = SystemClipboard.write(Self.rules)
     }
 
     private func recheck() {

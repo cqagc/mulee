@@ -57,27 +57,39 @@ public actor ArchiveExtractor {
             if !verified {
                 let failure = Self.classify(initial.text, multipart: set.isMultipart)
                 guard failure == .wrongPasswords else { throw failure }
-                var candidates: [String] = []
-                for source in match.sources {
+                var sources = match.sources.filter {
+                    if case .keychainItem = $0 { return true }
+                    return false
+                }
+                sources.append(.pageText)
+                if options.readArchiveComment { sources.append(.archiveComment) }
+                if rules.contains(where: { $0.matchKind == .passwordBook }) { sources.append(.passwordBook) }
+                var seen = Set<String>()
+                sourceLoop: for source in sources {
+                    let candidates: [String]
                     switch source {
                     case .keychainItem(let id):
-                        if let password = try await passwords.password(for: id) { candidates.append(password) }
+                        candidates = try await passwords.password(for: id).map { [$0] } ?? []
+                    case .pageText:
+                        candidates = options.pagePasswords
+                    case .archiveComment:
+                        candidates = try await ArchiveCommentReader.password(archive: main, binary: binary, timeout: options.timeout).map { [$0] } ?? []
                     case .passwordBook:
-                        candidates += try await passwords.passwordBook()
+                        candidates = try await passwords.passwordBook()
                     }
-                }
-                for candidate in candidates {
-                    let test = try await SevenZipProcess.run(
-                        binary: binary, arguments: ["t", "-sccUTF-8", "--", main.path], password: candidate, timeout: options.timeout
-                    )
-                    if test.status == 0 {
-                        verified = true
-                        successfulPassword = candidate
-                        usedSource = match.sources.first
-                        break
+                    for candidate in candidates where seen.insert(candidate).inserted {
+                        let test = try await SevenZipProcess.run(
+                            binary: binary, arguments: ["t", "-sccUTF-8", "--", main.path], password: candidate, timeout: options.timeout
+                        )
+                        if test.status == 0 {
+                            verified = true
+                            successfulPassword = candidate
+                            usedSource = source
+                            break sourceLoop
+                        }
+                        let failure = Self.classify(test.text, multipart: set.isMultipart)
+                        if failure != .wrongPasswords { throw failure }
                     }
-                    let failure = Self.classify(test.text, multipart: set.isMultipart)
-                    if failure != .wrongPasswords { throw failure }
                 }
             }
             guard verified else { throw ExtractionFailure.wrongPasswords }
@@ -137,7 +149,7 @@ public actor ArchiveExtractor {
                                                 sourceURL: sourceURL, options: childOptions, depth: depth + 1, progress: nil))
                 }
             }
-            let result = ExtractionResult(status: .succeeded, failure: nil, matchedRule: usedSource == nil ? nil : match.matchedRule,
+            let result = ExtractionResult(status: .succeeded, failure: nil, matchedRule: matchedRule(for: usedSource, match: match, rules: rules),
                                           passwordSource: usedSource, encoding: encoding, topLevelItems: items,
                                           originalVolumes: originals, warnings: warnings, nestedResults: nested)
             do { try options.postAction.apply(to: result) }
@@ -161,9 +173,17 @@ public actor ArchiveExtractor {
             let waiting: Bool
             if case .missingVolumes = failure { waiting = true } else { waiting = false }
             return ExtractionResult(status: waiting ? .waitingForVolumes : .failed, failure: failure,
-                                    matchedRule: usedSource == nil ? nil : match.matchedRule, passwordSource: usedSource,
+                                    matchedRule: matchedRule(for: usedSource, match: match, rules: rules), passwordSource: usedSource,
                                     encoding: encoding, topLevelItems: [], originalVolumes: originals,
                                     warnings: warnings, nestedResults: [])
+        }
+    }
+
+    private func matchedRule(for source: UnzipPasswordSource?, match: UnzipRuleMatch, rules: [UnzipRule]) -> UnzipRule? {
+        switch source {
+        case .keychainItem: match.matchedRule
+        case .passwordBook: rules.first { $0.matchKind == .passwordBook }
+        default: nil
         }
     }
 

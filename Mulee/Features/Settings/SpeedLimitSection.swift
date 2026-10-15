@@ -30,7 +30,21 @@ struct SpeedLimitSection: View {
             }
             Toggle(isOn: $model.scheduledLimit) {
                 Text("计划限速")
-                Text("工作日 9:00–18:00 下载限制为 5 MB/s")
+                Text("工作日按以下时段限速；支持跨午夜，开始与结束相同时不生效")
+            }
+            if model.scheduledLimit {
+                DatePicker("开始时间", selection: $model.scheduleStart, displayedComponents: .hourAndMinute)
+                DatePicker("结束时间", selection: $model.scheduleEnd, displayedComponents: .hourAndMinute)
+                Picker("时段内下载限速", selection: $model.scheduledDownloadLimit) {
+                    ForEach(SettingsModel.downloadLimitOptions, id: \.self) { limit in
+                        Text(Self.title(for: Double(limit))).tag(limit)
+                    }
+                }
+                Picker("时段内上传限速", selection: $model.scheduledUploadLimit) {
+                    ForEach(SettingsModel.uploadLimitOptions, id: \.self) { limit in
+                        Text(Self.title(for: limit)).tag(limit)
+                    }
+                }
             }
             LabeledContent {
                 HStack {

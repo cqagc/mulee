@@ -13,11 +13,15 @@ struct GeneralSettingsTab: View {
                         .foregroundStyle(.secondary)
                 }
                 Toggle("关闭窗口后继续在菜单栏运行", isOn: $model.closeKeepsRunning)
-                Toggle("开机启动", isOn: $model.launchAtLogin)
+                LoginItemSection()
             }
             Section("睡眠") {
                 Toggle("下载时阻止睡眠", isOn: $model.preventSleep)
-                Toggle("全部完成后允许睡眠", isOn: $model.allowSleepWhenDone)
+                Toggle(isOn: $model.allowSleepWhenDone) {
+                    Text("全部完成后允许睡眠")
+                    Text("开启时，做种和电驴等待来源不阻止睡眠；关闭时，这些任务也会阻止睡眠。仅在「下载时阻止睡眠」开启时生效。")
+                }
+                .disabled(!model.preventSleep)
             }
             DefaultHandlerSection()
             BrowserExtensionSection()

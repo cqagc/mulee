@@ -28,7 +28,10 @@ struct UnzipSettingsTab: View {
                     Text("从下载页面的文字里识别「解压密码：xxx」")
                     Text("需要安装浏览器扩展")
                 }
-                Toggle("读取压缩包注释里的密码", isOn: $model.readArchiveComment)
+                Toggle(isOn: $model.readArchiveComment) {
+                    Text("读取压缩包注释里的密码")
+                    Text("支持 ZIP 和 RAR5；当前解压工具不提供 7z 和旧版 RAR 的注释")
+                }
             }
             Section("解压后") {
                 LabeledContent {

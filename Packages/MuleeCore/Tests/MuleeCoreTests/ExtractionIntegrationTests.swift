@@ -34,7 +34,7 @@ struct ExtractionIntegrationTests {
         }
     }
 
-    @Test("密码本依次尝试；全错和命中规则密码错误均保留原件")
+    @Test("密码本依次尝试；全错保留原件，规则密码错误可回退密码本")
     func passwordBookAndFailure() async throws {
         try await ExtractionFixture.withFixture { fixture in
             let file = try fixture.file("fictional.txt")
@@ -48,11 +48,11 @@ struct ExtractionIntegrationTests {
             #expect(success.matchedRule == book)
             #expect(success.passwordSource == .passwordBook)
             let bad = ArchiveExtractor(passwords: InMemoryPasswordProvider(passwords: ["rule": "wrong"], passwordBook: ["fictional-secret"]))
-            let failure = await bad.extract(archive: archive, destination: fixture.root.appendingPathComponent("bad"), rules: [fixture.rule(), book])
-            #expect(failure.status == .failed)
-            #expect(failure.failure == .wrongPasswords)
+            let failure = await bad.extract(archive: archive, destination: fixture.root.appendingPathComponent("bad"), rules: [fixture.rule(), book], options: ExtractionOptions(postAction: .keep))
+            #expect(failure.status == .succeeded)
+            #expect(failure.passwordSource == .passwordBook)
             #expect(try Data(contentsOf: archive) == bytes)
-            #expect(!FileManager.default.fileExists(atPath: fixture.root.appendingPathComponent("bad").path))
+            #expect(FileManager.default.fileExists(atPath: fixture.root.appendingPathComponent("bad").path))
             let badBook = ArchiveExtractor(passwords: InMemoryPasswordProvider(passwordBook: ["bad", "also-bad"]))
             let allWrong = await badBook.extract(archive: archive, destination: fixture.destination, rules: [book])
             #expect(allWrong.failure == .wrongPasswords)
