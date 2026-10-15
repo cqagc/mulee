@@ -2,7 +2,8 @@ import Foundation
 import MuleeCore
 import Observation
 
-/// 全局 UI 状态。引擎接入前用 MockData 填充，所有操作只改内存里的示例数据。
+/// 全局 UI 状态。默认示例数据供预览使用，正式启动显式传入空列表。
+@MainActor
 @Observable
 final class AppModel {
     var tasks: [DownloadTask] {
@@ -12,6 +13,8 @@ final class AppModel {
         didSet { updateSleepPrevention() }
     }
     var networkStatus: NetworkStatus
+    var engineStates: [TaskKind: EngineState] = Dictionary(uniqueKeysWithValues: TaskKind.allCases.map { ($0, .unavailable) })
+    @ObservationIgnored weak var coordinator: DownloadCoordinator?
     var unzipRules: [UnzipRule]
     /// 主窗口当前选中的任务。
     var selectedTaskID: DownloadTask.ID?
@@ -36,7 +39,7 @@ final class AppModel {
         self.preventsSleepWhileDownloading = preventsSleepWhileDownloading
         self.networkStatus = networkStatus
         self.unzipRules = unzipRules
-        self.selectedTaskID = MockData.longTailTask.id
+        self.selectedTaskID = tasks.first { $0.id == MockData.longTailTask.id }?.id ?? tasks.first?.id
         let current = tasks.reduce(0) { $0 + $1.downloadRate }
         // 示例曲线：从三成速度逐步爬升到当前速度。
         self.downloadRateHistory = (0..<30).map { index in
@@ -77,37 +80,53 @@ final class AppModel {
 
     /// 暂停所有未完成的任务。
     func pauseAll() {
-        for index in tasks.indices where [.downloading, .waitingForSources].contains(tasks[index].status) {
-            pause(at: index)
+        for task in tasks where [.downloading, .waitingForSources, .queued].contains(task.status) {
+            pause(task.id)
         }
     }
 
     /// 继续所有暂停的任务。
     func resumeAll() {
-        for index in tasks.indices where tasks[index].status == .paused {
-            resume(at: index)
+        for task in tasks where task.status == .paused {
+            resume(task.id)
         }
     }
 
     func pause(_ id: DownloadTask.ID) {
+        if let coordinator {
+            Task { await coordinator.pause(id) }
+            return
+        }
         guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
         pause(at: index)
     }
 
     func resume(_ id: DownloadTask.ID) {
+        if let coordinator {
+            Task { await coordinator.resume(id) }
+            return
+        }
         guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
         resume(at: index)
     }
 
     func remove(_ id: DownloadTask.ID) {
+        if let coordinator {
+            Task { await coordinator.remove(id) }
+            return
+        }
         tasks.removeAll { $0.id == id }
         if selectedTaskID == id {
             selectedTaskID = nil
         }
     }
 
-    /// 根据识别出的链接创建任务（示例实现：只加入列表，不真正下载）。
-    func addTasks(from links: [ParsedLink], autoExtract: Bool) {
+    /// 正式运行交给协调器；没有协调器时保留预览和测试的示例行为。
+    func addTasks(from links: [ParsedLink], autoExtract: Bool, directory: URL? = nil) {
+        if let coordinator {
+            Task { await coordinator.add(links: links, autoExtract: autoExtract, directory: directory) }
+            return
+        }
         let newTasks = links.map { DownloadTask(link: $0, autoExtract: autoExtract) }
         tasks.insert(contentsOf: newTasks, at: 0)
         selectedTaskID = newTasks.first?.id ?? selectedTaskID

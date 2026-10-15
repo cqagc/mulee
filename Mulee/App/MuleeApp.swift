@@ -1,14 +1,31 @@
+import MuleeCore
 import SwiftUI
 
 @main
 struct MuleeApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var model: AppModel
     @State private var settings: SettingsModel
 
     init() {
         let settings = SettingsModel()
         _settings = State(initialValue: settings)
-        _model = State(initialValue: AppModel(preventsSleepWhileDownloading: settings.preventSleep))
+        let usesSampleData: Bool
+        #if DEBUG
+        usesSampleData = DebugLaunchOptions.usesSampleData
+        #else
+        usesSampleData = false
+        #endif
+        let model = AppModel(
+            tasks: usesSampleData ? MockData.tasks : [],
+            networkStatus: usesSampleData ? MockData.healthyNetwork : NetworkStatus(
+                ed2kID: .disconnected, kad: .disconnected, bittorrentPortReachable: nil,
+                p2pRoutedThroughProxy: false, p2pExitIP: nil, portMappingSucceeded: nil
+            ),
+            preventsSleepWhileDownloading: settings.preventSleep
+        )
+        _model = State(initialValue: model)
+        appDelegate.configure(model: model, settings: settings, usesSampleData: usesSampleData)
     }
 
     var body: some Scene {

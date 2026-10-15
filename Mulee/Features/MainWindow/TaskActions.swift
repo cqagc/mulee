@@ -9,8 +9,7 @@ enum TaskActions {
     }
 
     static func localURL(for task: DownloadTask) -> URL {
-        // TODO: 引擎接入后改用任务真实保存路径。
-        URL.downloadsDirectory.appending(path: "Mulee", directoryHint: .isDirectory)
+        task.savePath ?? URL.downloadsDirectory.appending(path: "Mulee", directoryHint: .isDirectory)
             .appending(path: task.name, directoryHint: .inferFromPath)
     }
 
@@ -19,8 +18,9 @@ enum TaskActions {
         if FileManager.default.fileExists(atPath: url.path) {
             NSWorkspace.shared.activateFileViewerSelecting([url])
         } else {
-            let directory = URL.downloadsDirectory.appending(path: "Mulee", directoryHint: .isDirectory)
-            NSWorkspace.shared.open(FileManager.default.fileExists(atPath: directory.path) ? directory : .downloadsDirectory)
+            let directory = task.savePath?.deletingLastPathComponent()
+                ?? URL.downloadsDirectory.appending(path: "Mulee", directoryHint: .isDirectory)
+            NSWorkspace.shared.open(task.savePath != nil || FileManager.default.fileExists(atPath: directory.path) ? directory : .downloadsDirectory)
         }
     }
 }

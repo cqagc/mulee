@@ -61,7 +61,7 @@ final class NewTaskModel {
 
     func createTasks(in model: AppModel) {
         guard canStartDownload else { return }
-        model.addTasks(from: parsedLinks, autoExtract: autoExtract)
+        model.addTasks(from: parsedLinks, autoExtract: autoExtract, directory: saveDirectory)
     }
 
     private func parseInput() {

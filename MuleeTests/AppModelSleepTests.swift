@@ -1,3 +1,4 @@
+import MuleeCore
 import Testing
 @testable import Mulee
 
@@ -19,7 +20,7 @@ import Testing
 
     @Test func pauseAllReleasesAndResumeReacquires() {
         let provider = CountingProvider()
-        let model = AppModel(sleepPreventer: SleepPreventer(provider: provider))
+        let model = AppModel(tasks: MockData.tasks, sleepPreventer: SleepPreventer(provider: provider))
         #expect(model.isPreventingSleep)
 
         model.pauseAll()
@@ -39,7 +40,7 @@ import Testing
 
     @Test func disablingPreferenceImmediatelyReleasesAndEnablingReacquires() {
         let provider = CountingProvider()
-        let model = AppModel(sleepPreventer: SleepPreventer(provider: provider))
+        let model = AppModel(tasks: MockData.tasks, sleepPreventer: SleepPreventer(provider: provider))
         #expect(model.hasActiveTransfers)
         #expect(provider.created == 1)
 
@@ -62,6 +63,7 @@ import Testing
     @Test func disabledInitialPreferenceDoesNotAcquireAssertion() {
         let provider = CountingProvider()
         let model = AppModel(
+            tasks: MockData.tasks,
             preventsSleepWhileDownloading: false,
             sleepPreventer: SleepPreventer(provider: provider)
         )
