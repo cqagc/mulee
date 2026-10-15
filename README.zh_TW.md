@@ -85,16 +85,12 @@ Mulee 支援 HTTP / HTTPS / FTP、BT / 磁力連結、電驢與影片下載。�
 | BT / 磁力 / .torrent | libtorrent 2.0 引擎，可選擇下載檔案；分享率達到 1:1 後降低速度或停止，可設定私有種子不受此限制。 |
 | 電驢 ed2k | 使用 aMule 3.1（`amuled`），冷門資源可以掛幾週等待來源。顯示排隊名次、來源數、完整來源最後出現時間與近 14 天的來源紀錄。等待來源是正常的任務狀態。 |
 | 影片 | 使用 yt-dlp，主要支援 Bilibili / YouTube；Bilibili 彈幕可轉成 ASS 字幕。yt-dlp、Deno、ffmpeg 由 Mulee 自行下載並驗證。 |
-| 迅雷連結 | 解析 `thunder://` 中的原始連結，交給對應引擎；不提供迅雷 P2SP 加速。 |
+| 迅雷連結 | 解析 `thunder://` 中的原始連結，交給對應引擎。 |
 | 自動解壓縮 | 7-Zip 解壓縮已完成的下載，密碼規則中的密碼存入鑰匙圈，修復 GBK / Big5 / Shift-JIS 檔名亂碼。 |
 | 網路診斷 | 檢查 P2P 流量是否經過代理、監聽連接埠能否從外部連入。附有可複製的 Stash / Clash 規則與連接埠轉送說明。 |
 | macOS 整合 | 可設為 magnet / ed2k / thunder / .torrent 預設開啟程式，提供 Chrome / Safari 擴充功能、選單列即時速度和下載時防止睡眠。 |
 
 App 隨附四個輔助程式：`aria2c`、`mulee-torrentd`、`amuled`、`7zz`。它們以固定版本的原始碼編譯，僅動態連結系統函式庫。發行的 App 使用 Developer ID 簽署，並通過 Apple 公證。
-
-### 專案範圍
-
-不加廣告，不內建資源搜尋、推薦或種子站，不提供迅雷 P2SP 加速，也不製作 Windows / Linux 版。
 
 ---
 

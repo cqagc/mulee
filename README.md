@@ -85,16 +85,12 @@ All tasks shown are sample data. Click an image to view it at full size.
 | BitTorrent / magnet / .torrent | libtorrent 2.0 supports file selection and seeding policies: throttle or stop at a 1:1 share ratio, with an optional exemption for private torrents. |
 | eD2k | Uses aMule 3.1 (`amuled`). Downloads of rare files can wait for sources for weeks. Shows queue position, source counts, when a complete source was last seen, and source activity over the past 14 days. Waiting for sources is a normal task state. |
 | Video | Uses yt-dlp, with Bilibili and YouTube as the main supported sites. Bilibili danmaku can be converted to ASS subtitles. Mulee downloads and verifies yt-dlp, Deno, and ffmpeg itself. |
-| Thunder links | Decodes `thunder://` links and passes the original URL to the appropriate engine. No Xunlei P2SP acceleration. |
+| Thunder links | Decodes `thunder://` links and passes the original URL to the appropriate engine. |
 | Automatic extraction | 7-Zip extracts completed downloads, stores password-rule secrets in Keychain, and repairs garbled GBK / Big5 / Shift-JIS filenames. |
 | Network diagnostics | Checks whether P2P traffic goes through a proxy and whether listening ports accept incoming connections. Includes Stash / Clash rules to copy and instructions for port forwarding. |
 | macOS integration | Default handler for magnet / ed2k / thunder / .torrent, Chrome and Safari extensions, live menu bar speeds, and sleep prevention while downloading. |
 
 The app bundles four helpers built from pinned source versions: `aria2c`, `mulee-torrentd`, `amuled`, and `7zz`. Their dynamic dependencies are limited to system libraries. The distributed app is Developer ID signed and notarized by Apple.
-
-### Scope
-
-Mulee does not include ads, built-in resource search or recommendations, torrent indexes, or Xunlei P2SP acceleration. Windows and Linux versions are outside the project's scope.
 
 ---
 
