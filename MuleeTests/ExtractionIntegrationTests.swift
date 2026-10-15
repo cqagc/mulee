@@ -5,12 +5,12 @@ import Testing
 
 @Suite @MainActor struct ExtractionIntegrationTests {
     nonisolated private static var binary: URL? {
-        ["/opt/homebrew/bin/7zz", "/usr/local/bin/7zz"].first {
-            FileManager.default.isExecutableFile(atPath: $0)
-        }.map { URL(filePath: $0) }
+        guard let path = ProcessInfo.processInfo.environment["MULEE_7ZZ"], !path.isEmpty,
+              FileManager.default.isExecutableFile(atPath: path) else { return nil }
+        return URL(fileURLWithPath: path)
     }
 
-    @Test(.enabled(if: Self.binary != nil, "本机没有 7zz，跳过集成测试"))
+    @Test(.enabled(if: Self.binary != nil, "未设置可执行的 MULEE_7ZZ，跳过集成测试"))
     func extractsEncryptedArchiveAfterTaskCompletes() async throws {
         let binary = try #require(Self.binary)
         let context = try ExtractionTestContext()
@@ -22,8 +22,10 @@ import Testing
         try FileManager.default.removeItem(at: payload)
         let rule = UnzipRule(matchKind: .sourceSite, pattern: "files.example.com", keychainItemID: "integration", maskedLength: 16, hitCount: 0)
         context.model.unzipRules = [rule]
+        let bundled = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/7zz")
+        #expect(FileManager.default.isExecutableFile(atPath: bundled.path))
         let service = ArchiveExtractionService(
-            binary: binary, passwords: InMemoryPasswordProvider(passwords: ["integration": "integration-only"])
+            passwords: InMemoryPasswordProvider(passwords: ["integration": "integration-only"])
         )
         let coordinator = ExtractionCoordinator(model: context.model, settings: context.settings, extractor: service)
         context.model.tasks = [try context.task("星雲.7z", createFile: false)]
@@ -47,6 +49,10 @@ import Testing
         let process = Process()
         process.executableURL = binary
         process.currentDirectoryURL = payload.deletingLastPathComponent()
+        var environment = ProcessInfo.processInfo.environment
+        environment["LANG"] = "en_US.UTF-8"
+        environment["LC_ALL"] = "en_US.UTF-8"
+        process.environment = environment
         process.arguments = ["a", "-t7z", "-pintegration-only", "-mhe=on", archive.path, payload.lastPathComponent]
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice

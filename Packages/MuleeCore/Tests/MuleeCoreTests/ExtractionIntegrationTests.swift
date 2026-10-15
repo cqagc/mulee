@@ -4,7 +4,7 @@ import Synchronization
 import Testing
 @testable import MuleeCore
 
-@Suite(.serialized, .enabled(if: ExtractionFixture.binary != nil))
+@Suite(.serialized, .enabled(if: ExtractionFixture.binary != nil, "未设置可执行的 MULEE_7ZZ，跳过集成测试"))
 struct ExtractionIntegrationTests {
     @Test("加密文件头规则密码解压，保留原件、碰撞自动编号、进度完成")
     func encryptedHeaders() async throws {

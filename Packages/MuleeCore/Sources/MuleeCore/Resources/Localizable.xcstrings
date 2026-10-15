@@ -1496,25 +1496,25 @@
         }
       }
     },
-    "找不到 7-Zip 解压工具": {
+    "Mulee 缺少内置的 7-Zip 解压工具，请重新安装 Mulee": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "找不到 7-Zip 解压工具"
+            "value": "Mulee 缺少内置的 7-Zip 解压工具，请重新安装 Mulee"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "7-Zip extraction tool not found"
+            "value": "Mulee is missing its built-in 7-Zip extraction tool. Please reinstall Mulee."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "找不到 7-Zip 解壓縮工具"
+            "value": "Mulee 缺少內建的 7-Zip 解壓縮工具，請重新安裝 Mulee"
           }
         }
       }

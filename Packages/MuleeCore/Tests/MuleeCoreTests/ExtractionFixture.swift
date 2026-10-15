@@ -3,7 +3,11 @@ import Testing
 @testable import MuleeCore
 
 struct ExtractionFixture: Sendable {
-    static let binary = SevenZipProcess.homebrewBinary
+    static var binary: URL? {
+        guard let path = ProcessInfo.processInfo.environment["MULEE_7ZZ"], !path.isEmpty,
+              FileManager.default.isExecutableFile(atPath: path) else { return nil }
+        return URL(fileURLWithPath: path)
+    }
     let root: URL
     let destination: URL
 

@@ -64,6 +64,9 @@ targets:
       - name: Bundle amuled
         script: '"$SRCROOT"/scripts/build-amuled.sh'
         basedOnDependencyAnalysis: false
+      - name: Bundle 7-Zip
+        script: '"$SRCROOT"/scripts/build-7zip.sh'
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cqagc.mulee

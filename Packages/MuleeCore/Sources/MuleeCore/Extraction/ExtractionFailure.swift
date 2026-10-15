@@ -20,7 +20,7 @@ public enum ExtractionFailure: Error, Sendable, Equatable, LocalizedError {
         case .missingVolumes: String(localized: "分卷不全，等待其余分卷下载完成", bundle: .module)
         case .insufficientSpace: String(localized: "磁盘空间不足", bundle: .module)
         case .unsafePath: String(localized: "压缩包包含不安全的路径或链接", bundle: .module)
-        case .executableMissing: String(localized: "找不到 7-Zip 解压工具", bundle: .module)
+        case .executableMissing: String(localized: "Mulee 缺少内置的 7-Zip 解压工具，请重新安装 Mulee", bundle: .module)
         case .passwordStorage: String(localized: "无法读取或保存解压密码", bundle: .module)
         case .invalidPassword: String(localized: "密码包含不支持的换行符或长度过长", bundle: .module)
         case .cancelled: String(localized: "解压已取消", bundle: .module)
