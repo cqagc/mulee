@@ -72,7 +72,7 @@ targets:
         LSApplicationCategoryType: public.app-category.utilities
         NSHumanReadableCopyright: "© 2026 CQAGC. GPL-3.0."
         SUFeedURL: https://github.com/cqagc/mulee/releases/latest/download/appcast.xml
-        SUPublicEDKey: REPLACE_WITH_SPARKLE_PUBLIC_ED_KEY
+        SUPublicEDKey: "v0O71QSNMq+qeWqiJJJw2zLqjpg9AItheGRHHwfmhj0="
         SUEnableAutomaticChecks: YES
         SUScheduledCheckInterval: 86400
         SUEnableSystemProfiling: NO

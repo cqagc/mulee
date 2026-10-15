@@ -85,7 +85,7 @@
 	<key>SUFeedURL</key>
 	<string>https://github.com/cqagc/mulee/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>REPLACE_WITH_SPARKLE_PUBLIC_ED_KEY</string>
+	<string>v0O71QSNMq+qeWqiJJJw2zLqjpg9AItheGRHHwfmhj0=</string>
 	<key>SUScheduledCheckInterval</key>
 	<integer>86400</integer>
 	<key>UTImportedTypeDeclarations</key>
