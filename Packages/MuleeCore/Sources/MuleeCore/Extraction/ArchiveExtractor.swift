@@ -5,7 +5,7 @@ public actor ArchiveExtractor {
     private let passwords: any PasswordProviding
 
     public init(binary: URL? = nil, passwords: any PasswordProviding = InMemoryPasswordProvider()) {
-        self.binary = binary ?? SevenZipProcess.homebrewBinary
+        self.binary = SevenZipProcess.locate(explicitURL: binary)
         self.passwords = passwords
     }
 

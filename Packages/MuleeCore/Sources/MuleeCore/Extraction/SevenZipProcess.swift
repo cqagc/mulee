@@ -3,10 +3,22 @@ import Foundation
 
 /// 每次调用独占 Process 和管道，在同一个任务中轮询非阻塞输出，无共享可变状态。
 enum SevenZipProcess {
-    static var homebrewBinary: URL? {
-        ["/opt/homebrew/bin/7zz", "/usr/local/bin/7zz"].first {
-            FileManager.default.isExecutableFile(atPath: $0)
-        }.map { URL(fileURLWithPath: $0) }
+    static func locate(
+        explicitURL: URL?,
+        bundleURL: URL = Bundle.main.bundleURL,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> URL? {
+        var candidates = [URL]()
+        if let explicitURL { candidates.append(explicitURL) }
+        candidates.append(bundleURL.appendingPathComponent("Contents/Helpers/7zz"))
+        if let path = environment["MULEE_7ZZ"], !path.isEmpty {
+            candidates.append(URL(fileURLWithPath: path))
+        }
+        return candidates.first {
+            var isDirectory: ObjCBool = false
+            return FileManager.default.fileExists(atPath: $0.path, isDirectory: &isDirectory)
+                && !isDirectory.boolValue && FileManager.default.isExecutableFile(atPath: $0.path)
+        }
     }
 
     @concurrent

@@ -14,7 +14,7 @@ xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' 
 
 ## worktree 共享缓存
 
-三个脚本优先使用已初始化子模块自身的 HEAD；子模块为空时，读取父仓库索引中的
+aria2、torrentd、aMule 三个脚本优先使用已初始化子模块自身的 HEAD；子模块为空时，读取父仓库索引中的
 `ThirdParty/<模块>` gitlink，不会误用父仓库 HEAD。仅缓存未命中、需要源码编译时
 才要求相应子模块初始化；wxWidgets 的 PCRE2 / Expat 嵌套模块也仅在编译 wx 时校验。
 因此新 worktree 可直接复用指向主仓库 `build/thirdparty` 的符号链接，无需初始化子模块。
@@ -29,6 +29,7 @@ aria2 / aMule 则复制已链接的二进制，不重用构建树或 CMake 导�
 
 编译成功时同时缓存许可证文本：torrentd 使用 `<键>/licenses/<组件>/`，
 aria2 使用 `aria2/<键>/licenses/`，aMule 使用 `amuled/<键>/licenses/<组件>/`。
+7-Zip 使用 `7zip/<键>/licenses/`，缓存键始终取父仓库索引记录的 gitlink。
 打包只读取这些缓存文本，不读取当前 worktree 的子模块源码。
 
 ### 旧缓存一次性迁移（2026-10-15）
@@ -91,6 +92,48 @@ standalone 产物为 `<cache>/bin/aria2c`。集成测试只使用 `MULEE_ARIA2C`
 Xcode 脚本关闭用户脚本沙盒，以便在缓存目录编译、打包并签名；构建阶段每次运行。
 增量构建会清除旧的 `Contents/Frameworks/aria2`、`Contents/Resources/aria2`，以及仅旧 aria2
 使用的 Homebrew 依赖许可证；保留 BT / 电驴引擎共用的 OpenSSL、Boost 等许可证。
+
+## 解压工具 7-Zip
+
+`Mulee` 在 amuled 之后运行 `Bundle 7-Zip`，从官方子模块 `ThirdParty/7zip`
+（ip7z/7zip 26.04）编译并打包 `Contents/Helpers/7zz`。运行机器无需 Homebrew。
+脚本只读导出父仓库索引 gitlink 对应的提交，在构建副本的 `CPP/7zip/Bundles/Alone2`
+运行上游推荐的 `make -f ../../cmpl_mac_arm64.mak`，不修改子模块，不引入外部库。
+
+- 固定 arm64、`-mmacosx-version-min=26.0`、显式 macOS SDK；构建及子进程使用
+  `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`。
+- 校验架构仅 arm64、`LC_BUILD_VERSION minos` 为 26.0，`otool -L` 只有 `/usr/lib/`
+  和 `/System/`；`7zz i` 必须列出 7z、zip、Rar、Rar5、tar、gzip、Split 和 AES。
+  支持 ZIP / 7z / RAR（含 RAR5）解压、tar.gz、分卷及加密压缩包；RAR 仅解压。
+- 缓存为 `${MULEE_THIRDPARTY_CACHE:-$SRCROOT/build/thirdparty}/7zip/<键>/`，键包含父仓库
+  gitlink、make 参数、SDK、工具链及脚本摘要。仅缓存未命中时需要初始化子模块。
+  `BUILD_JOBS` 控制 make 并行度，默认 8。
+- Xcode 阶段原子替换 helper，使用 `EXPANDED_CODE_SIGN_IDENTITY` 和 hardened runtime 签名；
+  无身份时 ad-hoc，有身份时加 `--timestamp`。增量封印失效时保留 entitlements / flags 重签 App。
+- 上游 `DOC/License.txt` 在编译成功时缓存，随包放入
+  `Contents/Resources/Licenses/7zip/License.txt`，包含 GNU LGPL、BSD 3-clause、BSD 2-clause
+  及 unRAR 限制；同目录说明文件记录精确源码提交地址。
+
+```sh
+scripts/build-7zip.sh --standalone
+MULEE_7ZZ="$PWD/build/thirdparty/bin/7zz" swift test --package-path Packages/MuleeCore --disable-sandbox
+MULEE_7ZZ="$PWD/build/thirdparty/bin/7zz" TEST_RUNNER_MULEE_7ZZ="$PWD/build/thirdparty/bin/7zz" \
+  xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS' test
+```
+
+standalone 产物为 `<cache>/bin/7zz`。查找顺序为显式路径、`Bundle.main` 的
+`Contents/Helpers/7zz`、环境变量 `MULEE_7ZZ`，不回退到 Homebrew；缺失时提示重新安装 Mulee。
+MuleeCore 与 App 解压集成测试只用 `MULEE_7ZZ` 生成夹具，没有可执行路径时跳过；
+App 测试通过默认解压服务验证包内工具。Xcode 测试进程用 `TEST_RUNNER_MULEE_7ZZ` 传递该变量。
+
+2026-10-16 验证：MuleeCore 全量复跑 184 项通过，App 189 项通过，解压集成测试均实际运行；
+首次核心测试曾遇到既有 `Ed2kUnitTests.stateLock` 失败，未改动电驴代码。
+standalone、空子模块缓存命中、Xcode 增量构建均通过，7-Zip 阶段实际修复增量封印；
+App 内 7zz 为 arm64、minos 26.0，仅链接系统库，ad-hoc hardened runtime 签名，
+`codesign --verify --deep --strict` 通过。直接用包内工具解开加密文件头的密码 7z、中文文件名 ZIP、
+tar.gz 与分卷 7z，文件名及内容均一致。RAR / RAR5 通过 `7zz i` 注册能力检查，未使用真实 RAR 夹具；
+Developer ID 时间戳未实测。为限制生成文件范围，验收工程及所有日志位于 `build/`，
+汇总为 `build/7zip-verification.log`。
 
 ## 签名与许可证
 
@@ -164,7 +207,7 @@ BSL-1.0 文本。`Licenses/README.txt` 追加对应组件和源码地址。
 
 ## 电驴引擎 amuled
 
-`Mulee` 的最后一个 post-build 阶段 `Bundle amuled` 运行 `scripts/build-amuled.sh`，从已固定的 aMule 3.1.0、wxWidgets 3.2.12、Crypto++ 8.9.0 子模块编译 `Contents/Helpers/amuled`。必须保留进程名 **amuled**，供用户的代理规则匹配直连。App 不打包测试客户端 amulecmd。
+`Mulee` 的 post-build 阶段 `Bundle amuled` 运行 `scripts/build-amuled.sh`，从已固定的 aMule 3.1.0、wxWidgets 3.2.12、Crypto++ 8.9.0 子模块编译 `Contents/Helpers/amuled`。必须保留进程名 **amuled**，供用户的代理规则匹配直连。App 不打包测试客户端 amulecmd。
 
 构建机需要 Apple Silicon、支持 macOS 26 SDK 的 Xcode / Command Line Tools、`cmake` 和 `/opt/homebrew/opt/boost` 的头文件（`brew install cmake boost`）。缓存未命中时，所需源码由主控预先初始化；编译 wxWidgets 时还需要 PCRE2 / Expat 嵌套子模块。脚本不会初始化、修改子模块，也不会下载构建依赖。所有子进程使用 `LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8`。
 
