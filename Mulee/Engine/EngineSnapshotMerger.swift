@@ -9,9 +9,11 @@ enum EngineSnapshotMerger {
         now: Date,
         videoConfiguration: VideoEngineConfiguration = VideoEngineConfiguration()
     ) -> [DownloadTask] {
+        // 按引擎任务标识建索引：上万条任务时逐条线性查找是平方级开销，每秒轮询会卡住主线程。
+        let snapshotIDs = snapshots.mapValues { Set($0.map(\.engineTaskID)) }
         var result = tasks.map { task in
-            guard let id = task.engineTaskID, let current = snapshots[task.kind],
-                  !current.contains(where: { $0.engineTaskID == id }),
+            guard let id = task.engineTaskID, let current = snapshotIDs[task.kind],
+                  !current.contains(id),
                   [.downloading, .queued, .paused].contains(task.status) else { return task }
             var task = task
             task.status = .failed
@@ -21,9 +23,15 @@ enum EngineSnapshotMerger {
             task.estimatedTimeRemaining = nil
             return task
         }
+        var indexByKey: [TaskKey: Int] = [:]
+        for (index, task) in result.enumerated() {
+            guard let id = task.engineTaskID else { continue }
+            let key = TaskKey(kind: task.kind, engineTaskID: id)
+            if indexByKey[key] == nil { indexByKey[key] = index }
+        }
         for kind in TaskKind.allCases {
             for snapshot in snapshots[kind] ?? [] {
-                let index = result.firstIndex { $0.kind == kind && $0.engineTaskID == snapshot.engineTaskID }
+                let index = indexByKey[TaskKey(kind: kind, engineTaskID: snapshot.engineTaskID)]
                 var task: DownloadTask
                 if let index {
                     task = result[index]
@@ -75,6 +83,7 @@ enum EngineSnapshotMerger {
                 if let index {
                     result[index] = task
                 } else {
+                    indexByKey[TaskKey(kind: kind, engineTaskID: snapshot.engineTaskID)] = result.count
                     result.append(task)
                 }
             }
@@ -98,5 +107,10 @@ enum EngineSnapshotMerger {
             ))
         case .video: .video(site: .other, quality: "自动", danmakuToASS: false)
         }
+    }
+
+    private struct TaskKey: Hashable {
+        let kind: TaskKind
+        let engineTaskID: String
     }
 }
