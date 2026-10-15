@@ -115,5 +115,6 @@ if [ ${#NOTARY_AUTH[@]} -gt 0 ]; then
   spctl -a -vvv -t execute "$APP" 2>&1 | tail -2
 fi
 
-shasum -a 256 "$DMG" | tee "$DMG.sha256"
+# 校验文件里只写文件名，不带构建机的绝对路径。
+(cd "$OUT" && shasum -a 256 "$(basename "$DMG")" | tee "$(basename "$DMG").sha256")
 step "完成：${DMG}（$(du -h "$DMG" | cut -f1)）"
