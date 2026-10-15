@@ -1281,6 +1281,12 @@
             "state": "translated",
             "value": "BT 與電驢上傳合計；電驢上傳越多，別人給你的佇列順位越前"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTとeD2kのアップロードの合計です。eD2kで多くアップロードするほど、相手の待ち順が優先されます。"
+          }
         }
       }
     },
@@ -1690,6 +1696,12 @@
             "state": "translated",
             "value": "GPL-3.0 授權條款"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPL-3.0ライセンス"
+          }
         }
       }
     },
@@ -1709,6 +1721,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "GitHub"
@@ -1852,6 +1870,12 @@
             "state": "translated",
             "value": "Made by CQAGC"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Made by CQAGC"
+          }
         }
       }
     },
@@ -1904,6 +1928,12 @@
             "state": "translated",
             "value": "Mulee 可以開啟 magnet、ed2k、thunder 連結與 .torrent 種子檔。開啟後，需在「新增下載」面板確認才會開始下載。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muleeはmagnet、ed2k、thunderリンクと.torrentファイルを開けます。「新規ダウンロード」パネルで確認すると、ダウンロードが始まります。"
+          }
         }
       }
     },
@@ -1926,6 +1956,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mulee 將儲存下載進度並結束，安裝更新後重新開啟。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muleeはダウンロードの進行状況を保存して終了し、アップデートのインストール後に再び開きます。"
           }
         }
       }
@@ -2354,6 +2390,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載、做種或等待來源時防止睡眠"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード中・シード中・ソース待ちのスリープを防止する"
           }
         }
       }
@@ -2842,6 +2884,12 @@
             "state": "translated",
             "value": "仍有任務正在進行，要安裝更新嗎？"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスクが進行中です。アップデートをインストールしますか？"
+          }
         }
       }
     },
@@ -2980,6 +3028,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "以後再說"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今はしない"
           }
         }
       }
@@ -3409,6 +3463,12 @@
             "state": "translated",
             "value": "允許睡眠"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スリープを許可"
+          }
         }
       }
     },
@@ -3809,6 +3869,12 @@
             "state": "translated",
             "value": "關於 Mulee"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muleeについて"
+          }
         }
       }
     },
@@ -3831,6 +3897,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "關閉"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じる"
           }
         }
       }
@@ -5305,6 +5377,12 @@
             "state": "translated",
             "value": "安裝並重新開啟"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストールして再び開く"
+          }
         }
       }
     },
@@ -5618,6 +5696,12 @@
             "state": "translated",
             "value": "將 Mulee 設為預設下載工具？"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muleeをデフォルトのダウンロードツールに設定しますか？"
+          }
         }
       }
     },
@@ -5871,6 +5955,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "工作日依下列時段限制速度；支援跨午夜，開始與結束相同時不生效"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平日は以下の時間帯に速度を制限します。日付をまたぐ時間帯にも対応します。開始時刻と終了時刻が同じ場合は適用されません。"
           }
         }
       }
@@ -6367,6 +6457,12 @@
             "state": "translated",
             "value": "開啟時，做種和電驢等待來源不防止睡眠；關閉時，這些任務也會防止睡眠。僅在「下載時防止睡眠」開啟時生效。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オンの場合、シード中やeD2kのソース待ちではスリープを妨げません。オフの場合、これらのタスクもスリープを防止します。「ダウンロード中はスリープしない」がオンの場合のみ有効です。"
+          }
         }
       }
     },
@@ -6484,6 +6580,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "開始時間"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始時刻"
           }
         }
       }
@@ -6740,6 +6842,12 @@
             "state": "translated",
             "value": "目前版本"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在のバージョン"
+          }
         }
       }
     },
@@ -6761,6 +6869,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "所有下載合計，依各引擎實際需求分配"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのダウンロードの合計です。各エンジンの実際の需要に応じて割り当てます。"
           }
         }
       }
@@ -6784,6 +6898,12 @@
             "state": "translated",
             "value": "所有引擎合計；電驢等待來源與 BT 做種不占名額"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのエンジンの合計です。eD2kのソース待ちとBTのシードは数に含みません。"
+          }
         }
       }
     },
@@ -6806,6 +6926,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "所選文字中沒有可下載的連結。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択したテキストにダウンロード可能なリンクがありません。"
           }
         }
       }
@@ -6857,6 +6983,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "打開登入項目"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログイン項目を開く"
           }
         }
       }
@@ -7111,6 +7243,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "支援 ZIP 和 RAR5；目前解壓縮工具不提供 7z 和舊版 RAR 的註解"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ZIPとRAR5に対応しています。現在の展開ツールでは、7zと旧版RARのコメントは取得できません。"
           }
         }
       }
@@ -7599,6 +7737,12 @@
             "state": "translated",
             "value": "無法儲存下載進度，暫不安裝更新。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードの進行状況を保存できません。アップデートのインストールを見送ります。"
+          }
         }
       }
     },
@@ -7678,6 +7822,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法更新登入時啟動：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログイン時の起動設定を変更できません：%@"
           }
         }
       }
@@ -7904,6 +8054,12 @@
             "state": "translated",
             "value": "時段內上傳速度限制"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指定時間帯のアップロード速度制限"
+          }
         }
       }
     },
@@ -7925,6 +8081,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "時段內下載速度限制"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指定時間帯のダウンロード速度制限"
           }
         }
       }
@@ -8471,6 +8633,12 @@
             "state": "translated",
             "value": "更新"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデート"
+          }
         }
       }
     },
@@ -8493,6 +8661,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "目前無法更新：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在アップデートを利用できません：%@"
           }
         }
       }
@@ -9068,6 +9242,12 @@
             "state": "translated",
             "value": "檢查更新⋯"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを確認…"
+          }
         }
       }
     },
@@ -9352,6 +9532,12 @@
             "state": "translated",
             "value": "此組建未包含第三方授權條款目錄。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このビルドには他社製ソフトウェアのライセンスフォルダが含まれていません。"
+          }
         }
       }
     },
@@ -9577,6 +9763,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "立即檢查"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今すぐ確認"
           }
         }
       }
@@ -10297,6 +10489,12 @@
             "state": "translated",
             "value": "稍後"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あとで"
+          }
         }
       }
     },
@@ -10406,6 +10604,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "第三方授權條款"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他社製ソフトウェアのライセンス"
           }
         }
       }
@@ -10778,6 +10982,12 @@
             "state": "translated",
             "value": "系統會詢問是否更改預設開啟方式。你也可以稍後在設定中更改。"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルトで開くアプリを変更するか、システムが確認します。あとで設定から変更することもできます。"
+          }
         }
       }
     },
@@ -10799,6 +11009,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "結束時間"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終了時刻"
           }
         }
       }
@@ -11055,6 +11271,12 @@
             "state": "translated",
             "value": "自動下載並安裝更新"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを自動でダウンロードしてインストールする"
+          }
         }
       }
     },
@@ -11106,6 +11328,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動檢查更新"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを自動で確認する"
           }
         }
       }
@@ -11767,6 +11995,12 @@
             "state": "translated",
             "value": "排程速度限制中"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールによる速度制限中"
+          }
         }
       }
     },
@@ -11818,6 +12052,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "設為預設"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルトに設定"
           }
         }
       }
@@ -11965,6 +12205,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "請在系統設定的「登入項目」中核准 Mulee 登入時啟動。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム設定の「ログイン項目」で、ログイン時のMuleeの起動を許可してください。"
           }
         }
       }
@@ -12220,6 +12466,12 @@
             "state": "translated",
             "value": "還有任務正在執行，確定結束 Mulee？"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスクが実行中です。Muleeを終了しますか？"
+          }
         }
       }
     },
@@ -12387,6 +12639,12 @@
             "state": "translated",
             "value": "結束"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終了"
+          }
         }
       }
     },
@@ -12408,6 +12666,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "結束會暫停下載和解壓縮，下載進度會保留。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終了するとダウンロードと展開が一時停止します。ダウンロードの進行状況は保存されます。"
           }
         }
       }
@@ -12431,6 +12695,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "適用於 macOS 的開源下載工具。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS用のオープンソースのダウンロードツールです。"
           }
         }
       }
@@ -12948,6 +13218,12 @@
             "state": "translated",
             "value": "預設下載工具"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルトのダウンロードツール"
+          }
         }
       }
     },
@@ -13145,6 +13421,12 @@
             "state": "translated",
             "value": "Chrome 連線已安裝"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chrome接続機能をインストール済み"
+          }
         }
       }
     },
@@ -13164,6 +13446,12 @@
           }
         },
         "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "P%lld %@"
+          }
+        },
+        "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "P%lld %@"
@@ -13191,6 +13479,12 @@
             "state": "translated",
             "value": "YouTube"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YouTube"
+          }
         }
       }
     },
@@ -13213,6 +13507,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "全不選"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべての選択を解除"
           }
         }
       }
@@ -13237,6 +13537,12 @@
             "state": "translated",
             "value": "全選"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて選択"
+          }
         }
       }
     },
@@ -13259,6 +13565,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "分 P / 合集"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パート / コレクション"
           }
         }
       }
@@ -13283,6 +13595,12 @@
             "state": "translated",
             "value": "安裝 Chrome 登入狀態連線"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chromeのログイン状態接続機能をインストール"
+          }
         }
       }
     },
@@ -13305,6 +13623,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "尚未接收登入狀態"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログイン状態は未受信"
           }
         }
       }
@@ -13329,6 +13653,12 @@
             "state": "translated",
             "value": "已有 B 站登入狀態"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilibiliのログイン状態を受信済み"
+          }
         }
       }
     },
@@ -13351,6 +13681,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "已有 YouTube 登入狀態"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YouTubeのログイン状態を受信済み"
           }
         }
       }
@@ -13375,6 +13711,12 @@
             "state": "translated",
             "value": "無法安裝 Chrome 登入狀態連線"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chromeのログイン状態接続機能をインストールできません"
+          }
         }
       }
     },
@@ -13397,6 +13739,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法清除瀏覽器登入狀態"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザのログイン状態を消去できません"
           }
         }
       }
@@ -13421,6 +13769,12 @@
             "state": "translated",
             "value": "無法取得影片清單，仍可下載目前影片"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画リストを取得できません。現在の動画はダウンロードできます。"
+          }
         }
       }
     },
@@ -13443,6 +13797,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "無法存取影片登入狀態的鑰匙圈（%d）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画のログイン状態を保存したキーチェーンにアクセスできません（%d）"
           }
         }
       }
@@ -13467,6 +13827,12 @@
             "state": "translated",
             "value": "無法讀取瀏覽器登入狀態"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザのログイン状態を読み取れません"
+          }
         }
       }
     },
@@ -13489,6 +13855,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "更新時間：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新日時：%@"
           }
         }
       }
@@ -13513,6 +13885,12 @@
             "state": "translated",
             "value": "正在取得影片清單…"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画リストを取得中…"
+          }
         }
       }
     },
@@ -13535,6 +13913,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "瀏覽器登入狀態"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザのログイン状態"
           }
         }
       }
@@ -13559,6 +13943,12 @@
             "state": "translated",
             "value": "清除"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "消去"
+          }
         }
       }
     },
@@ -13581,6 +13971,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "清除 B 站登入狀態"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilibiliのログイン状態を消去"
           }
         }
       }
@@ -13605,6 +14001,12 @@
             "state": "translated",
             "value": "清除 YouTube 登入狀態"
           }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "YouTubeのログイン状態を消去"
+          }
         }
       }
     },
@@ -13627,6 +14029,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "在瀏覽器擴充功能中開啟登入狀態傳遞後，Mulee 才會接收。登入狀態優先儲存在鑰匙圈，不支援時儲存在僅你可讀的本機檔案。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザ拡張機能でログイン状態の共有をオンにすると、Muleeが受信します。ログイン状態はキーチェーンに優先して保存し、対応していない場合は自分だけが読み取れるこのMac上のファイルに保存します。"
           }
         }
       }
