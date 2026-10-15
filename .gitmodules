@@ -17,3 +17,6 @@
 [submodule "ThirdParty/aria2"]
 	path = ThirdParty/aria2
 	url = https://github.com/aria2/aria2.git
+[submodule "ThirdParty/7zip"]
+	path = ThirdParty/7zip
+	url = https://github.com/ip7z/7zip.git
