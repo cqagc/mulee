@@ -4,3 +4,13 @@
 [submodule "ThirdParty/openssl"]
 	path = ThirdParty/openssl
 	url = https://github.com/openssl/openssl.git
+[submodule "ThirdParty/amule"]
+	path = ThirdParty/amule
+	url = https://github.com/amule-org/amule.git
+[submodule "ThirdParty/cryptopp"]
+	path = ThirdParty/cryptopp
+	url = https://github.com/weidai11/cryptopp.git
+[submodule "ThirdParty/wxWidgets"]
+	path = ThirdParty/wxWidgets
+	url = https://github.com/wxWidgets/wxWidgets.git
+	shallow = true
