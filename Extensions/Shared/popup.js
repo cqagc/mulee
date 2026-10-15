@@ -6,6 +6,8 @@ const status = document.getElementById("status");
 const sendButton = document.getElementById("send");
 const takeover = document.getElementById("takeover");
 const extensions = document.getElementById("extensions");
+const videoLogin = document.getElementById("video-login");
+const videoLoginSync = document.getElementById("video-login-sync");
 
 function message(key) {
     return extensionAPI.i18n.getMessage(key) || extensionAPI.i18n.getMessage("sendFailed");
@@ -24,6 +26,9 @@ function updateSelection() {
 
 async function initialize() {
     const settings = await extensionAPI.storage.local.get({ takeover: false, extensions: MuleeLinks.defaultExtensions });
+    const videoSettings = await extensionAPI.storage.local.get({ videoLogin: false });
+    videoLogin.checked = videoSettings.videoLogin && await extensionAPI.permissions.contains(MuleeVideoLogin.permissionRequest(extensionAPI));
+    videoLoginSync.disabled = !videoLogin.checked;
     const supported = (extensionAPI.runtime.getManifest().optional_permissions || []).includes("downloads");
     const granted = supported && await extensionAPI.permissions.contains({ permissions: ["downloads"] });
     takeover.checked = settings.takeover && granted;
@@ -104,6 +109,40 @@ document.getElementById("save").addEventListener("click", async () => {
         status.textContent = message("saved");
     } catch (error) {
         showError(error);
+    }
+});
+
+videoLogin.addEventListener("change", async () => {
+    try {
+        if (videoLogin.checked) {
+            const granted = await extensionAPI.permissions.request(MuleeVideoLogin.permissionRequest(extensionAPI));
+            videoLogin.checked = granted;
+            if (!granted) status.textContent = message("permissionDenied");
+        }
+        await extensionAPI.storage.local.set({ videoLogin: videoLogin.checked });
+        videoLoginSync.disabled = !videoLogin.checked;
+        if (videoLogin.checked) {
+            const response = await extensionAPI.runtime.sendMessage({ type: "syncVideoLogin" });
+            if (!response?.ok) throw new Error("videoLoginFailed");
+            status.textContent = message("videoLoginSent");
+        } else {
+            await extensionAPI.permissions.remove(MuleeVideoLogin.permissionRequest(extensionAPI));
+        }
+    } catch {
+        status.textContent = message("videoLoginFailed");
+    }
+});
+
+videoLoginSync.addEventListener("click", async () => {
+    videoLoginSync.disabled = true;
+    try {
+        const response = await extensionAPI.runtime.sendMessage({ type: "syncVideoLogin" });
+        if (!response?.ok) throw new Error("videoLoginFailed");
+        status.textContent = message("videoLoginSent");
+    } catch {
+        status.textContent = message("videoLoginFailed");
+    } finally {
+        videoLoginSync.disabled = !videoLogin.checked;
     }
 });
 

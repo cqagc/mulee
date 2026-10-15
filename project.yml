@@ -31,6 +31,10 @@ targets:
       - path: Mulee/Resources/Licenses
         type: folder
       - path: MuleeSafariExtension/BrowserExtensionRequest.swift
+    entitlements:
+      path: Mulee/App/VideoLogin.entitlements
+      properties:
+        com.apple.security.application-groups: [LV69DG6R9Y.com.cqagc.mulee.video-login]
     dependencies:
       - package: MuleeCore
       - package: Sparkle
@@ -131,6 +135,11 @@ targets:
       - path: MuleeSafariExtension
         excludes: [Info.plist]
       - path: Mulee/App/OpenURLRequest.swift
+    entitlements:
+      path: MuleeSafariExtension/MuleeSafariExtension.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.application-groups: [LV69DG6R9Y.com.cqagc.mulee.video-login]
     dependencies:
       - package: MuleeCore
     info:

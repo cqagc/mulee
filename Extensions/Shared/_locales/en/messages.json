@@ -73,5 +73,23 @@
     },
     "closeTab": {
         "message": "Close this tab"
+    },
+    "videoLoginOptions": {
+        "message": "Video sign-in"
+    },
+    "videoLogin": {
+        "message": "Share Bilibili / YouTube sign-in with Mulee to download quality options that require sign-in"
+    },
+    "videoLoginHint": {
+        "message": "Cookies are read only from these two sites after you enable this option. For Chrome, install the connection in Mulee’s Video settings first. Clear saved sign-in in Mulee after turning this off."
+    },
+    "videoLoginSync": {
+        "message": "Update sign-in"
+    },
+    "videoLoginSent": {
+        "message": "Sign-in shared with Mulee"
+    },
+    "videoLoginFailed": {
+        "message": "Unable to share sign-in. For Chrome, install the connection in Mulee’s Video settings. For Safari, use a signed release of Mulee."
     }
 }

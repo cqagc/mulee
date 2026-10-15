@@ -22,6 +22,7 @@ nonisolated struct VideoEngineConfiguration: Equatable, Sendable {
     var qualityTitle: String { quality == .compatible ? String(localized: "兼容优先") : String(localized: "画质优先") }
 
     func apply(to engine: YtDlpEngine) async throws {
+        await engine.configureCookies { site in try await VideoLoginStore.shared.cookies(for: site) }
         try await engine.configure(
             quality: quality, cookiesURL: nil,
             subtitles: YtDlpSubtitles(danmaku: danmaku, closedCaptions: closedCaptions),

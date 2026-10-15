@@ -7,7 +7,7 @@ struct YtDlpProcess: Sendable {
     private let pipe: Pipe
     let output: AsyncStream<Data>
 
-    init(binary: URL, arguments: [String], parentProcessID: pid_t = getpid()) throws {
+    init(binary: URL, arguments: [String], parentProcessID: pid_t = getpid(), cleanupURL: URL? = nil) throws {
         let process = Process()
         let pipe = Pipe()
         self.process = process
@@ -26,7 +26,7 @@ struct YtDlpProcess: Sendable {
         // 独立监督 shell 监视 App PID。App 崩溃后仍可终止 yt-dlp 及 ffmpeg。
         // 所有路径和 URL 经位置参数传递，不插值到 shell 代码里。
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = ["-c", Self.supervisor, "mulee-ytdlp", String(parentProcessID), binary.path] + arguments
+        process.arguments = ["-c", Self.supervisor, "mulee-ytdlp", String(parentProcessID), cleanupURL?.path ?? "", binary.path] + arguments
         process.standardInput = FileHandle.nullDevice
         process.standardOutput = pipe
         process.standardError = pipe
@@ -85,7 +85,8 @@ struct YtDlpProcess: Sendable {
     exec 2>/dev/null
     set -m
     parent="$1"
-    shift
+    cookie_file="$2"
+    shift 2
     "$@" 2>&3 3>&- &
     child=$!
     supervisor=$$
@@ -97,6 +98,9 @@ struct YtDlpProcess: Sendable {
     stop_group() {
         kill -TERM -- "-$1" 2>/dev/null || true
         kill -KILL -- "-$1" 2>/dev/null || true
+    }
+    cleanup_cookie() {
+        if [ -n "$cookie_file" ]; then /bin/rm -- "$cookie_file" 2>/dev/null || true; fi
     }
     cleanup() {
         # Job control gives the tool its own process group and restores SIGINT.
@@ -110,6 +114,7 @@ struct YtDlpProcess: Sendable {
         stop_group "$watcher"
         wait "$child" 2>/dev/null
         wait "$watcher" 2>/dev/null
+        cleanup_cookie
     }
     trap 'cleanup; exit 143' TERM INT HUP
     wait "$child"
@@ -117,6 +122,7 @@ struct YtDlpProcess: Sendable {
     stop_group "$child"
     stop_group "$watcher"
     wait "$watcher" 2>/dev/null
+    cleanup_cookie
     exit "$result"
     """#
 }

@@ -73,5 +73,23 @@
     },
     "closeTab": {
         "message": "关闭此标签页"
+    },
+    "videoLoginOptions": {
+        "message": "视频登录状态"
+    },
+    "videoLogin": {
+        "message": "把 B 站 / YouTube 登录状态交给 Mulee，用于下载需要登录的画质"
+    },
+    "videoLoginHint": {
+        "message": "仅在开启后读取这两个网站的 Cookie。Chrome 需先在 Mulee 的设置·视频中安装连接。关闭后可在 Mulee 中清除已保存的登录状态。"
+    },
+    "videoLoginSync": {
+        "message": "更新登录状态"
+    },
+    "videoLoginSent": {
+        "message": "登录状态已交给 Mulee"
+    },
+    "videoLoginFailed": {
+        "message": "无法传递登录状态。Chrome 请先在 Mulee 设置·视频中安装连接；Safari 请使用正式签名的 Mulee。"
     }
 }

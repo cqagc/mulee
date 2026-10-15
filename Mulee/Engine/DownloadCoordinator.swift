@@ -8,7 +8,7 @@ final class DownloadCoordinator {
     private var engines: [any DownloadEngine]
     private let videoBootstrap: VideoEngineBootstrap?
     private let videoEngineFactory: (@MainActor (VideoEngineConfiguration) async throws -> any DownloadEngine)?
-    private var waitingVideoLinks: [DownloadTask.ID: (link: ParsedLink, directory: URL?)] = [:]
+    private var waitingVideoLinks: [DownloadTask.ID: (link: ParsedLink, directory: URL?, entry: YtDlpPlaylistEntry?)] = [:]
     private var submittingVideoIDs: Set<DownloadTask.ID> = []
     private var videoFFmpegURL: URL?
     private var videoStartupTask: Task<Void, Never>?
@@ -213,11 +213,13 @@ final class DownloadCoordinator {
 
     func add(
         links: [ParsedLink], autoExtract: Bool, directory: URL? = nil,
-        filePriorities: [ParsedLink: [Int]] = [:]
+        filePriorities: [ParsedLink: [Int]] = [:],
+        videoEntries: [ParsedLink: YtDlpPlaylistEntry] = [:]
     ) async {
         var insertionIndex = 0
         for link in links {
             var task = DownloadTask(link: link, autoExtract: autoExtract)
+            if let entry = videoEntries[link] { task.name = "P\(entry.index) \(entry.title)" }
             if let detail = videoConfiguration.detail(for: link) {
                 task.detail = detail
             }
@@ -226,7 +228,7 @@ final class DownloadCoordinator {
                 model.tasks.insert(task, at: min(insertionIndex, model.tasks.count))
                 if insertionIndex == 0 { model.selectedTaskID = task.id }
                 insertionIndex += 1
-                waitingVideoLinks[task.id] = (link, directory)
+                waitingVideoLinks[task.id] = (link, directory, videoEntries[link])
                 if engine(for: .video) != nil {
                     await submitWaitingVideos()
                 } else if case .failed(let reason) = model.engineStates[.video] {
@@ -441,9 +443,16 @@ final class DownloadCoordinator {
             }
             do {
                 let queued = shouldQueueNewTask()
-                let engineID = try await queued
-                    ? engine.addQueued(link: pending.link, directory: pending.directory)
-                    : engine.add(link: pending.link, directory: pending.directory)
+                let engineID: String
+                if let video = engine as? YtDlpEngine {
+                    engineID = try await video.add(
+                        link: pending.link, directory: pending.directory, entry: pending.entry, paused: queued
+                    )
+                } else {
+                    engineID = try await queued
+                        ? engine.addQueued(link: pending.link, directory: pending.directory)
+                        : engine.add(link: pending.link, directory: pending.directory)
+                }
                 guard generation == token, let index = model.tasks.firstIndex(where: { $0.id == id }) else {
                     excludedTaskIDs[.video, default: []].insert(engineID)
                     try await engine.remove(engineID, deleteFiles: false)

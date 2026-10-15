@@ -1,5 +1,6 @@
 import AppKit
 import SafariServices
+import MuleeCore
 
 final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
     nonisolated func beginRequest(with context: NSExtensionContext) {
@@ -9,8 +10,22 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             guard object.count == 1 else { return nil }
             return object["url"] as? String
         }
+        let cookieData = (message as? [String: Any]).flatMap { object -> Data? in
+            guard object["type"] as? String == "videoCookies", JSONSerialization.isValidJSONObject(object) else { return nil }
+            return try? JSONSerialization.data(withJSONObject: object)
+        }
         let response = BrowserExtensionResponse(context: context)
         Task { @MainActor in
+            if let cookieData {
+                do {
+                    let request = try VideoCookieRequest.parse(cookieData)
+                    try VideoCookieHandoff.save(request, directory: VideoCookieHandoff.directory())
+                    response.complete(opened: true)
+                } catch {
+                    response.complete(opened: false)
+                }
+                return
+            }
             let url = BrowserExtensionRequest.validatedURL(from: value.map { ["url": $0] })
             let opened = url.map { NSWorkspace.shared.open($0) } ?? false
             response.complete(opened: opened)

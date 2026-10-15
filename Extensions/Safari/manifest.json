@@ -31,8 +31,16 @@
     "background": {
         "scripts": [
             "core.js",
+            "video-login.js",
             "background.js"
         ],
         "persistent": false
-    }
+    },
+    "optional_permissions": [
+        "cookies"
+    ],
+    "optional_host_permissions": [
+        "https://*.bilibili.com/*",
+        "https://*.youtube.com/*"
+    ]
 }

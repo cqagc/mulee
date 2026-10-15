@@ -12,11 +12,12 @@ struct YtDlpProcessTests {
         let script = root.appendingPathComponent("worker")
         try Data("#!/bin/sh\n/bin/sleep 30 &\necho $! > \"$1\"\nwait\n".utf8).write(to: script)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+        let cookies = try YtDlpCookieFile(cookies: [], site: .bilibili, directory: root)
         let parent = Process()
         parent.executableURL = URL(fileURLWithPath: "/bin/sleep")
         parent.arguments = ["30"]
         try parent.run()
-        let child = try YtDlpProcess(binary: script, arguments: [pidFile.path], parentProcessID: parent.processIdentifier)
+        let child = try YtDlpProcess(binary: script, arguments: [pidFile.path], parentProcessID: parent.processIdentifier, cleanupURL: cookies.url)
         do {
             let deadline = ContinuousClock.now.advanced(by: .seconds(5))
             while !FileManager.default.fileExists(atPath: pidFile.path), ContinuousClock.now < deadline {
@@ -28,6 +29,7 @@ struct YtDlpProcessTests {
             while child.isRunning, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(20)) }
             #expect(!child.isRunning)
             #expect(kill(pid, 0) != 0)
+            #expect(!FileManager.default.fileExists(atPath: cookies.url.path))
             await child.terminate()
         } catch {
             if parent.isRunning { parent.terminate() }
