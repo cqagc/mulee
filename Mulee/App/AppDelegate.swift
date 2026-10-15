@@ -20,13 +20,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.loadTaskHistory(from: TaskHistoryStore())
         self.settings = settings
         let stateDirectory = URL.applicationSupportDirectory.appending(path: "Mulee/aria2", directoryHint: .isDirectory)
-        coordinator = DownloadCoordinator(model: model, engines: [Aria2Engine(stateDirectory: stateDirectory)])
+        coordinator = DownloadCoordinator(
+            model: model, engines: [Aria2Engine(stateDirectory: stateDirectory)],
+            videoBootstrap: VideoEngineBootstrap()
+        )
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let coordinator, let settings else { return }
         startupTask = Task {
-            await coordinator.start(options: EngineOptionsMapper.options(from: settings))
+            await coordinator.start(
+                options: EngineOptionsMapper.options(from: settings),
+                videoConfiguration: VideoEngineConfiguration.configuration(from: settings)
+            )
         }
     }
 

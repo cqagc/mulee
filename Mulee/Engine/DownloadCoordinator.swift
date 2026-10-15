@@ -5,7 +5,11 @@ import MuleeCore
 @MainActor
 final class DownloadCoordinator {
     private let model: AppModel
-    private let engines: [any DownloadEngine]
+    private var engines: [any DownloadEngine]
+    private let videoBootstrap: VideoEngineBootstrap?
+    private var videoStartupTask: Task<Void, Never>?
+    private var videoConfigurationTask: Task<Void, Never>?
+    private var videoConfiguration = VideoEngineConfiguration()
     private var started: Set<TaskKind> = []
     private var generation: UUID?
     private var pollingTask: Task<Void, Never>?
@@ -16,17 +20,43 @@ final class DownloadCoordinator {
     private var excludedTaskIDs: [TaskKind: Set<String>] = [:]
     private var isPolling = false
 
-    init(model: AppModel, engines: [any DownloadEngine]) {
+    init(model: AppModel, engines: [any DownloadEngine], videoBootstrap: VideoEngineBootstrap? = nil) {
         self.model = model
         self.engines = engines
+        self.videoBootstrap = videoBootstrap
         model.coordinator = self
     }
 
-    func start(options: EngineOptions) async {
+    func start(options: EngineOptions, videoConfiguration: VideoEngineConfiguration = VideoEngineConfiguration()) async {
         guard generation == nil, !Task.isCancelled else { return }
         let token = UUID()
         generation = token
         latestOptions = options
+        self.videoConfiguration = videoConfiguration
+        if let videoBootstrap {
+            model.engineStates[.video] = .preparing
+            videoStartupTask = Task { [weak self] in
+                guard let self else { return }
+                do {
+                    let engine = try await videoBootstrap.makeEngine(configuration: videoConfiguration)
+                    guard self.generation == token, !Task.isCancelled else { return }
+                    // 准备期间设置可能变化；启动前下发最新值。
+                    try await self.videoConfiguration.apply(to: engine)
+                    try await engine.start(options: self.latestOptions ?? options)
+                    guard self.generation == token, !Task.isCancelled else {
+                        await engine.stop()
+                        return
+                    }
+                    self.engines.append(engine)
+                    self.started.insert(.video)
+                    self.model.engineStates[.video] = EngineStatusPresentation.videoReadyState(ffmpegURL: videoBootstrap.ffmpegURL)
+                    self.configureVideo(self.videoConfiguration)
+                } catch {
+                    guard self.generation == token, !Task.isCancelled else { return }
+                    self.model.engineStates[.video] = .failed(EngineStatusPresentation.errorMessage(error))
+                }
+            }
+        }
         await withTaskGroup(of: (TaskKind, String?).self) { group in
             for engine in engines {
                 group.addTask {
@@ -79,11 +109,15 @@ final class DownloadCoordinator {
         pollingTask = nil
         applyTask?.cancel()
         applyTask = nil
+        videoStartupTask?.cancel()
+        videoConfigurationTask?.cancel()
         started.removeAll()
         for kind in TaskKind.allCases {
             model.engineStates[kind] = .unavailable
         }
         await stopEngines()
+        await videoStartupTask?.value
+        videoStartupTask = nil
     }
 
     func poll() async {
@@ -115,7 +149,9 @@ final class DownloadCoordinator {
         for kind in snapshots.keys {
             snapshots[kind]?.removeAll { excludedTaskIDs[kind, default: []].contains($0.engineTaskID) }
         }
-        model.tasks = EngineSnapshotMerger.merge(tasks: model.tasks, snapshots: snapshots, now: .now)
+        model.tasks = EngineSnapshotMerger.merge(
+            tasks: model.tasks, snapshots: snapshots, now: .now, videoConfiguration: videoConfiguration
+        )
         if let selected = model.selectedTaskID, !model.tasks.contains(where: { $0.id == selected }) {
             model.selectedTaskID = nil
         }
@@ -125,7 +161,15 @@ final class DownloadCoordinator {
     func add(links: [ParsedLink], autoExtract: Bool, directory: URL? = nil) async {
         var insertionIndex = 0
         for link in links {
+            if link.kind == .video {
+                await videoStartupTask?.value
+                await videoConfigurationTask?.value
+                guard generation != nil, !Task.isCancelled else { return }
+            }
             var task = DownloadTask(link: link, autoExtract: autoExtract)
+            if let detail = videoConfiguration.detail(for: link) {
+                task.detail = detail
+            }
             task.status = .engineUnavailable
             if let engine = engine(for: link.kind) {
                 pendingAdds[link.kind, default: 0] += 1
@@ -138,9 +182,9 @@ final class DownloadCoordinator {
                 }
                 pendingAdds[link.kind, default: 0] -= 1
                 revisions[link.kind, default: 0] += 1
-            } else if let configured = engines.first(where: { $0.kind == link.kind }) {
+            } else if engines.contains(where: { $0.kind == link.kind }) || (link.kind == .video && videoBootstrap != nil) {
                 task.status = .failed
-                if case .failed(let reason) = model.engineStates[configured.kind] {
+                if case .failed(let reason) = model.engineStates[link.kind] {
                     task.errorMessage = reason
                 } else {
                     task.errorMessage = "下载引擎未运行"
@@ -219,6 +263,24 @@ final class DownloadCoordinator {
                     guard !Task.isCancelled, self.generation == token else { return }
                     self.model.engineStates[engine.kind] = .failed(EngineStatusPresentation.errorMessage(error))
                 }
+            }
+        }
+    }
+
+    func configureVideo(_ configuration: VideoEngineConfiguration) {
+        videoConfiguration = configuration
+        let previous = videoConfigurationTask
+        videoConfigurationTask = Task { [weak self] in
+            await previous?.value
+            guard let self, let token = self.generation, !Task.isCancelled,
+                  let engine = self.engines.first(where: { $0.kind == .video }) as? YtDlpEngine else { return }
+            do {
+                try await configuration.apply(to: engine)
+                guard self.generation == token, !Task.isCancelled else { return }
+                self.model.engineStates[.video] = EngineStatusPresentation.videoReadyState(ffmpegURL: self.videoBootstrap?.ffmpegURL)
+            } catch {
+                guard self.generation == token, !Task.isCancelled else { return }
+                self.model.engineStates[.video] = .failed(EngineStatusPresentation.errorMessage(error))
             }
         }
     }

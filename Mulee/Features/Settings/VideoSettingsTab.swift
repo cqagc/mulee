@@ -30,6 +30,7 @@ struct VideoSettingsTab: View {
             }
             Section("B 站") {
                 Toggle("弹幕转 ASS", isOn: $model.danmakuToASS)
+                Toggle("CC 字幕", isOn: $model.ccSubtitles)
             }
         }
         .formStyle(.grouped)

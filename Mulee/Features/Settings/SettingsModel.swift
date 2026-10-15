@@ -83,6 +83,7 @@ final class SettingsModel {
         static let ytDlpChannel = "video.ytDlpChannel"
         static let updateBeforeRetry = "video.updateBeforeRetry"
         static let danmakuToASS = "video.danmakuToASS"
+        static let ccSubtitles = "video.ccSubtitles"
         static let autoExtract = "unzip.autoExtract"
         static let detectPagePassword = "unzip.detectPagePassword"
         static let readArchiveComment = "unzip.readArchiveComment"
@@ -139,6 +140,7 @@ final class SettingsModel {
     var ytDlpChannel: YtDlpChannel { didSet { defaults.set(ytDlpChannel.rawValue, forKey: Key.ytDlpChannel) } }
     var updateBeforeRetry: Bool { didSet { defaults.set(updateBeforeRetry, forKey: Key.updateBeforeRetry) } }
     var danmakuToASS: Bool { didSet { defaults.set(danmakuToASS, forKey: Key.danmakuToASS) } }
+    var ccSubtitles: Bool { didSet { defaults.set(ccSubtitles, forKey: Key.ccSubtitles) } }
 
     // MARK: 解压
     var autoExtract: Bool { didSet { defaults.set(autoExtract, forKey: Key.autoExtract) } }
@@ -174,6 +176,7 @@ final class SettingsModel {
         ytDlpChannel = Self.raw(defaults, Key.ytDlpChannel, .stable)
         updateBeforeRetry = Self.bool(defaults, Key.updateBeforeRetry, true)
         danmakuToASS = Self.bool(defaults, Key.danmakuToASS, true)
+        ccSubtitles = Self.bool(defaults, Key.ccSubtitles, true)
         autoExtract = Self.bool(defaults, Key.autoExtract, true)
         detectPagePassword = Self.bool(defaults, Key.detectPagePassword, true)
         readArchiveComment = Self.bool(defaults, Key.readArchiveComment, true)

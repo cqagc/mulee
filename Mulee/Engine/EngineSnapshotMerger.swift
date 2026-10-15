@@ -6,7 +6,8 @@ enum EngineSnapshotMerger {
     static func merge(
         tasks: [DownloadTask],
         snapshots: [TaskKind: [EngineTaskSnapshot]],
-        now: Date
+        now: Date,
+        videoConfiguration: VideoEngineConfiguration = VideoEngineConfiguration()
     ) -> [DownloadTask] {
         var result = tasks.map { task in
             guard let id = task.engineTaskID, let current = snapshots[task.kind],
@@ -39,6 +40,11 @@ enum EngineSnapshotMerger {
                         sourceLink: snapshot.sourceURL?.absoluteString ?? "",
                         engineTaskID: snapshot.engineTaskID
                     )
+                    if kind == .video, let url = snapshot.sourceURL,
+                       let link = LinkParser.parse(url.absoluteString).first,
+                       let detail = videoConfiguration.detail(for: link) {
+                        task.detail = detail
+                    }
                 }
                 task.name = snapshot.name
                 let pathExtension = URL(filePath: snapshot.name).pathExtension

@@ -8,13 +8,13 @@ public actor YtDlpEngine: DownloadEngine {
     public typealias Updater = @Sendable () async throws -> URL
 
     private let stateDirectory: URL
-    private let binaryURL: URL?
+    private var binaryURL: URL?
     private let installer: ManagedToolInstaller?
     private let ffmpegURL: URL?
     private let denoURL: URL?
     private let allowHomebrewFallback: Bool
-    private let channel: YtDlpChannel
-    private let updatesEnabled: Bool
+    private var channel: YtDlpChannel
+    private var updatesEnabled: Bool
     private let updater: Updater?
     private var quality: YtDlpQuality
     private var cookiesURL: URL?
@@ -67,6 +67,21 @@ public actor YtDlpEngine: DownloadEngine {
         self.quality = quality
         self.cookiesURL = cookiesURL
         self.subtitles = subtitles
+    }
+
+    /// 通道切换只替换后续任务使用的工具，不中断正在运行的子进程。
+    public func configure(
+        quality: YtDlpQuality, cookiesURL: URL?, subtitles: YtDlpSubtitles,
+        channel: YtDlpChannel, updatesEnabled: Bool
+    ) async throws {
+        if channel != self.channel {
+            let binary = try await resolveBinary(channel: channel, useExplicitPath: false)
+            binaryURL = binary
+            if options != nil { resolvedBinary = binary }
+        }
+        self.channel = channel
+        self.updatesEnabled = updatesEnabled
+        configure(quality: quality, cookiesURL: cookiesURL, subtitles: subtitles)
     }
 
     public func start(options: EngineOptions) async throws {
@@ -191,17 +206,16 @@ public actor YtDlpEngine: DownloadEngine {
         schedule()
     }
 
-    private func resolveBinary() async throws -> URL {
-        if let binaryURL {
+    private func resolveBinary(channel selectedChannel: YtDlpChannel? = nil, useExplicitPath: Bool = true) async throws -> URL {
+        if useExplicitPath, let binaryURL {
             guard FileManager.default.isExecutableFile(atPath: binaryURL.path) else { throw EngineError.binaryNotFound }
             return binaryURL
         }
-        if let installer {
-            do { return try await installer.install(.ytDlp(channel: channel)) } catch {
-                guard allowHomebrewFallback else { throw error }
-            }
-        }
+        let tool = ManagedTool.ytDlp(channel: selectedChannel ?? channel)
+        if let installer, let installed = try await installer.installedURL(for: tool) { return installed }
+        if !useExplicitPath, let installer { return try await installer.install(tool) }
         if allowHomebrewFallback, let url = Self.homebrew("yt-dlp") { return url }
+        if let installer { return try await installer.install(tool) }
         throw EngineError.binaryNotFound
     }
 
@@ -221,6 +235,9 @@ public actor YtDlpEngine: DownloadEngine {
     }
 
     private func run(_ id: String, token: UUID) async {
+        let selectedQuality = quality
+        let selectedChannel = channel
+        let shouldUpdate = updatesEnabled
         do {
             guard let index = jobs.firstIndex(where: { $0.id == id }), tokens[id] == token else { return }
             jobs[index].status = .downloading
@@ -238,7 +255,6 @@ public actor YtDlpEngine: DownloadEngine {
             try Task.checkCancellation()
             guard tokens[id] == token, let current = jobs.first(where: { $0.id == id }),
                   let binary = resolvedBinary else { return }
-            let selectedQuality = quality
             let child = try YtDlpProcess(
                 binary: binary, arguments: arguments(for: current, deno: deno, quality: selectedQuality)
             )
@@ -259,7 +275,7 @@ public actor YtDlpEngine: DownloadEngine {
             children[id] = nil
             if child.status != 0 {
                 let raw = errors.isEmpty ? "yt-dlp 退出码 \(child.status)" : errors
-                if try await retry(id, token: token, raw: raw) { return }
+                if try await retry(id, token: token, raw: raw, channel: selectedChannel, updatesEnabled: shouldUpdate) { return }
                 throw EngineError.launchFailed(raw)
             }
             guard let index = jobs.firstIndex(where: { $0.id == id }),
@@ -304,15 +320,23 @@ public actor YtDlpEngine: DownloadEngine {
         schedule()
     }
 
-    private func retry(_ id: String, token: UUID, raw: String) async throws -> Bool {
+    private func retry(
+        _ id: String, token: UUID, raw: String, channel: YtDlpChannel, updatesEnabled: Bool
+    ) async throws -> Bool {
         guard updatesEnabled,
               let index = jobs.firstIndex(where: { $0.id == id }), !jobs[index].retried,
               updater != nil || installer != nil else { return false }
         jobs[index].retried = true
         try persist()
         do {
-            if let updater { resolvedBinary = try await updater() }
-            else if let installer { resolvedBinary = try await installer.install(.ytDlp(channel: channel), force: true) }
+            let updated: URL?
+            if let updater { updated = try await updater() }
+            else if let installer { updated = try await installer.install(.ytDlp(channel: channel), force: true) }
+            else { updated = nil }
+            if self.channel == channel, let updated {
+                binaryURL = updated
+                resolvedBinary = updated
+            }
         } catch {
             throw EngineError.launchFailed(raw + "\n更新 yt-dlp 失败：" + String(describing: error))
         }

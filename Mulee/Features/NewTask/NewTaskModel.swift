@@ -61,6 +61,7 @@ final class NewTaskModel {
 
     func createTasks(in model: AppModel) {
         guard canStartDownload else { return }
+        // TODO: 把逐任务画质和字幕选项传给视频引擎；当前使用全局设置。
         model.addTasks(from: parsedLinks, autoExtract: autoExtract, directory: saveDirectory)
     }
 

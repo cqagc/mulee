@@ -6,9 +6,25 @@ enum EngineStatusPresentation {
     static func title(for state: EngineState) -> String {
         switch state {
         case .running: "HTTP 就绪"
+        case .preparing: "正在准备"
+        case .missingFFmpeg: "缺少 ffmpeg，音视频合并不可用"
         case .unavailable: "未接入"
         case .failed(let reason): reason.count > 22 ? String(reason.prefix(22)) + "…" : reason
         }
+    }
+
+    static func videoTitle(for state: EngineState) -> String {
+        switch state {
+        case .running: "就绪"
+        case .preparing: "正在准备"
+        case .missingFFmpeg: "缺少 ffmpeg，音视频合并不可用"
+        case .unavailable: "未接入"
+        case .failed(let reason): "启动失败：\(reason)"
+        }
+    }
+
+    static func videoReadyState(ffmpegURL: URL?) -> EngineState {
+        ffmpegURL == nil ? .missingFFmpeg : .running
     }
 
     nonisolated static func errorMessage(_ error: any Error) -> String {
