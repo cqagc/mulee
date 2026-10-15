@@ -40,6 +40,8 @@ targets:
       path: Mulee/Resources/Info.plist
       properties:
         CFBundleDisplayName: Mulee
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleURLTypes:
           - CFBundleURLName: com.cqagc.mulee.links
             CFBundleTypeRole: Viewer
@@ -56,6 +58,13 @@ targets:
             UTTypeTagSpecification:
               public.filename-extension: [torrent]
               public.mime-type: [application/x-bittorrent]
+        NSServices:
+          - NSMenuItem:
+              default: 用 Mulee 下载
+            NSMessage: downloadWithMulee
+            NSPortName: Mulee
+            NSSendTypes: [NSStringPboardType, NSURLPboardType, public.utf8-plain-text, public.url]
+            NSRequiredContext: {}
         LSApplicationCategoryType: public.app-category.utilities
         NSHumanReadableCopyright: "© 2026 CQAGC. GPL-3.0."
         SUFeedURL: https://github.com/cqagc/mulee/releases/latest/download/appcast.xml
@@ -128,6 +137,8 @@ targets:
       path: MuleeSafariExtension/Info.plist
       properties:
         CFBundleDisplayName: Mulee
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.Safari.web-extension
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SafariWebExtensionHandler

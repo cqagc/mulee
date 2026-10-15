@@ -12,6 +12,21 @@ final class OpenURLRouter {
         self.settings = settings
     }
 
+    /// 从服务菜单接收选中文本，沿用浏览器入口的远程链接和数量限制。
+    @discardableResult
+    func openSelectedText(_ text: String) -> Bool {
+        guard text.utf8.count <= OpenURLRequest.maximumBytes else { return false }
+        let links = LinkParser.parse(text)
+        guard !links.isEmpty, links.count <= OpenURLRequest.maximumLinks,
+              links.allSatisfy(OpenURLRequest.isRemote) else { return false }
+        var components = URLComponents()
+        components.scheme = "mulee"
+        components.host = "add"
+        components.queryItems = links.map { URLQueryItem(name: "url", value: $0.original) }
+        guard let url = components.url else { return false }
+        return open([url])
+    }
+
     @discardableResult
     func open(_ urls: [URL]) -> Bool {
         let requests = urls.compactMap { OpenURLRequest.parse($0, detectPagePassword: settings.detectPagePassword) }

@@ -932,6 +932,28 @@
         }
       }
     },
+    "BT 和电驴上传合计；电驴上传越多，别人给你排队越靠前": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combined uploads for BitTorrent and eD2k; uploading more on eD2k improves your queue position"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT 和电驴上传合计；电驴上传越多，别人给你排队越靠前"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT 與電驢上傳合計；電驢上傳越多，別人給你的佇列順位越前"
+          }
+        }
+      }
+    },
     "BT 和电驴共用；电驴上传越多，别人给你排队越靠前": {
       "extractionState": "manual",
       "localizations": {
@@ -1230,6 +1252,52 @@
         }
       }
     },
+    "GPL-3.0 许可证": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPL-3.0 许可证"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPL-3.0 license"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPL-3.0 授權條款"
+          }
+        }
+      }
+    },
+    "GitHub": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub"
+          }
+        }
+      }
+    },
     "H.264/HEVC MP4，系统播放器和 iPhone 都能播": {
       "extractionState": "manual",
       "localizations": {
@@ -1322,6 +1390,29 @@
         }
       }
     },
+    "Made by CQAGC": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Made by CQAGC"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Made by CQAGC"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Made by CQAGC"
+          }
+        }
+      }
+    },
     "Mulee": {
       "extractionState": "manual",
       "localizations": {
@@ -1341,6 +1432,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mulee"
+          }
+        }
+      }
+    },
+    "Mulee 可以打开 magnet、ed2k、thunder 链接和 .torrent 种子文件。打开后，需在「新建下载」面板确认才会开始下载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulee 可以打开 magnet、ed2k、thunder 链接和 .torrent 种子文件。打开后，需在「新建下载」面板确认才会开始下载。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulee can open magnet, ed2k and thunder links, and .torrent files. Downloads start only after you confirm in the New Download panel."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulee 可以開啟 magnet、ed2k、thunder 連結與 .torrent 種子檔。開啟後，需在「新增下載」面板確認才會開始下載。"
           }
         }
       }
@@ -1686,6 +1800,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "下載"
+          }
+        }
+      }
+    },
+    "下载、做种或等待来源时阻止睡眠": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载、做种或等待来源时阻止睡眠"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prevent sleep while downloading, seeding, or waiting for sources"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載、做種或等待來源時防止睡眠"
           }
         }
       }
@@ -2173,6 +2309,29 @@
         }
       }
     },
+    "以后再说": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以后再说"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not now"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以後再說"
+          }
+        }
+      }
+    },
     "任务信息": {
       "extractionState": "manual",
       "localizations": {
@@ -2495,6 +2654,28 @@
         }
       }
     },
+    "允许睡眠": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许睡眠"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sleep allowed"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允許睡眠"
+          }
+        }
+      }
+    },
     "先在内存里攒成大块再写盘，减少 SSD 写入": {
       "extractionState": "manual",
       "localizations": {
@@ -2790,6 +2971,52 @@
           "stringUnit": {
             "state": "translated",
             "value": "關"
+          }
+        }
+      }
+    },
+    "关于 Mulee": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关于 Mulee"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About Mulee"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關於 Mulee"
+          }
+        }
+      }
+    },
+    "关闭": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "關閉"
           }
         }
       }
@@ -4197,6 +4424,29 @@
         }
       }
     },
+    "将 Mulee 设为默认下载工具？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将 Mulee 设为默认下载工具？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Mulee as your default download tool?"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將 Mulee 設為預設下載工具？"
+          }
+        }
+      }
+    },
     "尚未见到": {
       "extractionState": "manual",
       "localizations": {
@@ -4377,6 +4627,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "平日 9:00–18:00 下載限制為 5 MB/s"
+          }
+        }
+      }
+    },
+    "工作日按以下时段限速；支持跨午夜，开始与结束相同时不生效": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作日按以下时段限速；支持跨午夜，开始与结束相同时不生效"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply these limits on weekdays; overnight periods are supported. Equal start and end times disable the period."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "工作日依下列時段限制速度；支援跨午夜，開始與結束相同時不生效"
           }
         }
       }
@@ -4748,6 +5020,28 @@
         }
       }
     },
+    "开启时，做种和电驴等待来源不阻止睡眠；关闭时，这些任务也会阻止睡眠。仅在「下载时阻止睡眠」开启时生效。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开启时，做种和电驴等待来源不阻止睡眠；关闭时，这些任务也会阻止睡眠。仅在「下载时阻止睡眠」开启时生效。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When enabled, seeding and eD2k tasks waiting for sources allow sleep. When disabled, they also prevent sleep. Applies only when “Prevent sleep while downloading” is enabled."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開啟時，做種和電驢等待來源不防止睡眠；關閉時，這些任務也會防止睡眠。僅在「下載時防止睡眠」開啟時生效。"
+          }
+        }
+      }
+    },
     "开始下载 %lld 个任务": {
       "extractionState": "manual",
       "localizations": {
@@ -4812,6 +5106,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "開始後可在詳細資訊中選擇要下載的檔案"
+          }
+        }
+      }
+    },
+    "开始时间": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始时间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start time"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始時間"
           }
         }
       }
@@ -5023,6 +5339,73 @@
         }
       }
     },
+    "所有下载合计，按各引擎实际需求分配": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combined limit for all downloads, allocated by engine demand"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有下载合计，按各引擎实际需求分配"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有下載合計，依各引擎實際需求分配"
+          }
+        }
+      }
+    },
+    "所有引擎合计；电驴等待来源和 BT 做种不占名额": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total across all engines; eD2k waiting for sources and BitTorrent seeding do not count"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有引擎合计；电驴等待来源和 BT 做种不占名额"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有引擎合計；電驢等待來源與 BT 做種不占名額"
+          }
+        }
+      }
+    },
+    "所选文本中没有可下载的链接。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所选文本中没有可下载的链接。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected text contains no downloadable links."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所選文字中沒有可下載的連結。"
+          }
+        }
+      }
+    },
     "打开 Mulee": {
       "extractionState": "manual",
       "localizations": {
@@ -5042,6 +5425,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "開啟 Mulee"
+          }
+        }
+      }
+    },
+    "打开登录项": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开登录项"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Login Items"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開登入項目"
           }
         }
       }
@@ -5226,6 +5631,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "搜尋任務"
+          }
+        }
+      }
+    },
+    "支持 ZIP 和 RAR5；当前解压工具不提供 7z 和旧版 RAR 的注释": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持 ZIP 和 RAR5；当前解压工具不提供 7z 和旧版 RAR 的注释"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supports ZIP and RAR5. The current extraction tool does not expose comments for 7z or older RAR archives."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支援 ZIP 和 RAR5；目前解壓縮工具不提供 7z 和舊版 RAR 的註解"
           }
         }
       }
@@ -5667,6 +6094,28 @@
         }
       }
     },
+    "无法更新开机启动：%@": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法更新开机启动：%@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to update launch at login: %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法更新登入時啟動：%@"
+          }
+        }
+      }
+    },
     "无法移除临时解压密码：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -5824,6 +6273,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "日期"
+          }
+        }
+      }
+    },
+    "时段内上传限速": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时段内上传限速"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled upload limit"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時段內上傳速度限制"
+          }
+        }
+      }
+    },
+    "时段内下载限速": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时段内下载限速"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled download limit"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時段內下載速度限制"
           }
         }
       }
@@ -6955,6 +7448,29 @@
         }
       }
     },
+    "此构建未包含第三方许可证目录。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此构建未包含第三方许可证目录。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This build does not include a third-party licenses folder."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此組建未包含第三方授權條款目錄。"
+          }
+        }
+      }
+    },
     "每日版": {
       "extractionState": "manual",
       "localizations": {
@@ -7783,6 +8299,29 @@
         }
       }
     },
+    "第三方许可证": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第三方许可证"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Third-party licenses"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第三方授權條款"
+          }
+        }
+      }
+    },
     "等待其余分卷": {
       "extractionState": "manual",
       "localizations": {
@@ -8055,6 +8594,51 @@
           "stringUnit": {
             "state": "translated",
             "value": "系統代理只影響網頁類連線，BT 和電驢不受這項設定影響。連接埠是否可連入可在下方查看。"
+          }
+        }
+      }
+    },
+    "系统会询问是否更改默认打开方式。你也可以稍后在设置中更改。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统会询问是否更改默认打开方式。你也可以稍后在设置中更改。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The system will ask you to confirm changes to default apps. You can also change these later in Settings."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系統會詢問是否更改預設開啟方式。你也可以稍後在設定中更改。"
+          }
+        }
+      }
+    },
+    "结束时间": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "结束时间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End time"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結束時間"
           }
         }
       }
@@ -8818,6 +9402,28 @@
         }
       }
     },
+    "计划限速中": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "计划限速中"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduled limits active"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排程速度限制中"
+          }
+        }
+      }
+    },
     "设为 Mulee": {
       "extractionState": "manual",
       "localizations": {
@@ -8837,6 +9443,29 @@
           "stringUnit": {
             "state": "translated",
             "value": "設為 Mulee"
+          }
+        }
+      }
+    },
+    "设为默认": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设为默认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set as default"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設為預設"
           }
         }
       }
@@ -8928,6 +9557,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "說明已複製"
+          }
+        }
+      }
+    },
+    "请在系统设置的「登录项」中批准 Mulee 开机启动。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在系统设置的「登录项」中批准 Mulee 开机启动。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Approve Mulee in System Settings > Login Items to launch at login."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請在系統設定的「登入項目」中核准 Mulee 登入時啟動。"
           }
         }
       }
@@ -9116,6 +9767,28 @@
         }
       }
     },
+    "还有任务正在运行，确定退出 Mulee？": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还有任务正在运行，确定退出 Mulee？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasks are still running. Quit Mulee?"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "還有任務正在執行，確定結束 Mulee？"
+          }
+        }
+      }
+    },
     "还没有下载任务": {
       "extractionState": "manual",
       "localizations": {
@@ -9227,6 +9900,73 @@
           "stringUnit": {
             "state": "translated",
             "value": "連線至電驢伺服器"
+          }
+        }
+      }
+    },
+    "退出": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結束"
+          }
+        }
+      }
+    },
+    "退出会暂停下载和解压，下载进度会保留。": {
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "退出会暂停下载和解压，下载进度会保留。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitting stops downloads and extraction. Download progress is saved."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結束會暫停下載和解壓縮，下載進度會保留。"
+          }
+        }
+      }
+    },
+    "适用于 macOS 的开源下载工具。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "适用于 macOS 的开源下载工具。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An open-source download tool for macOS."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "適用於 macOS 的開源下載工具。"
           }
         }
       }
@@ -9622,6 +10362,29 @@
         }
       }
     },
+    "默认下载工具": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "默认下载工具"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default download tool"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "預設下載工具"
+          }
+        }
+      }
+    },
     "默认保存目录": {
       "extractionState": "manual",
       "localizations": {
@@ -9756,424 +10519,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "，排隊第 %lld 位"
-          }
-        }
-      }
-    },
-    "工作日按以下时段限速；支持跨午夜，开始与结束相同时不生效": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "工作日按以下时段限速；支持跨午夜，开始与结束相同时不生效"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Apply these limits on weekdays; overnight periods are supported. Equal start and end times disable the period."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "工作日依下列時段限制速度；支援跨午夜，開始與結束相同時不生效"
-          }
-        }
-      }
-    },
-    "开始时间": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "开始时间"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Start time"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開始時間"
-          }
-        }
-      }
-    },
-    "结束时间": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "结束时间"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "End time"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "結束時間"
-          }
-        }
-      }
-    },
-    "时段内下载限速": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "时段内下载限速"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scheduled download limit"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "時段內下載速度限制"
-          }
-        }
-      }
-    },
-    "时段内上传限速": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "时段内上传限速"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scheduled upload limit"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "時段內上傳速度限制"
-          }
-        }
-      }
-    },
-    "计划限速中": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "计划限速中"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Scheduled limits active"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "排程速度限制中"
-          }
-        }
-      }
-    },
-    "开启时，做种和电驴等待来源不阻止睡眠；关闭时，这些任务也会阻止睡眠。仅在「下载时阻止睡眠」开启时生效。": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "开启时，做种和电驴等待来源不阻止睡眠；关闭时，这些任务也会阻止睡眠。仅在「下载时阻止睡眠」开启时生效。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "When enabled, seeding and eD2k tasks waiting for sources allow sleep. When disabled, they also prevent sleep. Applies only when “Prevent sleep while downloading” is enabled."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開啟時，做種和電驢等待來源不防止睡眠；關閉時，這些任務也會防止睡眠。僅在「下載時防止睡眠」開啟時生效。"
-          }
-        }
-      }
-    },
-    "允许睡眠": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "允许睡眠"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sleep allowed"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "允許睡眠"
-          }
-        }
-      }
-    },
-    "下载、做种或等待来源时阻止睡眠": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下载、做种或等待来源时阻止睡眠"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Prevent sleep while downloading, seeding, or waiting for sources"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下載、做種或等待來源時防止睡眠"
-          }
-        }
-      }
-    },
-    "请在系统设置的「登录项」中批准 Mulee 开机启动。": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请在系统设置的「登录项」中批准 Mulee 开机启动。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Approve Mulee in System Settings > Login Items to launch at login."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "請在系統設定的「登入項目」中核准 Mulee 登入時啟動。"
-          }
-        }
-      }
-    },
-    "打开登录项": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开登录项"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open Login Items"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打開登入項目"
-          }
-        }
-      }
-    },
-    "无法更新开机启动：%@": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法更新开机启动：%@"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unable to update launch at login: %@"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無法更新登入時啟動：%@"
-          }
-        }
-      }
-    },
-    "还有任务正在运行，确定退出 Mulee？": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "还有任务正在运行，确定退出 Mulee？"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tasks are still running. Quit Mulee?"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "還有任務正在執行，確定結束 Mulee？"
-          }
-        }
-      }
-    },
-    "退出会暂停下载和解压，下载进度会保留。": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "退出会暂停下载和解压，下载进度会保留。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quitting stops downloads and extraction. Download progress is saved."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "結束會暫停下載和解壓縮，下載進度會保留。"
-          }
-        }
-      }
-    },
-    "退出": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "退出"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quit"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "結束"
-          }
-        }
-      }
-    },
-    "支持 ZIP 和 RAR5；当前解压工具不提供 7z 和旧版 RAR 的注释": {
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支持 ZIP 和 RAR5；当前解压工具不提供 7z 和旧版 RAR 的注释"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Supports ZIP and RAR5. The current extraction tool does not expose comments for 7z or older RAR archives."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "支援 ZIP 和 RAR5；目前解壓縮工具不提供 7z 和舊版 RAR 的註解"
-          }
-        }
-      }
-    },
-    "BT 和电驴上传合计；电驴上传越多，别人给你排队越靠前": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Combined uploads for BitTorrent and eD2k; uploading more on eD2k improves your queue position"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BT 和电驴上传合计；电驴上传越多，别人给你排队越靠前"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BT 與電驢上傳合計；電驢上傳越多，別人給你的佇列順位越前"
-          }
-        }
-      }
-    },
-    "所有下载合计，按各引擎实际需求分配": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Combined limit for all downloads, allocated by engine demand"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "所有下载合计，按各引擎实际需求分配"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "所有下載合計，依各引擎實際需求分配"
-          }
-        }
-      }
-    },
-    "所有引擎合计；电驴等待来源和 BT 做种不占名额": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Total across all engines; eD2k waiting for sources and BitTorrent seeding do not count"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "所有引擎合计；电驴等待来源和 BT 做种不占名额"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "所有引擎合計；電驢等待來源與 BT 做種不占名額"
           }
         }
       }

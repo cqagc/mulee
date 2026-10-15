@@ -6,6 +6,7 @@ import MuleeCore
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let updates = AppUpdateController.shared
     var openURLRouter: OpenURLRouter?
+    private var servicesProvider: DownloadServicesProvider?
     private var settingsRuntime: SettingsRuntime?
     private var coordinator: DownloadCoordinator?
     private var extractionCoordinator: ExtractionCoordinator?
@@ -19,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     func configure(model: AppModel, settings: SettingsModel, usesSampleData: Bool) {
         openURLRouter = OpenURLRouter(model: model, settings: settings)
+        servicesProvider = DownloadServicesProvider(router: openURLRouter)
         self.model = model
         self.settings = settings
         updates.installation.hasActiveTransfers = { [weak model] in
@@ -67,6 +69,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.servicesProvider = servicesProvider
+        NSUpdateDynamicServices()
         if !AppEnvironment.isRunningUnitTests, !Self.wasLaunchedAtLogin {
             model?.mainWindowRequest += 1
         }
