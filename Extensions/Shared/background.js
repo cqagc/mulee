@@ -59,7 +59,8 @@ extensionAPI.runtime.onMessage.addListener((message, sender, respond) => {
     if (message?.type === "syncVideoLogin") {
         globalThis.MuleeVideoLogin.transfer(extensionAPI, [], true).then(
             () => respond({ ok: true }),
-            () => respond({ ok: false, error: "videoLoginFailed" })
+            error => respond({ ok: false, error: ["videoLoginNotFound", "videoLoginReloadRequired"].includes(error.message)
+                ? error.message : "videoLoginFailed" })
         );
         return true;
     }

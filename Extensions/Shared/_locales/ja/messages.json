@@ -23,6 +23,15 @@
   "send": {
     "message": "Muleeに送信"
   },
+  "sendSelected": {
+    "message": "Muleeに送信（$1）"
+  },
+  "selectAll": {
+    "message": "すべて選択"
+  },
+  "selectNone": {
+    "message": "選択をすべて解除"
+  },
   "options": {
     "message": "ダウンロードの引き継ぎ設定"
   },
@@ -81,7 +90,7 @@
     "message": "Bilibili / YouTubeのログイン状態をMuleeと共有し、ログインが必要な画質でダウンロードする"
   },
   "videoLoginHint": {
-    "message": "オンにした場合のみ、この2つのサイトのCookieを読み取ります。Chromeでは、先にMuleeの「設定」＞「動画」で接続機能をインストールしてください。オフにした後は、Muleeで保存済みのログイン状態を消去できます。"
+    "message": "オンにした場合のみ、この2つのサイトのCookieを読み取ります。Chromeでは、先にMuleeの「設定」＞「動画」で「Chrome拡張機能にログイン状態の受け渡しを許可」をクリックしてください。オフにした後は、Muleeで保存済みのログイン状態を消去できます。"
   },
   "videoLoginSync": {
     "message": "ログイン状態を更新"
@@ -89,7 +98,13 @@
   "videoLoginSent": {
     "message": "ログイン状態をMuleeに送信しました"
   },
+  "videoLoginNotFound": {
+    "message": "BilibiliまたはYouTubeのログイン情報が見つかりません。先にブラウザでログインしてください。"
+  },
+  "videoLoginReloadRequired": {
+    "message": "chrome://extensionsでMulee拡張機能を再読み込みしてから、もう一度お試しください。"
+  },
   "videoLoginFailed": {
-    "message": "ログイン状態を共有できません。Chromeでは、先にMuleeの「設定」＞「動画」で接続機能をインストールしてください。Safariでは、正式に署名されたMuleeを使用してください。"
+    "message": "ログイン状態を共有できません。Chromeでは、先にMuleeの「設定」＞「動画」で「Chrome拡張機能にログイン状態の受け渡しを許可」をクリックしてください。Safariでは、正式に署名されたMuleeを使用してください。"
   }
 }

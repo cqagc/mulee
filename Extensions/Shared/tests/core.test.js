@@ -102,3 +102,47 @@ test("selected text trims unmatched wrappers while preserving balanced URL paren
     assert.deepEqual(links.extractLinks("(" + magnet + ")"), [magnet]);
     assert.deepEqual(links.extractLinks("（https://example.org/a(1).zip）"), ["https://example.org/a(1).zip"]);
 });
+
+test("Bilibili tracking is removed while parts, timestamps and season identifiers survive", () => {
+    const tracking = "track_id trackid spm_id_from from_spmid from_source from vd_source share_source share_medium share_plat "
+        + "share_session_id share_tag share_from bbid ts unique_k timestamp buvid is_story_h5 mid plat_id up_id msource seid session_id rt spmid";
+    for (const base of ["https://www.bilibili.com/video/BVexample", "https://www.bilibili.com/bangumi/play/ep123", "https://b23.tv/example"]) {
+        const retained = base + "?p=2&t=90&ep_id=123&season_id=456&season_type=1&custom=a%20b&TRACK_ID=keep";
+        const input = retained + "&" + tracking.split(" ").map(key => key + "=tracking").join("&") + "&utm_source=share#part";
+        assert.equal(links.normalizeURL(input), retained + "#part");
+        assert.equal(links.normalizeURL(links.normalizeURL(input)), retained + "#part");
+    }
+});
+
+test("YouTube tracking is removed without changing video, playlist, index or time", () => {
+    for (const base of ["https://www.youtube.com/watch", "https://m.youtube.com/watch", "https://youtu.be/example"]) {
+        const retained = base + "?v=example&list=playlist&index=3&t=1m2s&custom=keep";
+        assert.equal(links.normalizeURL(retained + "&si=share&pp=feed&feature=share&ab_channel=channel&utm_medium=web&fbclid=x&gclid=y"), retained);
+    }
+});
+
+test("unknown sites keep queries byte for byte except explicitly global tracking parameters", () => {
+    const query = "token=a%2fb+z&signature=X%20Y&track_id=keep&from=keep&si=keep&v=1&list=2&flag&token=second&?utm_source=keep";
+    for (const host of ["example.org", "bilibili.com.evil.org", "notyoutube.com", "youtu.be.evil.org"]) {
+        const value = "https://" + host + "/资料.zip?" + query + "#fragment?utm_source=keep";
+        assert.equal(links.normalizeURL(value), value);
+        const tracked = "https://" + host + "/资料.zip?utm_source=remove&" + query + "&fbclid=x&gclid=y&utm_campaign=z#fragment";
+        assert.equal(links.normalizeURL(tracked), "https://" + host + "/资料.zip?" + query + "#fragment");
+    }
+    assert.equal(links.normalizeURL("https://example.org/a.zip?utm_source=x#file"), "https://example.org/a.zip#file");
+    assert.equal(links.normalizeURL("https://example.org/a.zip#file?utm_source=keep"), "https://example.org/a.zip#file?utm_source=keep");
+    for (const value of [magnet, ed2k, thunder("https://example.org/a.zip"), "invalid"]) {
+        assert.equal(links.normalizeURL(value), value);
+    }
+});
+
+test("collection, selection extraction and handoff deduplicate normalized URLs", () => {
+    const base = "https://www.bilibili.com/video/BVexample?p=2&t=30";
+    const otherPart = "https://www.bilibili.com/video/BVexample?p=3&t=30";
+    const variants = [base + "&track_id=a", base + "&trackid=b", base];
+    assert.deepEqual(links.collectLinks(variants, variants.join("\n"), base + "&from_spmid=c"), [base]);
+    assert.deepEqual(links.extractLinks([...variants, otherPart].join("\n")), [base, otherPart]);
+    const [entry] = links.buildBatches([...variants, otherPart], base + "&vd_source=d");
+    assert.deepEqual(new URL(entry).searchParams.getAll("url"), [base, otherPart]);
+    assert.equal(new URL(entry).searchParams.get("referrer"), base);
+});

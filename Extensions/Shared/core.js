@@ -6,6 +6,9 @@
     const maximumBytes = 1048576;
     const defaultExtensions = "zip rar 7z tar gz bz2 xz iso img dmg pkg exe msi mp4 mkv mov avi webm torrent";
     const fileExtensions = new Set((defaultExtensions + " mp3 flac wav aac ogg m4a pdf epub doc docx xls xlsx ppt pptx deb rpm zst tgz vhd vhdx").split(" "));
+    const bilibiliTracking = new Set(("track_id trackid spm_id_from from_spmid from_source from vd_source share_source share_medium share_plat "
+        + "share_session_id share_tag share_from bbid ts unique_k timestamp buvid is_story_h5 mid plat_id up_id msource seid session_id rt spmid").split(" "));
+    const youtubeTracking = new Set(["si", "pp", "feature", "ab_channel"]);
 
     function extensionList(value) {
         return [...new Set(String(value).toLowerCase().split(/[\s,;，；]+/)
@@ -66,6 +69,32 @@
             || hasExtension(value, [...fileExtensions]) || isVideoPage(value));
     }
 
+    function normalizeURL(value) {
+        try {
+            const url = new URL(value);
+            if (!["http:", "https:", "ftp:"].includes(url.protocol)) return value;
+            const host = url.hostname.toLowerCase();
+            const matches = domain => host === domain || host.endsWith("." + domain);
+            const tracking = matches("bilibili.com") || matches("b23.tv") ? bilibiliTracking
+                : matches("youtube.com") || matches("youtu.be") ? youtubeTracking : new Set();
+            const queryStart = value.indexOf("?");
+            const fragmentStart = value.indexOf("#");
+            if (queryStart < 0 || (fragmentStart >= 0 && fragmentStart < queryStart)) return value;
+            const queryEnd = fragmentStart < 0 ? value.length : fragmentStart;
+            const parameters = value.slice(queryStart + 1, queryEnd).split("&");
+            const retained = parameters.filter(parameter => {
+                const key = new URLSearchParams("key=" + parameter.split("=", 1)[0]).get("key") || "";
+                return !key.startsWith("utm_") && key !== "fbclid" && key !== "gclid" && !tracking.has(key);
+            });
+            if (retained.length === parameters.length) return value;
+            // Preserve all remaining query bytes: download URLs may contain signatures.
+            const query = retained.join("&");
+            return value.slice(0, queryStart) + (query ? "?" + query : "") + value.slice(queryEnd);
+        } catch {
+            return value;
+        }
+    }
+
     function trimPunctuation(value) {
         let result = value.replace(/[，。；：！？、….,;!?]+$/u, "");
         const pairs = { ")": "(", "]": "[", "}": "{", "）": "（", "】": "【", "》": "《" };
@@ -81,11 +110,11 @@
     function extractLinks(text) {
         const matches = String(text).match(/ed2k:\/\/\|file\|[^\r\n]*?\|\/|(?:https?:\/\/|ftp:\/\/|magnet:\?|thunder:\/\/)[^\s<>"，。；：！？、…]+/gi) || [];
         return [...new Set(matches.map(trimPunctuation)
-            .filter(value => remoteLink(value)))];
+            .filter(value => remoteLink(value)).map(normalizeURL))];
     }
 
     function collectLinks(hrefs, text, pageURL) {
-        return [...new Set([...hrefs, ...extractLinks(text), pageURL].filter(isDownloadable))];
+        return [...new Set([...hrefs, ...extractLinks(text), pageURL].filter(isDownloadable).map(normalizeURL))];
     }
 
     function buildBatches(links, referrer = "", text = "") {
@@ -95,7 +124,7 @@
         let source = "";
         try {
             const url = new URL(referrer);
-            if (["http:", "https:"].includes(url.protocol)) source = referrer;
+            if (["http:", "https:"].includes(url.protocol)) source = normalizeURL(referrer);
         } catch {
             // Browser-internal pages are not valid referrers.
         }
@@ -105,7 +134,7 @@
         const batches = [];
         let parameters = [];
         let size = prefix.length + suffix.length;
-        for (const link of [...new Set(links)]) {
+        for (const link of [...new Set(links.map(normalizeURL))]) {
             const parameter = "url=" + encodeURIComponent(link);
             if (prefix.length + suffix.length + parameter.length > maximumBytes) throw new Error("tooLarge");
             if (parameters.length === maximumLinks || size + parameter.length + (parameters.length ? 1 : 0) > maximumBytes) {
@@ -121,7 +150,7 @@
     }
 
     const api = { maximumLinks, maximumBytes, defaultExtensions, extensionList, remoteLink,
-        isVideoPage, hasExtension, isDownloadable, extractLinks, collectLinks, buildBatches };
+        isVideoPage, hasExtension, isDownloadable, normalizeURL, extractLinks, collectLinks, buildBatches };
     root.MuleeLinks = api;
     if (typeof module !== "undefined") module.exports = api;
 })(globalThis);

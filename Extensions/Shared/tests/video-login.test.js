@@ -20,7 +20,7 @@ function fixture(enabled, granted = true, scheme = "chrome-extension") {
             cookies: { getAll: async ({ domain }) => {
                 reads.push(domain);
                 return [
-                    { domain: "." + domain, path: "/", name: "test", value: "synthetic", secure: true, httpOnly: true, hostOnly: false },
+                    { domain: "." + domain, path: "/", name: domain === "bilibili.com" ? "SESSDATA" : "test", value: "synthetic", secure: true, httpOnly: true, hostOnly: false },
                     { domain: ".example.org", path: "/", name: "forbidden", value: "synthetic", secure: true, httpOnly: false, hostOnly: false }
                 ];
             } }
@@ -93,4 +93,71 @@ test("Safari uses the app extension host", async () => {
     await login.transfer(state.api, [], true);
     assert.ok(state.messages.length > 0);
     assert.ok(state.messages.every(({ host }) => host === "com.cqagc.mulee"));
+});
+
+test("automatic transfers skip empty cookies and explicit sync explains when neither site is signed in", async () => {
+    const state = fixture(true);
+    state.api.cookies.getAll = async () => [];
+    await login.transfer(state.api, ["https://b23.tv/example", "https://youtu.be/example"]);
+    assert.deepEqual(state.messages, []);
+    await assert.rejects(login.transfer(state.api, [], true), { message: "videoLoginNotFound" });
+    assert.deepEqual(state.messages, []);
+});
+
+test("explicit sync skips each empty site while still transferring the other", async () => {
+    for (const signedIn of ["bilibili.com", "youtube.com"]) {
+        const state = fixture(true);
+        const getAll = state.api.cookies.getAll;
+        state.api.cookies.getAll = query => query.domain === signedIn ? getAll(query) : Promise.resolve([]);
+        await login.transfer(state.api, [], true);
+        assert.equal(state.messages.length, 1);
+        assert.equal(state.messages[0].payload.site + ".com", signedIn);
+    }
+});
+
+test("Bilibili cookies without a permitted SESSDATA are never sent", async () => {
+    const state = fixture(true);
+    state.api.cookies.getAll = async () => [
+        { domain: ".bilibili.com", path: "/", name: "buvid3", value: "synthetic" },
+        { domain: ".example.org", path: "/", name: "SESSDATA", value: "synthetic" }
+    ];
+    await login.transfer(state.api, ["https://www.bilibili.com/video/example"]);
+    assert.deepEqual(state.messages, []);
+    await assert.rejects(login.transfer(state.api, [], true), { message: "videoLoginNotFound" });
+    assert.deepEqual(state.messages, []);
+});
+
+test("anonymous Bilibili cookies do not stop a signed-in YouTube transfer", async () => {
+    const state = fixture(true);
+    const getAll = state.api.cookies.getAll;
+    state.api.cookies.getAll = async query => (await getAll(query)).map(cookie => ({ ...cookie, name: "anonymous" }));
+    await login.transfer(state.api, [], true);
+    assert.equal(state.messages.length, 1);
+    assert.equal(state.messages[0].payload.site, "youtube");
+});
+
+test("missing cookie or native messaging APIs return an actionable reload code", async () => {
+    for (const remove of [
+        api => { delete api.cookies; },
+        api => { delete api.cookies.getAll; },
+        api => { delete api.runtime.sendNativeMessage; }
+    ]) {
+        for (const explicit of [false, true]) {
+            const state = fixture(true);
+            remove(state.api);
+            await assert.rejects(login.transfer(state.api, ["https://youtu.be/example"], explicit), { message: "videoLoginReloadRequired" });
+            assert.deepEqual(state.reads, []);
+            assert.deepEqual(state.messages, []);
+        }
+    }
+});
+
+test("unrelated downloads do not require cookie APIs and cookie read errors stay private", async () => {
+    const state = fixture(true);
+    state.api.cookies.getAll = async () => { throw new Error("synthetic credential"); };
+    await assert.rejects(login.transfer(state.api, [], true), { message: "videoLoginFailed" });
+    delete state.api.cookies;
+    delete state.api.runtime.sendNativeMessage;
+    await login.transfer(state.api, ["https://example.org/a.zip"]);
+    assert.deepEqual(state.messages, []);
 });

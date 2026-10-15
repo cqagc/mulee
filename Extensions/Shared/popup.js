@@ -9,8 +9,8 @@ const extensions = document.getElementById("extensions");
 const videoLogin = document.getElementById("video-login");
 const videoLoginSync = document.getElementById("video-login-sync");
 
-function message(key) {
-    return extensionAPI.i18n.getMessage(key) || extensionAPI.i18n.getMessage("sendFailed");
+function message(key, substitutions) {
+    return extensionAPI.i18n.getMessage(key, substitutions) || extensionAPI.i18n.getMessage("sendFailed");
 }
 
 for (const node of document.querySelectorAll("[data-i18n]")) node.textContent = message(node.dataset.i18n);
@@ -21,7 +21,21 @@ function showError(error) {
 }
 
 function updateSelection() {
-    sendButton.disabled = !document.querySelector(".link input:checked");
+    const count = document.querySelectorAll(".link input:checked").length;
+    sendButton.disabled = count === 0;
+    sendButton.textContent = message("sendSelected", String(count));
+}
+
+function showVideoLoginError(error) {
+    const key = ["videoLoginNotFound", "videoLoginReloadRequired"].includes(error.message) ? error.message : "videoLoginFailed";
+    status.textContent = message(key);
+}
+
+for (const [id, checked] of [["select-all", true], ["select-none", false]]) {
+    document.getElementById(id).addEventListener("click", () => {
+        for (const input of document.querySelectorAll(".link input")) input.checked = checked;
+        updateSelection();
+    });
 }
 
 async function initialize() {
@@ -48,6 +62,10 @@ async function initialize() {
         });
         page = { url: result.result.url, text: result.result.selection };
         const links = MuleeLinks.collectLinks(result.result.hrefs, result.result.text, page.url);
+        const currentLink = MuleeLinks.isDownloadable(page.url) ? MuleeLinks.normalizeURL(page.url) : "";
+        const currentIndex = links.indexOf(currentLink);
+        if (currentIndex > 0) links.unshift(...links.splice(currentIndex, 1));
+        document.getElementById("selection-actions").hidden = links.length <= 5;
         document.getElementById("empty").hidden = links.length > 0;
         for (const link of links) {
             const label = document.createElement("label");
@@ -55,7 +73,7 @@ async function initialize() {
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
             checkbox.value = link;
-            checkbox.checked = true;
+            checkbox.checked = link === currentLink;
             checkbox.addEventListener("change", updateSelection);
             const text = document.createElement("span");
             text.textContent = link;
@@ -123,13 +141,13 @@ videoLogin.addEventListener("change", async () => {
         videoLoginSync.disabled = !videoLogin.checked;
         if (videoLogin.checked) {
             const response = await extensionAPI.runtime.sendMessage({ type: "syncVideoLogin" });
-            if (!response?.ok) throw new Error("videoLoginFailed");
+            if (!response?.ok) throw new Error(response?.error || "videoLoginFailed");
             status.textContent = message("videoLoginSent");
         } else {
             await extensionAPI.permissions.remove(MuleeVideoLogin.permissionRequest(extensionAPI));
         }
-    } catch {
-        status.textContent = message("videoLoginFailed");
+    } catch (error) {
+        showVideoLoginError(error);
     }
 });
 
@@ -137,13 +155,14 @@ videoLoginSync.addEventListener("click", async () => {
     videoLoginSync.disabled = true;
     try {
         const response = await extensionAPI.runtime.sendMessage({ type: "syncVideoLogin" });
-        if (!response?.ok) throw new Error("videoLoginFailed");
+        if (!response?.ok) throw new Error(response?.error || "videoLoginFailed");
         status.textContent = message("videoLoginSent");
-    } catch {
-        status.textContent = message("videoLoginFailed");
+    } catch (error) {
+        showVideoLoginError(error);
     } finally {
         videoLoginSync.disabled = !videoLogin.checked;
     }
 });
 
+updateSelection();
 initialize().catch(showError);

@@ -18,6 +18,7 @@
     async function transfer(api, links, explicit = false) {
         const settings = await api.storage.local.get({ videoLogin: false });
         if (!settings.videoLogin || !await api.permissions.contains(permissionRequest(api))) return;
+        let transferred = 0;
         for (const site of sites) {
             if (!explicit && !links.some(link => {
                 try {
@@ -25,13 +26,21 @@
                     return allowedDomain(host, site) || host === (site === "bilibili" ? "b23.tv" : "youtu.be");
                 } catch { return false; }
             })) continue;
-            const cookies = (await api.cookies.getAll({ domain: site + ".com" }))
+            if (typeof api.cookies?.getAll !== "function" || typeof api.runtime.sendNativeMessage !== "function") {
+                throw new Error("videoLoginReloadRequired");
+            }
+            let storedCookies;
+            try {
+                storedCookies = await api.cookies.getAll({ domain: site + ".com" });
+            } catch { throw new Error("videoLoginFailed"); }
+            const cookies = storedCookies
                 .filter(cookie => allowedDomain(cookie.domain, site))
                 .map(cookie => ({
                     domain: cookie.domain, path: cookie.path, name: cookie.name, value: cookie.value,
                     secure: cookie.secure, httpOnly: cookie.httpOnly, hostOnly: cookie.hostOnly,
                     ...(cookie.expirationDate === undefined ? {} : { expirationDate: cookie.expirationDate })
                 }));
+            if (!cookies.length || (site === "bilibili" && !cookies.some(cookie => cookie.name === "SESSDATA"))) continue;
             if (cookies.length > 256) throw new Error("videoLoginFailed");
             const request = { type: "videoCookies", site, cookies };
             if (new TextEncoder().encode(JSON.stringify(request)).length > 524288) throw new Error("videoLoginFailed");
@@ -43,7 +52,9 @@
                 response = await api.runtime.sendNativeMessage(safari ? "com.cqagc.mulee" : "com.cqagc.mulee.video_login", request);
             } catch { throw new Error("videoLoginFailed"); }
             if (!response?.ok) throw new Error("videoLoginFailed");
+            transferred++;
         }
+        if (explicit && !transferred) throw new Error("videoLoginNotFound");
     }
 
     const api = { permissionRequest, allowedDomain, transfer };

@@ -23,6 +23,15 @@
     "send": {
         "message": "傳送至 Mulee"
     },
+    "sendSelected": {
+        "message": "傳送至 Mulee（$1）"
+    },
+    "selectAll": {
+        "message": "全選"
+    },
+    "selectNone": {
+        "message": "全部取消選取"
+    },
     "options": {
         "message": "下載接管設定"
     },
@@ -81,7 +90,7 @@
         "message": "將 B 站 / YouTube 登入狀態交給 Mulee，用於下載需要登入的畫質"
     },
     "videoLoginHint": {
-        "message": "僅在開啟後讀取這兩個網站的 Cookie。Chrome 需先在 Mulee 的設定·影片中安裝連線。關閉後可在 Mulee 中清除已儲存的登入狀態。"
+        "message": "僅在開啟後讀取這兩個網站的 Cookie。Chrome 需先在 Mulee 的設定·影片中點「允許 Chrome 擴充功能傳遞登入狀態」。關閉後可在 Mulee 中清除已儲存的登入狀態。"
     },
     "videoLoginSync": {
         "message": "更新登入狀態"
@@ -89,7 +98,13 @@
     "videoLoginSent": {
         "message": "登入狀態已交給 Mulee"
     },
+    "videoLoginNotFound": {
+        "message": "未讀取到 B 站或 YouTube 的登入資訊，請先在瀏覽器中登入。"
+    },
+    "videoLoginReloadRequired": {
+        "message": "請在 chrome://extensions 中重新載入 Mulee 擴充功能後再試。"
+    },
     "videoLoginFailed": {
-        "message": "無法傳遞登入狀態。Chrome 請先在 Mulee 設定·影片中安裝連線；Safari 請使用正式簽署的 Mulee。"
+        "message": "無法傳遞登入狀態。Chrome 請先在 Mulee 設定·影片中點「允許 Chrome 擴充功能傳遞登入狀態」；Safari 請使用正式簽署的 Mulee。"
     }
 }
