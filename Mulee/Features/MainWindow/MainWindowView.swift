@@ -9,6 +9,9 @@ struct MainWindowView: View {
     @State private var isShowingInspector = true
 
     private var category: SidebarItem { selection ?? .all }
+    private var inspectorToggleTitle: String {
+        isShowingInspector ? String(localized: "隐藏详情栏") : String(localized: "显示详情栏")
+    }
     private var canPauseAll: Bool {
         model.tasks.contains { [.downloading, .waitingForSources, .seeding].contains($0.status) }
     }
@@ -21,14 +24,27 @@ struct MainWindowView: View {
             MainSidebarView(selection: $selection)
                 .navigationSplitViewColumnWidth(Theme.sidebarWidth)
         } detail: {
-            TaskListView(tasks: visibleTasks, isSearching: !search.isEmpty)
-                .navigationTitle(category.navigationTitle)
-                .navigationSubtitle(SidebarItem.subtitle(for: visibleTasks))
-                .searchable(text: $search, prompt: String(localized: "搜索任务"))
-        }
-        .inspector(isPresented: $isShowingInspector) {
-            TaskInspectorView(task: model.selectedTask)
-                .inspectorColumnWidth(min: Theme.inspectorWidth, ideal: Theme.inspectorWidth, max: 380)
+            // 详情栏放在内容区里而不用 .inspector：窗口宽度不变时，系统 inspector 展开会先把侧边栏挤出窗口再弹回。
+            HStack(spacing: 0) {
+                TaskListView(tasks: visibleTasks, isSearching: !search.isEmpty)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if isShowingInspector {
+                    HStack(spacing: 0) {
+                        Divider()
+                        TaskInspectorView(task: model.selectedTask)
+                            .frame(width: Theme.inspectorWidth)
+                            .frame(maxHeight: .infinity)
+                            .background(Color(nsColor: .windowBackgroundColor))
+                    }
+                    .transition(.move(edge: .trailing))
+                }
+            }
+            .clipped()
+            // 动画只作用于内容区，工具栏（搜索框、边栏按钮）不参与过渡。
+            .animation(.smooth(duration: 0.25), value: isShowingInspector)
+            .navigationTitle(category.navigationTitle)
+            .navigationSubtitle(SidebarItem.subtitle(for: visibleTasks))
+            .searchable(text: $search, prompt: String(localized: "搜索任务"))
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -41,8 +57,10 @@ struct MainWindowView: View {
                     .help("全部暂停 / 继续")
                     .disabled(!canPauseAll && !model.tasks.contains { $0.status == .paused })
                 TransferSpeedView(downloadRate: model.totalDownloadRate, uploadRate: model.totalUploadRate)
-                Button(isShowingInspector ? String(localized: "隐藏详情栏") : String(localized: "显示详情栏"), systemImage: MuleeSymbol.inspector.name, action: toggleInspector)
-                    .help(isShowingInspector ? String(localized: "隐藏详情栏") : String(localized: "显示详情栏"))
+                // 标题固定，避免切换时工具栏把它当成新按钮重新排版；状态只体现在提示和辅助功能里。
+                Button("详情栏", systemImage: MuleeSymbol.inspector.name, action: toggleInspector)
+                    .help(inspectorToggleTitle)
+                    .accessibilityLabel(inspectorToggleTitle)
             }
         }
         .sheet(isPresented: $model.isShowingNewTask) {
