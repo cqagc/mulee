@@ -9,6 +9,7 @@ import Foundation
 /// - `ed2k://|file|名称|大小|哈希|...` 名称做百分号解码，哈希统一大写，大小必须是正整数。
 /// - http/https 链接中，bilibili.com、b23.tv、youtube.com、youtu.be 识别为视频，其他识别为 HTTP 直链。
 /// - ftp 链接识别为 HTTP 直链。
+/// - 本地绝对路径、file URL 和 HTTP(S) URL 的路径以 .torrent 结尾时识别为 BT 种子文件。
 public enum LinkParser {
     public static func parse(_ text: String) -> [ParsedLink] {
         // 先提取完整的 ed2k，避免文件名里的空格被切开。
@@ -35,12 +36,35 @@ public enum LinkParser {
         to links: inout [ParsedLink],
         seen: inout Set<ParsedLink>
     ) {
+        for line in text.split(whereSeparator: \.isNewline) {
+            let candidate = line.trimmingCharacters(in: .whitespaces)
+            // 单独一行的绝对路径允许文件名含空格；多个路径仍按空白分开。
+            if candidate.hasPrefix("/"), candidate.lowercased().hasSuffix(".torrent"),
+               !candidate.contains("://"), !candidate.lowercased().contains(".torrent /"),
+               let link = parseCandidate(candidate) {
+                if seen.insert(link).inserted { links.append(link) }
+            } else {
+                appendTokens(in: line, to: &links, seen: &seen)
+            }
+        }
+    }
+
+    private static func appendTokens(
+        in text: Substring,
+        to links: inout [ParsedLink],
+        seen: inout Set<ParsedLink>
+    ) {
         for part in text.split(whereSeparator: \.isWhitespace) {
+            let path = trimmingPunctuation(String(part))
+            if path.hasPrefix("/"), let link = parseCandidate(path), seen.insert(link).inserted {
+                links.append(link)
+                continue
+            }
             // 从协议头开始识别，允许前面紧贴中文。全角句读（，。；：！？、…）一律视为链接结束：
             // URL 里不会出现未编码的全角句读，而「链接，提取码 abcd」这类写法很常见。
             // 全角括号、书名号等可能是文件名的一部分，保留在链接内，结尾多出的单个括号再修剪。
             let matches = part.matches(
-                of: #/(?i)(?:https?://|ftp://|thunder://|magnet:\?)[^\s，。；：！？、…]+/#
+                of: #/(?i)(?:https?://|ftp://|file://|thunder://|magnet:\?)[^\s，。；：！？、…]+/#
             )
             for match in matches {
                 let candidate = trimmingPunctuation(String(match.output))
@@ -90,6 +114,17 @@ public enum LinkParser {
         if lowercased.hasPrefix("ed2k://") {
             return Ed2kLinkParser.parse(candidate, original: original)
         }
+        if candidate.hasPrefix("/") {
+            let url = URL(fileURLWithPath: candidate)
+            if !url.hasDirectoryPath, url.pathExtension.lowercased() == "torrent" {
+                return .torrentFile(url: url, original: original)
+            }
+        }
+        if let url = URL(string: candidate), url.isFileURL,
+           url.host() == nil || url.host() == "" || url.host()?.lowercased() == "localhost",
+           url.path.hasPrefix("/"), !url.hasDirectoryPath, url.pathExtension.lowercased() == "torrent" {
+            return .torrentFile(url: url, original: original)
+        }
 
         guard let url = URL(string: candidate),
               let scheme = url.scheme?.lowercased(),
@@ -97,6 +132,9 @@ public enum LinkParser {
               let host = url.host?.lowercased(), !host.isEmpty else { return nil }
 
         if scheme != "ftp" {
+            if !url.hasDirectoryPath, url.pathExtension.lowercased() == "torrent" {
+                return .torrentFile(url: url, original: original)
+            }
             if host == "bilibili.com" || host.hasSuffix(".bilibili.com") || host == "b23.tv" {
                 return .video(url: url, site: .bilibili, original: original)
             }

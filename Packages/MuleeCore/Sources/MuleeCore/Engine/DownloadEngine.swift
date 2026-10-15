@@ -22,6 +22,6 @@ public protocol DownloadEngine: Actor {
     /// 删除任务；`deleteFiles` 为 true 时同时删除已下载的文件（含未完成的临时文件）。
     func remove(_ engineTaskID: String, deleteFiles: Bool) async throws
 
-    /// 引擎里所有任务（进行中、排队、暂停、已完成、出错）的当前状态。
+    /// 引擎里所有任务（进行中、排队、暂停、做种、已完成、出错）的当前状态。
     func snapshots() async throws -> [EngineTaskSnapshot]
 }

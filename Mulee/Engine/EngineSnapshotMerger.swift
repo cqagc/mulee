@@ -59,12 +59,17 @@ enum EngineSnapshotMerger {
                 if kind == .http {
                     task.detail = .http(connections: snapshot.connections)
                 }
+                if let detail = snapshot.detail {
+                    task.detail = detail
+                }
                 if let total = snapshot.totalBytes, snapshot.downloadRate > 0, snapshot.status == .downloading {
                     task.estimatedTimeRemaining = .seconds(Double(max(0, total - snapshot.receivedBytes)) / Double(snapshot.downloadRate))
                 } else {
                     task.estimatedTimeRemaining = nil
                 }
-                if snapshot.status == .completed, task.completedAt == nil {
+                if let completedAt = snapshot.completedAt {
+                    task.completedAt = completedAt
+                } else if snapshot.status == .completed, task.completedAt == nil {
                     task.completedAt = now
                 }
                 if let index {
