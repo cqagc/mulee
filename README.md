@@ -5,7 +5,12 @@
 **一个纯粹的 macOS 下载器。** HTTP、BT / 磁力、ed2k、视频，一个软件全搞定。
 开源，免费，永不加广告。
 
-> 🚧 开发中。**HTTP / HTTPS / FTP 下载已经可用**（aria2 引擎，支持多线程、断点续传、重启后自动恢复）；BT、电驴、视频引擎还在开发中。
+> 🚧 开发中。已经可用：
+> - **HTTP / HTTPS / FTP 下载**（aria2 引擎，多线程、断点续传、重启后自动恢复）
+> - **视频下载**（yt-dlp，已实测 Bilibili；yt-dlp 和 Deno 首次使用时自动下载并校验）。合并音视频暂时需要本机有 ffmpeg（`brew install ffmpeg`）
+> - **自动解压**（下载完成后自动解压，规则密码存在钥匙串里，自动修复 GBK / Big5 / Shift-JIS 文件名乱码）
+>
+> BT、电驴引擎还在开发中。
 >
 > 开发构建需要先 `brew install aria2`：构建时会自动把 aria2c 及其依赖库打包进 App，只有构建机需要安装，运行方不需要。详见 [docs/BUILDING.md](docs/BUILDING.md)。
 
@@ -87,7 +92,7 @@ Mulee 只是一个下载工具，请只下载你有权获取的内容。
 **Mulee is a no-nonsense download manager for macOS.** HTTP, BitTorrent / magnet, ed2k and video sites, all in one native app.
 Open source, free, and never any ads.
 
-> 🚧 Work in progress. **HTTP / HTTPS / FTP downloads work** (aria2 engine: multi-connection, resume, session restore). BitTorrent, ed2k and video engines are in progress. Development builds need `brew install aria2` on the build machine (aria2c is bundled into the app at build time; end users need nothing, see [docs/BUILDING.md](docs/BUILDING.md)).
+> 🚧 Work in progress. **Working now:** HTTP / HTTPS / FTP downloads (aria2 engine: multi-connection, resume, session restore), video downloads via yt-dlp (tested with Bilibili; merging audio and video currently needs a local ffmpeg), and auto-extraction with Keychain-stored rule passwords and GBK / Big5 / Shift-JIS filename repair. BitTorrent and ed2k engines are in progress. Development builds need `brew install aria2` on the build machine (aria2c is bundled into the app at build time; end users need nothing, see [docs/BUILDING.md](docs/BUILDING.md)).
 
 **Planned:** multi-connection HTTP/FTP, BitTorrent and magnet links, native ed2k, `thunder://` link decoding, video downloads powered by yt-dlp (YouTube and Bilibili first), and auto-extraction with password rules and filename encoding repair. Native Swift UI for Apple Silicon, a menu bar item, browser extensions, default handler for magnet / ed2k / thunder / .torrent, and sleep prevention while downloading.
 
