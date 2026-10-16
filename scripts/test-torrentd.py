@@ -242,7 +242,7 @@ def validate_item(item):
         assert type(item[key]) is bool, (key, item)
     for key in ("progress", "ratio"):
         assert type(item[key]) is float, (key, item)
-    assert item["max_connections"] == 100
+    assert item["max_connections"] == 250
     diagnostics = item["diagnostics"]
     assert set(diagnostics["peer_sources"]) == {"tracker", "dht", "pex", "lsd", "incoming"}
     assert diagnostics["connected_peers"] == diagnostics["ipv4"] + diagnostics["ipv6"]
@@ -499,7 +499,7 @@ def run_tests(binary, root):
     assert restored["total_wanted_done"] >= before, (before, restored)
     assert restored["source"] == "loopback-test"
     assert not restored["is_finished"]
-    assert restored["max_connections"] == 100
+    assert restored["max_connections"] == 250
     assert restored["sequential_download"] and restored["first_last_priority"]
     b.request("set_download_mode", {"id": single_id, "sequential_download": False, "first_last_priority": False})
     assert not b.torrent(single_id)["sequential_download"] and not b.torrent(single_id)["first_last_priority"]
@@ -580,7 +580,7 @@ def run_tests(binary, root):
     a.request("pause", {"id": multi_id})
     a.close("shutdown")
     stored = bdecode((a.state / "resume" / (single_id + ".resume")).read_bytes())
-    assert stored[b"max_connections"] == 100
+    assert stored[b"max_connections"] == 250
     assert len(stored[b"trackers"]) == 2
     assert len(stored[b"trackers"][0]) == 2 and len(stored[b"trackers"][1]) == 48
     dht_path = a.state / "dht.state"
@@ -602,7 +602,7 @@ def run_tests(binary, root):
     assert not broken.exists() and (a.state / "broken" / broken.name).exists()
     assert a.torrent(multi_id)["paused"]
     assert a.torrent(multi_id)["sequential_download"] and a.torrent(multi_id)["first_last_priority"]
-    assert a.torrent(single_id)["max_connections"] == 100
+    assert a.torrent(single_id)["max_connections"] == 250
     assert "Ignoring damaged DHT state" in (a.state / "torrentd.log").read_text()
     assert a.request("files", {"id": multi_id})["files"][1]["priority"] == 0
     assert "Broken resume" in (a.state / "torrentd.log").read_text()

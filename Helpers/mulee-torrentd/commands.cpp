@@ -300,7 +300,7 @@ json::object Session::add(const json::object& params) {
     prepare(add, count);
     auto handle = session_.add_torrent(add, error);
     if (error) throw RequestError("invalid_torrent", error.message());
-    handle.set_max_connections(100);
+    handle.set_max_connections(per_torrent_connections);
     auto inserted = torrents_.emplace(id, Torrent{handle, metadata, add.peers, count});
     try {
         persistence_.save_meta(id, metadata);

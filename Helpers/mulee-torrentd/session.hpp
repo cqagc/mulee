@@ -10,6 +10,11 @@
 #include <map>
 
 namespace mulee {
+// Per-torrent connection cap. 100 (qBittorrent's default) left single downloads with
+// fewer peers than libtorrent's default in A/B runs; 250 still bounds one torrent
+// within the 500 global limit when several run at once.
+inline constexpr int per_torrent_connections = 250;
+
 struct ClientRules {
     std::mutex mutex;
     std::vector<std::string> values;

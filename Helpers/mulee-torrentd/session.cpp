@@ -143,7 +143,7 @@ Session::Session(Protocol& protocol, Persistence& persistence)
 
 void Session::prepare(lt::add_torrent_params& params,
     const std::shared_ptr<std::atomic<std::int64_t>>& count) {
-    params.max_connections = 100;
+    params.max_connections = per_torrent_connections;
     params.extensions.push_back([rules = client_rules_, count](const lt::torrent_handle&, lt::client_data_t) {
         return std::make_shared<ClientTorrent>(rules, count);
     });
@@ -184,7 +184,7 @@ void Session::restore() {
             persistence_.log("Cannot restore " + id + ": " + error.message());
             continue;
         }
-        handle.set_max_connections(100);
+        handle.set_max_connections(per_torrent_connections);
         auto inserted = torrents_.emplace(id, Torrent{handle, persistence_.load_meta(id), params.peers, count});
         apply_download_mode(inserted.first->second);
     }
