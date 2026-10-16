@@ -117,20 +117,85 @@ struct IncompleteHTTPIntegrationTests {
             #expect(target.deletingLastPathComponent().path == fixture.downloads.path)
             #expect(try Data(contentsOf: target) == fixture.payload)
             #expect(!FileManager.default.fileExists(atPath: file.deletingLastPathComponent().path))
-            #expect(try await fixture.engine.snapshots().first { $0.engineTaskID == replaced }?.savePath == target)
+            #expect(try await fixture.engine.snapshots().allSatisfy { $0.engineTaskID != replaced })
         }
     }
 
-    @Test func deletionCleansIncompleteEvenWhenKeepingFilesAndLegacyPathIsUnchanged() async throws {
+    @Test func forgettingUnfinalizedCompletedRecordKeepsFilesWithoutResurrection() async throws {
         try await Aria2IntegrationFixture.withFixture { fixture in
             try await fixture.engine.start(options: fixture.options)
             let id = try await fixture.engine.add(
-                link: fixture.link("slow-delete.bin"), directory: nil, context: .init(), incompleteTaskID: UUID()
+                link: fixture.link("payload.bin"), directory: nil, context: .init(), incompleteTaskID: UUID()
+            )
+            let completed = try await fixture.waitFor(id) { $0.status == .completed }
+            let file = try #require(completed.savePath)
+            try await fixture.engine.forgetTransfer(id)
+            await fixture.engine.stop()
+            try await fixture.engine.start(options: fixture.options)
+            #expect(try await fixture.engine.snapshots().allSatisfy { $0.engineTaskID != id })
+            #expect(FileManager.default.fileExists(atPath: file.path))
+        }
+    }
+
+    @Test func finalizedThenDeletedRecordDoesNotReturnAfterRestart() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            try await fixture.engine.start(options: fixture.options)
+            let id = try await fixture.engine.add(
+                link: fixture.link("payload.bin"), directory: nil, context: .init(), incompleteTaskID: UUID()
+            )
+            let completed = try await fixture.waitFor(id) { $0.status == .completed }
+            let target = try await fixture.engine.finalizeIncomplete(id, file: #require(completed.savePath))
+            let records = try JSONDecoder().decode([String: IncompleteHTTPTransfer].self,
+                from: Data(contentsOf: fixture.state.appendingPathComponent("incomplete.json")))
+            #expect(records[id] == nil)
+            try await fixture.engine.remove(id, deleteFiles: false)
+            await fixture.engine.stop()
+            try await fixture.engine.start(options: fixture.options)
+            #expect(try await fixture.engine.snapshots().allSatisfy { $0.engineTaskID != id })
+            #expect(FileManager.default.fileExists(atPath: target.path))
+        }
+    }
+
+    @Test func checksumFailureKeepsStagedFileWhenRemovingRecord() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            try await fixture.engine.start(options: fixture.options)
+            let checksum = try #require(DownloadChecksum.parse(String(repeating: "0", count: 64)))
+            let id = try await fixture.engine.add(
+                link: fixture.link("payload.bin"), directory: nil, context: .init(), checksum: checksum,
+                incompleteTaskID: UUID()
+            )
+            let failed = try await fixture.waitFor(id) { $0.status == .failed }
+            let file = try #require(failed.savePath)
+            let control = URL(fileURLWithPath: file.path + ".aria2")
+            let hadControlFile = FileManager.default.fileExists(atPath: control.path)
+            try await fixture.engine.remove(id, deleteFiles: false)
+            #expect(try Data(contentsOf: file) == fixture.payload)
+            #expect(FileManager.default.fileExists(atPath: control.path) == hadControlFile)
+        }
+    }
+
+    @Test func keepingFilesPreservesIncompleteAndLegacyPathIsUnchanged() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            try await fixture.engine.start(options: fixture.options)
+            let taskID = UUID()
+            let id = try await fixture.engine.add(
+                link: fixture.link("slow-delete.bin"), directory: nil, context: .init(), incompleteTaskID: taskID
             )
             let active = try await fixture.waitFor(id) { $0.receivedBytes > 65_536 }
             let folder = try #require(active.savePath?.deletingLastPathComponent())
             try await fixture.engine.remove(id, deleteFiles: false)
-            #expect(!FileManager.default.fileExists(atPath: folder.path))
+            #expect(FileManager.default.fileExists(atPath: folder.path))
+            #expect(FileManager.default.fileExists(atPath: active.savePath!.path))
+            #expect(FileManager.default.fileExists(atPath: active.savePath!.path + ".aria2"))
+            await fixture.engine.stop()
+            try await fixture.engine.start(options: fixture.options)
+            let rangesBefore = await fixture.server.rangeRequests
+            let restored = try await fixture.engine.add(
+                link: fixture.link("slow-delete.bin"), directory: nil, context: .init(), incompleteTaskID: taskID
+            )
+            let restoredCompletion = try await fixture.waitFor(restored) { $0.status == .completed }
+            #expect(restoredCompletion.savePath == active.savePath)
+            #expect(await fixture.server.rangeRequests > rangesBefore)
             let legacyID = try await fixture.engine.add(link: fixture.link("legacy.bin"), directory: nil)
             let legacy = try await fixture.waitFor(legacyID) { $0.status == .completed }
             let legacyFile = try #require(legacy.savePath)

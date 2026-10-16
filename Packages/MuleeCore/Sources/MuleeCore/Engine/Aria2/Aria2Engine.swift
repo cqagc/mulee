@@ -12,6 +12,8 @@ public actor Aria2Engine: DownloadEngine {
     private var starting: Task<Void, any Error>?
     private var stopping: Task<Void, Never>?
     private var incompleteTransfers: [String: IncompleteHTTPTransfer] = [:]
+    private var finalizedFiles: [String: URL] = [:]
+    private var resumeAttempts: [String: UUID] = [:]
 
     /// - Parameters:
     ///   - stateDirectory: 存放 aria2 配置、会话、日志的目录（App 传 Application Support/Mulee/aria2）。
@@ -84,7 +86,9 @@ public actor Aria2Engine: DownloadEngine {
               let scheme = url.scheme?.lowercased(), ["http", "https", "ftp"].contains(scheme) else {
             throw EngineError.unsupportedLink
         }
-        var params: [Aria2RPCValue] = [.array([.string(url.absoluteString)])]
+        let prepared = try await HTTPResourceProbe.prepareDownload(url, context: context)
+        let context = prepared.context
+        var params: [Aria2RPCValue] = [.array([.string(prepared.url.absoluteString)])]
         var values = try Aria2RequestOptions.values(context: context, checksum: checksum)
         if let httpThreads {
             let threads = String(min(16, max(1, httpThreads)))
@@ -116,6 +120,7 @@ public actor Aria2Engine: DownloadEngine {
         _ engineTaskID: String, with url: URL, context: DownloadRequestContext,
         checksum: DownloadChecksum?, restartFromScratch: Bool = false
     ) async throws -> String {
+        resumeAttempts[engineTaskID] = nil
         let client = try runningClient()
         var status = try await taskStatus(engineTaskID, using: client)
         let transfer = incompleteTransfers[engineTaskID]
@@ -131,7 +136,9 @@ public actor Aria2Engine: DownloadEngine {
                 try await Task.sleep(for: .milliseconds(25))
             } while true
         }
-        var context = context
+        let prepared = try await HTTPResourceProbe.prepareDownload(url, context: context)
+        let url = prepared.url
+        var context = prepared.context
         if let path = status.files?.first?.path, !path.isEmpty {
             context.suggestedFilename = URL(fileURLWithPath: path).lastPathComponent
         } else if let file = transfer?.workingFile {
@@ -152,14 +159,15 @@ public actor Aria2Engine: DownloadEngine {
         }
         if ["error", "complete", "removed"].contains(status.status) {
             // aria2 的 changeUri 不接受 stopped 结果；同路径加载 .aria2 分块进度。
-            let old = previousURIs.first ?? url.absoluteString
-            id = try await client.call("aria2.addUri", [.array([.string(old)]), .object(values)])
+            id = try await client.call("aria2.addUri", [.array([.string(url.absoluteString)]), .object(values)])
             do {
                 let _: String = try await client.call("aria2.removeDownloadResult", [.string(engineTaskID)])
             } catch {
                 try? await remove(id, deleteFiles: false)
                 throw error
             }
+            try rekeyIncomplete(engineTaskID, to: id, transfer: transfer)
+            return id
         } else {
             try await pause(id)
             var updated = try Aria2RequestOptions.values(context: context, checksum: checksum)
@@ -209,6 +217,7 @@ public actor Aria2Engine: DownloadEngine {
     }
 
     public func pause(_ engineTaskID: String) async throws {
+        resumeAttempts[engineTaskID] = nil
         let client = try runningClient()
         do {
             let _: String = try await client.call("aria2.pause", [.string(engineTaskID)])
@@ -222,6 +231,36 @@ public actor Aria2Engine: DownloadEngine {
 
     public func resume(_ engineTaskID: String) async throws {
         let client = try runningClient()
+        let attempt = UUID()
+        resumeAttempts[engineTaskID] = attempt
+        defer {
+            if resumeAttempts[engineTaskID] == attempt { resumeAttempts[engineTaskID] = nil }
+        }
+        let options: [String: String] = try await client.call("aria2.getOption", [.string(engineTaskID)])
+        var context = Self.requestContext(headers: (options["header"] ?? "").components(separatedBy: "\n"))
+        context.userAgent = options["user-agent"]
+        context.referer = options["referer"].flatMap { URL(string: $0) }
+        if context.requestCookie != nil || context.headers.keys.contains(where: {
+            ["authorization", "proxy-authorization"].contains($0.lowercased())
+        }) {
+            let status = try await taskStatus(engineTaskID, using: client)
+            guard let uris = status.files?.first?.uris?.map(\.uri),
+                  let uri = uris.first, let url = URL(string: uri) else { throw EngineError.unsupportedLink }
+            let prepared = try await HTTPResourceProbe.prepareDownload(url, context: context)
+            // 用户暂停可能发生在网络预检期间，迟到的恢复不能再启动写盘。
+            guard resumeAttempts[engineTaskID] == attempt else { return }
+            var values = try Aria2RequestOptions.values(context: prepared.context, checksum: nil)
+            values["header"] = values["header"] ?? .string("")
+            let _: String = try await client.call("aria2.changeOption", [.string(engineTaskID), .object(values)])
+            guard resumeAttempts[engineTaskID] == attempt else { return }
+            if prepared.url != url {
+                let _: [Int] = try await client.call("aria2.changeUri", [
+                    .string(engineTaskID), .integer(1), .array(uris.map(Aria2RPCValue.string)),
+                    .array([.string(prepared.url.absoluteString)]), .integer(0)
+                ])
+            }
+        }
+        guard resumeAttempts[engineTaskID] == attempt else { return }
         let _: String = try await client.call("aria2.unpause", [.string(engineTaskID)])
     }
 
@@ -230,12 +269,16 @@ public actor Aria2Engine: DownloadEngine {
     }
 
     private func remove(_ engineTaskID: String, deleteFiles: Bool, preservingIncomplete: Bool) async throws {
+        resumeAttempts[engineTaskID] = nil
         let client = try runningClient()
         var status: Aria2RPCModels.Status
         do { status = try await taskStatus(engineTaskID, using: client) }
         catch let error as EngineError {
-            if case .rpc(let code, _) = error, code == 1, incompleteTransfers[engineTaskID] != nil, !preservingIncomplete {
-                try discardIncomplete(engineTaskID)
+            if case .rpc(let code, _) = error, code == 1, (incompleteTransfers[engineTaskID] != nil || finalizedFiles[engineTaskID] != nil), !preservingIncomplete {
+                if deleteFiles, let file = finalizedFiles[engineTaskID], FileManager.default.fileExists(atPath: file.path) {
+                    try FileManager.default.trashItem(at: file, resultingItemURL: nil)
+                }
+                try discardIncomplete(engineTaskID, deleteFiles: deleteFiles)
                 return
             }
             throw error
@@ -258,8 +301,11 @@ public actor Aria2Engine: DownloadEngine {
                     // 尚未启动的暂停任务直接从 waiting 队列移除，不产生 stopped 结果。
                     // GID 在成功 forceRemove 后消失同样表示移除完成；传输错误仍向上传递。
                     guard case .rpc(let code, _) = error, code == 1 else { throw error }
-                    if deleteFiles { try Aria2FileSafety.trashFiles(for: status) }
-                    if !preservingIncomplete { try discardIncomplete(engineTaskID) }
+                    if deleteFiles {
+                        if preservingIncomplete { try Aria2FileSafety.trashFiles(for: status) }
+                        else { try trashFiles(for: status) }
+                    }
+                    if !preservingIncomplete { try discardIncomplete(engineTaskID, deleteFiles: deleteFiles) }
                     return
                 }
                 if ["complete", "error", "removed"].contains(status.status) { break }
@@ -270,8 +316,11 @@ public actor Aria2Engine: DownloadEngine {
             } while true
         }
         let _: String = try await client.call("aria2.removeDownloadResult", [.string(engineTaskID)])
-        if deleteFiles { try Aria2FileSafety.trashFiles(for: status) }
-        if !preservingIncomplete { try discardIncomplete(engineTaskID) }
+        if deleteFiles {
+            if preservingIncomplete { try Aria2FileSafety.trashFiles(for: status) }
+            else { try trashFiles(for: status) }
+        }
+        if !preservingIncomplete { try discardIncomplete(engineTaskID, deleteFiles: deleteFiles) }
     }
 
     public func snapshots() async throws -> [EngineTaskSnapshot] {
@@ -310,6 +359,11 @@ public actor Aria2Engine: DownloadEngine {
                     snapshot.writeDirectories = [transfer.directory]
                 }
             }
+            if let file = finalizedFiles[snapshot.engineTaskID] {
+                snapshot.savePath = file
+                snapshot.name = file.lastPathComponent
+                snapshot.writeDirectories = [file.deletingLastPathComponent()]
+            }
             return snapshot
         }
         let present = Set(snapshots.map(\.engineTaskID))
@@ -330,22 +384,60 @@ public actor Aria2Engine: DownloadEngine {
     /// 调用方在网页检查和显式校验通过后调用；旧任务直接返回原路径。
     public func finalizeIncomplete(_ id: String, file: URL) throws -> URL {
         guard var transfer = incompleteTransfers[id] else { return file }
-        if let completed = transfer.completedFile { return completed }
+        if let completed = transfer.completedFile {
+            finalizedFiles[id] = completed
+            incompleteTransfers[id] = nil
+            try saveIncompleteTransfers()
+            return completed
+        }
         let workingFile = transfer.workingFile ?? file
         try transfer.planMove(from: workingFile)
         incompleteTransfers[id] = transfer
         try saveIncompleteTransfers()
         let destination = try transfer.finishMove(from: workingFile)
-        incompleteTransfers[id] = transfer
+        finalizedFiles[id] = destination
+        incompleteTransfers[id] = nil
         try saveIncompleteTransfers()
         try transfer.cleanup()
         return destination
     }
 
-    private func discardIncomplete(_ id: String) throws {
-        try incompleteTransfers[id]?.cleanup()
+    /// 删除记录不会删除下载内容；彻底清理文件时把整个工作目录移到废纸篓。
+    private func discardIncomplete(_ id: String, deleteFiles: Bool) throws {
+        if deleteFiles, let directory = incompleteTransfers[id]?.directory,
+           FileManager.default.fileExists(atPath: directory.path) {
+            try FileManager.default.trashItem(at: directory, resultingItemURL: nil)
+        }
         incompleteTransfers[id] = nil
+        finalizedFiles[id] = nil
         try saveIncompleteTransfers()
+    }
+
+    private func trashFiles(for status: Aria2RPCModels.Status) throws {
+        if let file = finalizedFiles[status.gid], FileManager.default.fileExists(atPath: file.path) {
+            try FileManager.default.trashItem(at: file, resultingItemURL: nil)
+        } else if incompleteTransfers[status.gid] == nil {
+            try Aria2FileSafety.trashFiles(for: status)
+        }
+    }
+
+    /// 彻底删除或过期只清理引擎记录，保留用户文件。
+    public func forgetTransfer(_ id: String) async throws {
+        if let starting { try await starting.value }
+        if client == nil {
+            let record = stateDirectory.appendingPathComponent("incomplete.json")
+            guard FileManager.default.fileExists(atPath: record.path) else { return }
+            incompleteTransfers = try JSONDecoder().decode([String: IncompleteHTTPTransfer].self, from: Data(contentsOf: record))
+        }
+        incompleteTransfers[id] = nil
+        finalizedFiles[id] = nil
+        try saveIncompleteTransfers()
+        guard let client else { return }
+        do {
+            let _: String = try await client.call("aria2.removeDownloadResult", [.string(id)])
+        } catch let error as EngineError {
+            guard case .rpc(let code, _) = error, code == 1 else { throw error }
+        }
     }
 
     private func rekeyIncomplete(
@@ -387,6 +479,7 @@ public actor Aria2Engine: DownloadEngine {
             stateDirectory: stateDirectory, port: try Aria2Process.availablePort(),
             secret: Aria2Configuration.makeSecret(), options: options
         )
+        try await prepareSessionCredentials(configuration.sessionURL)
         try configuration.write()
         let rpc = try Aria2RPCClient(port: configuration.port, secret: configuration.secret)
         let child: Aria2Process
@@ -438,7 +531,60 @@ public actor Aria2Engine: DownloadEngine {
         }
     }
 
+    private static func requestContext(headers: [String]) -> DownloadRequestContext {
+        var context = DownloadRequestContext()
+        for header in headers {
+            guard let colon = header.firstIndex(of: ":") else { continue }
+            let name = String(header[..<colon]).trimmingCharacters(in: .whitespaces)
+            let value = String(header[header.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+            context.headers[name] = value
+        }
+        return context
+    }
+
+    /// session 在子进程启动时就会恢复下载，必须在启动前处理其中的旧凭据。
+    private func prepareSessionCredentials(_ file: URL) async throws {
+        guard FileManager.default.fileExists(atPath: file.path) else { return }
+        let text = try String(contentsOf: file, encoding: .utf8)
+        var entries: [[String]] = []
+        for line in text.components(separatedBy: "\n") where !line.isEmpty {
+            if line.first?.isWhitespace != true { entries.append([line]) }
+            else if !entries.isEmpty { entries[entries.count - 1].append(line) }
+        }
+        var changed = false
+        for index in entries.indices {
+            let headers = entries[index].dropFirst().compactMap { line -> String? in
+                let value = line.trimmingCharacters(in: .whitespaces)
+                return value.hasPrefix("header=") ? String(value.dropFirst(7)) : nil
+            }
+            let context = Self.requestContext(headers: headers)
+            guard context.requestCookie != nil || context.headers.keys.contains(where: { ["authorization", "proxy-authorization"].contains($0.lowercased()) }),
+                  let uri = entries[index].first?.split(whereSeparator: \.isWhitespace).first,
+                  let url = URL(string: String(uri)) else { continue }
+            let prepared = try await HTTPResourceProbe.prepareDownload(url, context: context)
+            entries[index][0] = prepared.url.absoluteString
+            entries[index].removeAll { line in
+                let value = line.trimmingCharacters(in: .whitespaces)
+                guard value.hasPrefix("header="), let colon = value.firstIndex(of: ":") else { return false }
+                let name = value[value.index(value.startIndex, offsetBy: 7)..<colon].lowercased()
+                return ["cookie", "authorization", "proxy-authorization"].contains(name)
+            }
+            for (name, value) in prepared.context.headers where ["cookie", "authorization", "proxy-authorization"].contains(name.lowercased()) {
+                entries[index].append(" header=\(name): \(value)")
+            }
+            changed = true
+        }
+        if changed {
+            let temporary = file.deletingLastPathComponent().appendingPathComponent(".session-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: temporary) }
+            let data = Data((entries.map { $0.joined(separator: "\n") }.joined(separator: "\n") + "\n").utf8)
+            try YtDlpCookieFile.writePrivate(data, to: temporary)
+            _ = try FileManager.default.replaceItemAt(file, withItemAt: temporary)
+        }
+    }
+
     private func shutdown() async {
+        resumeAttempts.removeAll()
         guard let child = process else { return }
         let rpc = client
         client = nil

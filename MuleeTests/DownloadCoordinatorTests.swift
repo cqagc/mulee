@@ -86,7 +86,7 @@ import Testing
         await coordinator.stop()
     }
 
-    @Test func tasksWithoutEngineIDUseLocalActions() async throws {
+    @Test func taskWithoutEngineIDStaysPausedWhenEngineIsNotRunning() async throws {
         let model = AppModel(tasks: [MockData.longTailTask])
         let engine = FakeEngine()
         let coordinator = DownloadCoordinator(model: model, engines: [engine])
@@ -95,7 +95,9 @@ import Testing
         await coordinator.pause(id)
         #expect(model.tasks.first?.status == .paused)
         await coordinator.resume(id)
-        #expect(model.tasks.first?.status == .waitingForSources)
+        #expect(model.tasks.first?.status == .paused)
+        #expect(model.tasks.first?.errorMessage?.contains("下载引擎尚未运行") == true)
+        #expect(model.tasks.first?.errorMessage?.contains("重试") == true)
         await coordinator.remove(id)
 
         #expect(model.activeTasks.isEmpty)

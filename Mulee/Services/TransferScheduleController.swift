@@ -74,12 +74,32 @@ final class TransferScheduleController {
         }
     }
 
+    nonisolated struct PowerEvent: Equatable, Sendable {
+        let date: Date
+        let owner: String
+        let type: String
+    }
+
+    static let wakeOwner = "com.cqagc.mulee"
+
+    nonisolated static func scheduledPowerEvents() -> [PowerEvent] {
+        let events = IOPMCopyScheduledPowerEvents()?.takeRetainedValue() as? [[String: Any]] ?? []
+        return events.compactMap { event in
+            guard let date = event[kIOPMPowerEventTimeKey] as? Date,
+                  let owner = event[kIOPMPowerEventAppNameKey] as? String,
+                  let type = event[kIOPMPowerEventTypeKey] as? String else { return nil }
+            return PowerEvent(date: date, owner: owner, type: type)
+        }
+    }
+
     private let model: AppModel
     private let settings: SettingsModel
     private let now: () -> Date
     private let calendar: () -> Calendar
     private let scheduleWake: (Date) -> Int32
     private let cancelWake: (Date) -> Int32
+    private let copyScheduledEvents: () -> [PowerEvent]
+    private let cancelPowerEvent: (PowerEvent) -> Int32
     private var worker: Task<Void, Never>?
     private var previousConfiguration: Configuration?
     private var wasActive = false
@@ -91,10 +111,14 @@ final class TransferScheduleController {
         model: AppModel, settings: SettingsModel, now: @escaping () -> Date = Date.init,
         calendar: @escaping () -> Calendar = { .current },
         scheduleWake: @escaping (Date) -> Int32 = {
-            IOPMSchedulePowerEvent($0 as CFDate, "com.cqagc.mulee.schedule" as CFString, kIOPMAutoWake as CFString)
+            IOPMSchedulePowerEvent($0 as CFDate, "com.cqagc.mulee" as CFString, kIOPMAutoWake as CFString)
         },
         cancelWake: @escaping (Date) -> Int32 = {
-            IOPMCancelScheduledPowerEvent($0 as CFDate, "com.cqagc.mulee.schedule" as CFString, kIOPMAutoWake as CFString)
+            IOPMCancelScheduledPowerEvent($0 as CFDate, "com.cqagc.mulee" as CFString, kIOPMAutoWake as CFString)
+        },
+        copyScheduledEvents: @escaping () -> [PowerEvent] = TransferScheduleController.scheduledPowerEvents,
+        cancelPowerEvent: @escaping (PowerEvent) -> Int32 = {
+            IOPMCancelScheduledPowerEvent($0.date as CFDate, $0.owner as CFString, $0.type as CFString)
         }
     ) {
         self.model = model
@@ -103,6 +127,8 @@ final class TransferScheduleController {
         self.calendar = calendar
         self.scheduleWake = scheduleWake
         self.cancelWake = cancelWake
+        self.copyScheduledEvents = copyScheduledEvents
+        self.cancelPowerEvent = cancelPowerEvent
     }
 
     func start() {
@@ -204,7 +230,10 @@ final class TransferScheduleController {
     private func updateWake(_ start: Date?, now: Date) {
         let wake = start?.addingTimeInterval(-60)
         guard wake != attemptedWake else { return }
-        clearWake()
+        guard clearWake() else {
+            model.transferScheduleWakeIssue = String(localized: "系统无法清除旧的定时唤醒，尚未安排新唤醒；请稍后重试，下载计划仍会在下次唤醒后执行。")
+            return
+        }
         attemptedWake = wake
         guard let wake, wake > now else { return }
         let result = scheduleWake(wake)
@@ -218,9 +247,23 @@ final class TransferScheduleController {
         }
     }
 
-    private func clearWake() {
-        if let scheduledWake { _ = cancelWake(scheduledWake) }
+    @discardableResult
+    private func clearWake() -> Bool {
+        // 系统事件可跨 App 进程存活，不能只依赖本次运行的内存记录。
+        let events = copyScheduledEvents().filter {
+            $0.owner == Self.wakeOwner || $0.owner == "com.cqagc.mulee.schedule"
+        }
+        var succeeded = true
+        for event in events {
+            if cancelPowerEvent(event) != kIOReturnSuccess { succeeded = false }
+        }
+        if let scheduledWake, !events.contains(where: {
+            $0.date == scheduledWake && $0.owner == Self.wakeOwner && $0.type == kIOPMAutoWake
+        }) {
+            if cancelWake(scheduledWake) != kIOReturnSuccess { succeeded = false }
+        }
         scheduledWake = nil
         attemptedWake = nil
+        return succeeded
     }
 }

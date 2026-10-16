@@ -17,6 +17,7 @@ final class TorrentWatchFolderService {
     private struct Candidate {
         let stamp: Stamp
         let since: Date
+        var failures = 0
     }
 
     private(set) var lastError: String?
@@ -28,6 +29,7 @@ final class TorrentWatchFolderService {
     private var processing: Task<Void, Never>?
     private var generation = 0
     private var needsScan = true
+    private var lastScan: Date?
     private let manager = FileManager.default
 
     isolated deinit {
@@ -43,7 +45,7 @@ final class TorrentWatchFolderService {
             while !Task.isCancelled {
                 guard let self, self.generation == token else { return }
                 self.configure(folders: settings.watchFolders)
-                if self.processing == nil, self.needsScan || !self.candidates.isEmpty {
+                if self.processing == nil, self.shouldScan(at: .now) {
                     let folders = settings.watchFolders.map { URL(filePath: $0) }
                     let autoStart = settings.watchAutoStart
                     self.processing = Task { [weak self] in
@@ -69,12 +71,18 @@ final class TorrentWatchFolderService {
         candidates.removeAll()
         attempted.removeAll()
         needsScan = true
+        lastScan = nil
     }
 
     func retry() {
         attempted.removeAll()
+        candidates.removeAll()
         lastError = nil
         needsScan = true
+    }
+
+    func shouldScan(at date: Date) -> Bool {
+        needsScan || !candidates.isEmpty || (lastScan.map { date.timeIntervalSince($0) >= 30 } ?? true)
     }
 
     private func configure(folders: [String]) {
@@ -112,6 +120,7 @@ final class TorrentWatchFolderService {
     func scan(folders: [URL], autoStart: Bool, now: Date = .now, handler: Handler) async {
         let token = generation
         needsScan = false
+        lastScan = now
         var existing = Set<URL>()
         for folder in folders {
             guard !Task.isCancelled, token == generation else { return }
@@ -131,9 +140,26 @@ final class TorrentWatchFolderService {
                         continue
                     }
                     guard now.timeIntervalSince(candidate.since) >= 1 else { continue }
+                    let text: String
+                    do {
+                        text = try Self.inputText(for: file)
+                    } catch {
+                        // 文件短暂停写不代表写完；同一版本连续失败三次才停止等待。
+                        var failed = Candidate(stamp: stamp, since: now, failures: candidate.failures + 1)
+                        if (try? self.stamp(for: file)) != stamp {
+                            failed.failures = 0
+                        }
+                        if failed.failures >= 3 {
+                            attempted[file] = stamp
+                            candidates.removeValue(forKey: file)
+                            lastError = String(localized: "未处理 \(file.lastPathComponent)：\(EngineStatusPresentation.errorMessage(error))")
+                        } else {
+                            candidates[file] = failed
+                        }
+                        continue
+                    }
                     attempted[file] = stamp
                     do {
-                        let text = try Self.inputText(for: file)
                         let accepted = try await handler(file, text, autoStart)
                         guard !Task.isCancelled, token == generation else { return }
                         // 确认期间若文件被替换，不归档后来写入的内容。

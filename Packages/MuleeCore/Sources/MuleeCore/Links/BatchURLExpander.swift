@@ -7,8 +7,9 @@ public enum BatchURLExpander {
         public var errorDescription: String? { rawValue }
     }
 
-    public static func expand(_ text: String) throws -> [String] {
-        var results = [""]
+    public static func expand(_ text: String, limit: Int = 1000) throws -> [String] {
+        var count = 1
+        var segments: [(prefix: String, values: [String])] = []
         var start = text.startIndex
         for match in text.matches(of: #/\[([0-9]+|[a-zA-Z])-([0-9]+|[a-zA-Z])\]/#) {
             let first = String(match.1)
@@ -17,6 +18,8 @@ public enum BatchURLExpander {
             if first.utf8.allSatisfy({ (48...57).contains($0) }), last.utf8.allSatisfy({ (48...57).contains($0) }) {
                 guard let lower = Int64(first), let upper = Int64(last), lower <= upper else { throw ExpansionError.invalidRange }
                 guard upper - lower < 1000 else { throw ExpansionError.tooMany }
+                let size = Int(upper - lower + 1)
+                guard count <= min(1000, limit) / size else { throw ExpansionError.tooMany }
                 let width = first.hasPrefix("0") ? first.count : 0
                 values = (lower...upper).map { number in
                     let value = String(number)
@@ -31,10 +34,15 @@ public enum BatchURLExpander {
                 }
                 values = (lower...upper).map { String(UnicodeScalar($0)) }
             }
-            guard results.count <= 1000 / values.count else { throw ExpansionError.tooMany }
-            let prefix = String(text[start..<match.range.lowerBound])
-            results = results.flatMap { result in values.map { result + prefix + $0 } }
+            guard count <= min(1000, limit) / values.count else { throw ExpansionError.tooMany }
+            count *= values.count
+            segments.append((String(text[start..<match.range.lowerBound]), values))
             start = match.range.upperBound
+        }
+        guard count <= limit else { throw ExpansionError.tooMany }
+        var results = [""]
+        for segment in segments {
+            results = results.flatMap { result in segment.values.map { result + segment.prefix + $0 } }
         }
         return results.map { $0 + text[start...] }
     }

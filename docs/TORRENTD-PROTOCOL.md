@@ -102,6 +102,8 @@ mulee-torrentd --state-dir <目录>
 
 参数 `{}`。结果 `{"torrents": [ ... ]}`，每项：
 
+未完成文件改名失败只影响该任务：仍返回它和其他任务的快照，该项 `state` 为 `error`、`is_finished` 为 false，`error` 为 `conflict`（同名冲突）或 `io_error`（磁盘操作失败）。后续 `list` 会重试改名，成功后恢复正常字段。
+
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `id` | string | 任务 id |
@@ -169,6 +171,8 @@ mulee-torrentd --state-dir <目录>
 ### `rename_file`
 
 参数 `{"id": "...", "path": "目录/原名.bin", "new_path": "目录/新名.bin"}`，结果 `{}`。两个路径均相对保存目录，禁止绝对路径及 `.` / `..` 分量。匹配单文件或目录前缀，逐个等待 libtorrent 重命名确认；不存在返回 `not_found`，目标冲突返回 `conflict`。目录含多个文件时若中途磁盘失败，已完成的重命名不会回滚，调用方应重新读取 `files`。
+
+冲突检查同时覆盖最终名和实际存储名（未完成时带 `.mulee` 后缀），并检查磁盘路径及同一种子的其他文件映射；未在磁盘分配的文件映射也不能被占用。
 
 ### `force_recheck` / `force_reannounce`
 

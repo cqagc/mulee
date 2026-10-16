@@ -460,6 +460,73 @@ def management_tests(binary, root):
     print("PASS D2/F1-F5：过滤反馈、存储冲突/移动/重命名、校验/宣告、tracker、peer、IP 持久化、混合种子制作/导出", flush=True)
 
 
+def rename_storage_conflict_tests(binary, root):
+    root.mkdir()
+    torrent, torrent_id, _ = fixture(root, "rename-conflict", [
+        ("source.bin", os.urandom(65536)), ("reserved.bin", os.urandom(65536)),
+    ], multi=True)
+    destination = root / "downloads"
+    daemon = Daemon(binary, root / "state")
+    daemon.configure(destination)
+    daemon.request("add", {"torrent_file": str(torrent), "save_path": str(destination), "paused": True})
+    files = wait_for(lambda: daemon.request("files", {"id": torrent_id})["files"], description="marked files")
+    assert files[0]["storage_path"].endswith(".mulee")
+    # 映射占用也算冲突，即使目标文件尚未在磁盘分配。
+    for target in ["reserved.bin", "reserved.bin.mulee"]:
+        daemon.request("rename_file", {"id": torrent_id, "path": "rename-conflict/source.bin",
+                                      "new_path": "rename-conflict/" + target}, error="conflict")
+    content = destination / "rename-conflict"
+    content.mkdir(parents=True, exist_ok=True)
+    for name in ["occupied.bin", "occupied.bin.mulee"]:
+        occupied = content / name
+        occupied.write_bytes(b"keep existing bytes")
+        daemon.request("rename_file", {"id": torrent_id, "path": "rename-conflict/source.bin",
+                                      "new_path": "rename-conflict/occupied.bin"}, error="conflict")
+        assert occupied.read_bytes() == b"keep existing bytes"
+        occupied.unlink()
+    daemon.request("rename_file", {"id": torrent_id, "path": "rename-conflict/source.bin",
+                                  "new_path": "rename-conflict/available.bin"})
+    files = daemon.request("files", {"id": torrent_id})["files"]
+    assert files[0]["storage_path"] == "rename-conflict/available.bin.mulee"
+    daemon.close("shutdown")
+    print("PASS B2：重命名检查最终名、实际存储名及未落盘映射", flush=True)
+
+
+def isolated_snapshot_conflict_tests(binary, root):
+    root.mkdir()
+    bad, bad_id, _ = fixture(root, "conflicted.bin", [("", os.urandom(65536))])
+    good, good_id, _ = fixture(root, "healthy.bin", [("", os.urandom(65536))])
+    destination = root / "downloads"
+    daemon = Daemon(binary, root / "state")
+    daemon.configure(destination)
+    for torrent in [bad, good]:
+        daemon.request("add", {"torrent_file": str(torrent), "save_path": str(destination), "paused": True})
+    wait_for(lambda: daemon.request("files", {"id": bad_id})["files"], description="marked conflict fixture")
+    occupied = destination / "conflicted.bin"
+    occupied.write_bytes(b"keep existing bytes")
+    # 完整分块已校验，但最终位置被外部文件占用。
+    (destination / "conflicted.bin.mulee").write_bytes((root / "seed/conflicted.bin").read_bytes())
+    daemon.request("force_recheck", {"id": bad_id})
+    daemon.request("resume", {"id": bad_id})
+
+    def conflicted_snapshot():
+        snapshots = {item["id"]: item for item in daemon.request("list")["torrents"]}
+        assert good_id in snapshots and bad_id in snapshots
+        assert snapshots[good_id]["error"] is None
+        return snapshots if snapshots[bad_id]["error"] else None
+
+    snapshots = wait_for(conflicted_snapshot, description="isolated task conflict")
+    assert snapshots[bad_id]["state"] == "error"
+    assert snapshots[bad_id]["error"] == "conflict"
+    assert snapshots[bad_id]["is_finished"] is False
+    assert occupied.read_bytes() == b"keep existing bytes"
+    occupied.unlink()
+    wait_for(lambda: next(item for item in daemon.request("list")["torrents"] if item["id"] == bad_id)["error"] is None,
+             description="conflict cleared after freeing destination")
+    daemon.close("shutdown")
+    print("PASS B3：单任务冲突不阻断其他快照，清理冲突后恢复", flush=True)
+
+
 def incomplete_file_tests(binary, root):
     root.mkdir()
     first = os.urandom(256 * 1024)
@@ -532,6 +599,8 @@ def incomplete_file_tests(binary, root):
 
 
 def run_tests(binary, root):
+    rename_storage_conflict_tests(binary, root / "rename-conflicts")
+    isolated_snapshot_conflict_tests(binary, root / "snapshot-conflicts")
     incomplete_file_tests(binary, root / "incomplete-files")
     management_tests(binary, root)
 

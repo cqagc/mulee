@@ -155,12 +155,18 @@ import Testing
         let coordinator = DownloadCoordinator(model: app, engines: [engine])
         do {
             let url = root.appending(path: "fixture.torrent")
-            try torrentData().write(to: url)
+            let data = torrentData()
+            let range = try #require(data.range(of: Data("5:a.txt".utf8)))
+            var junkTorrent = data
+            junkTorrent.replaceSubrange(range, with: Data("5:a.url".utf8))
+            try junkTorrent.write(to: url)
             await coordinator.start(options: EngineOptions(downloadDirectory: root))
             #expect(app.engineStates[.bittorrent] == .running)
             let draft = NewTaskModel(inputText: url.absoluteString, saveDirectory: root, autoExtract: false)
             let item = try #require(draft.links.first)
-            item.files?[0].isSelected = false
+            item.applyJunkFilter(TorrentEngineSettings())
+            #expect(item.skippedJunkCount == 1)
+            #expect(item.filePriorities == [0, 4])
             item.sequentialDownload = true
 
             draft.createTasks(in: app)

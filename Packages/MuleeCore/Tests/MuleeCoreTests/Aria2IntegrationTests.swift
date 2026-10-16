@@ -6,6 +6,81 @@ import Testing
 
 @Suite(.serialized, .enabled(if: Aria2IntegrationFixture.binaryAvailable))
 struct Aria2IntegrationTests {
+    @Test func redirectedDownloadsNeverForwardCredentials() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            let destination = try Aria2HTTPServer(payload: fixture.payload)
+            do {
+                let port = try await destination.start()
+                let url = try #require(URL(string: "http://localhost:\(port)/payload.bin"))
+                await fixture.server.setRedirect(url)
+                try await fixture.engine.start(options: fixture.options)
+                let context = DownloadRequestContext(headers: ["Authorization": "Bearer test"], cookie: "sid=secret")
+                let id = try await fixture.engine.add(link: fixture.link("redirect.bin"), directory: nil, context: context)
+                _ = try await fixture.waitFor(id) { $0.status == .completed }
+                let received = await destination.receivedHeaders
+                #expect(!received.isEmpty)
+                #expect(received.allSatisfy { $0["cookie"] == nil && $0["authorization"] == nil })
+                await destination.stop()
+            } catch {
+                await destination.stop()
+                throw error
+            }
+        }
+    }
+
+    @Test(arguments: ["resume", "replace", "restart"])
+    func redirectsAreRecheckedForExistingTasks(_ operation: String) async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            let destination = try Aria2HTTPServer(payload: fixture.payload)
+            do {
+                let port = try await destination.start()
+                let target = try #require(URL(string: "http://localhost:\(port)/payload.bin"))
+                try await fixture.engine.start(options: fixture.options)
+                let context = DownloadRequestContext(headers: ["Authorization": "Bearer test"], cookie: "sid=secret")
+                let id = try await fixture.engine.add(link: fixture.link("payload.bin"), directory: nil, context: context, paused: true)
+                if operation == "restart" { await fixture.engine.stop() }
+                await fixture.server.setRedirect(target)
+                if operation == "restart" { try await fixture.engine.start(options: fixture.options) }
+                var resumed = id
+                if operation == "replace" {
+                    guard case .http(let url, _, _) = try fixture.link("replacement.bin") else { return }
+                    resumed = try await fixture.engine.replaceURI(id, with: url, context: context, checksum: nil)
+                }
+                try await fixture.engine.resume(resumed)
+                _ = try await fixture.waitFor(resumed) { $0.status == .completed }
+                let received = await destination.receivedHeaders
+                #expect(!received.isEmpty)
+                #expect(received.allSatisfy { $0["cookie"] == nil && $0["authorization"] == nil })
+                await destination.stop()
+            } catch {
+                await destination.stop()
+                throw error
+            }
+        }
+    }
+
+    @Test func pauseDuringCredentialPreflightPreventsEngineResume() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            try await fixture.engine.start(options: fixture.options)
+            let id = try await fixture.engine.add(
+                link: fixture.link("slow-cookie-pause.bin"), directory: nil,
+                context: DownloadRequestContext(cookie: "sid=secret"), paused: true
+            )
+            await fixture.server.holdHEADRequests()
+            let resume = Task { try await fixture.engine.resume(id) }
+            let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+            while await fixture.server.suspendedHEADRequests == 0, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            #expect(await fixture.server.suspendedHEADRequests > 0)
+            try await fixture.engine.pause(id)
+            await fixture.server.releaseHEADRequests()
+            try await resume.value
+            let snapshot = try #require(try await fixture.engine.snapshots().first { $0.engineTaskID == id })
+            #expect(snapshot.status == .paused)
+        }
+    }
+
     @Test("真实请求携带来源、UA、Cookie、建议文件名和校验值")
     func browserContextAndChecksum() async throws {
         try await Aria2IntegrationFixture.withFixture { fixture in

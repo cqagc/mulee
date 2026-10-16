@@ -9,6 +9,8 @@ final class ExtractionCoordinator {
     private let extractor: any ArchiveExtracting
     private var worker: Task<Void, Never>?
     private var activeJob: ExtractionJob?
+    private var activeExtraction: Task<ExtractionOutcome, Never>?
+    private var diskInterruptedJob: UUID?
     private var candidates: [DownloadTask.ID] = []
     private var manualRequests: Set<DownloadTask.ID> = []
     private var seenCompletions: Set<DownloadTask.ID> = []
@@ -41,6 +43,7 @@ final class ExtractionCoordinator {
     func cancel() {
         isStopped = true
         worker?.cancel()
+        activeExtraction?.cancel()
     }
 
     func stop() async {
@@ -49,13 +52,33 @@ final class ExtractionCoordinator {
         model.flushTaskHistory()
     }
 
+    /// 解压器不暴露可暂停的进程；取消后等待其回收进程和清理临时目录。
+    func cancelForDiskSpace(_ id: DownloadTask.ID) async {
+        guard let job = activeJob, job.taskIDs.contains(id), let operation = activeExtraction else { return }
+        diskInterruptedJob = job.id
+        operation.cancel()
+        let outcome = await operation.value
+        finishActive(outcome, job: job)
+    }
+
     func requestExtraction(_ id: DownloadTask.ID) {
         guard let task = model.tasks.first(where: { $0.id == id }), task.deletedAt == nil, task.status == .completed,
               let path = task.savePath, Self.isReadyForExtraction(task),
               ArchiveVolumeDetector.detect(filename: path.lastPathComponent, directoryFilenames: []).isArchive else { return }
+        let directory = path.deletingLastPathComponent().standardizedFileURL
+        let peers = model.tasks.filter { $0.deletedAt == nil && $0.savePath?.deletingLastPathComponent().standardizedFileURL == directory }
+        let volumes = ArchiveVolumeDetector.detect(
+            filename: path.lastPathComponent, directoryFilenames: peers.compactMap { $0.savePath?.lastPathComponent }
+        )
+        let names = Set(volumes.volumes.map { $0.lowercased() })
+        // 分卷一起被磁盘保护取消时，手动重试也要重置整组，避免另一卷的取消状态阻断重试。
+        let cancelledPeers = peers.filter {
+            $0.postDownload.extractionState == .cancelled && names.contains(($0.savePath?.lastPathComponent ?? "").lowercased())
+        }
+        let ids = Set(cancelledPeers.map(\.id)).union([id])
         manualRequests.insert(id)
         if !candidates.contains(id) { candidates.append(id) }
-        update([id]) { task in
+        update(ids) { task in
             task.postDownload.autoExtract = true
             task.postDownload.extractionState = .queued
             task.postDownload.extractProgress = nil
@@ -105,19 +128,43 @@ final class ExtractionCoordinator {
             model.flushTaskHistory()
             var extractionOptions = job.options
             extractionOptions.pagePasswords = job.taskIDs.compactMap { model.pagePasswords[$0] }
-            let outcome = await extractor.extract(
-                archive: job.archive, destination: job.destination,
-                rules: job.rules, sourceURL: job.sourceURL, options: extractionOptions
-            ) { [weak self] value in
-                Task { @MainActor [weak self] in
-                    self?.reportProgress(value, jobID: job.id)
+            let extractor = extractor
+            let options = extractionOptions
+            let operation = Task { @concurrent [weak self] in
+                await extractor.extract(
+                    archive: job.archive, destination: job.destination,
+                    rules: job.rules, sourceURL: job.sourceURL, options: options
+                ) { [weak self] value in
+                    Task { @MainActor [weak self] in
+                        self?.reportProgress(value, jobID: job.id)
+                    }
                 }
             }
-            finish(outcome, job: job)
-            activeJob = nil
-            model.flushTaskHistory()
+            activeExtraction = operation
+            if Task.isCancelled { operation.cancel() }
+            let outcome = await operation.value
+            finishActive(outcome, job: job)
         }
         worker = nil
+    }
+
+    private func finishActive(_ outcome: ExtractionOutcome, job: ExtractionJob) {
+        guard activeJob?.id == job.id else { return }
+        if diskInterruptedJob == job.id, outcome.status != .succeeded {
+            var interrupted = outcome
+            interrupted.status = .failed
+            interrupted.failure = .cancelled
+            finish(interrupted, job: job)
+            update(job.taskIDs) { task in
+                task.postDownload.extractionFailure = String(localized: "因磁盘空间不足未完成解压，原压缩包已保留。目标文件夹可能仍有已解出的内容，请检查并清理后手动重试。")
+            }
+        } else {
+            finish(outcome, job: job)
+        }
+        activeJob = nil
+        activeExtraction = nil
+        diskInterruptedJob = nil
+        model.flushTaskHistory()
     }
 
     private func nextJob() -> ExtractionJob? {

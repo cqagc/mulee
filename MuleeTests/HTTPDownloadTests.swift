@@ -4,6 +4,58 @@ import Testing
 @testable import Mulee
 
 @Suite @MainActor struct HTTPDownloadTests {
+    @Test(arguments: [false, true])
+    func pauseDuringResumePreflightWins(_ probeFails: Bool) async throws {
+        let link = try #require(LinkParser.parse("https://example.org/archive.bin").first)
+        var task = DownloadTask(link: link, autoExtract: false)
+        task.engineTaskID = "http-race"
+        task.status = .paused
+        task.httpIdentity = HTTPResourceIdentity(size: 100)
+        let model = AppModel(tasks: [task], preventsSleepWhileDownloading: false)
+        let engine = FakeEngine()
+        var continuation: CheckedContinuation<HTTPResourceIdentity, any Error>?
+        let coordinator = DownloadCoordinator(model: model, engines: [engine], inspectHTTP: { _, _, _ in
+            try await withCheckedThrowingContinuation { continuation = $0 }
+        })
+        await coordinator.start(options: EngineOptions(downloadDirectory: FileManager.default.temporaryDirectory))
+        let resume = Task { await coordinator.resume(task.id) }
+        let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+        while continuation == nil, ContinuousClock.now < deadline { await Task.yield() }
+        let response = try #require(continuation)
+        model.userPausedTaskIDs.insert(task.id)
+        await coordinator.pause(task.id)
+        if probeFails { response.resume(throwing: HTTPDownloadFailure.resourceChanged) }
+        else { response.resume(returning: HTTPResourceIdentity(size: 100)) }
+        await resume.value
+        #expect(model.tasks.first?.status == .paused)
+        #expect(model.userPausedTaskIDs.contains(task.id))
+        #expect(model.tasks.first?.httpValidationError == nil)
+        await coordinator.stop()
+    }
+
+    @Test(arguments: [false, true])
+    func deletingOrExpiringHTTPRecordExcludesCompletedSnapshots(_ expire: Bool) async throws {
+        let link = try #require(LinkParser.parse("https://example.org/archive.bin").first)
+        var task = DownloadTask(link: link, autoExtract: false)
+        task.engineTaskID = "completed-http"
+        task.status = .completed
+        task.deletedAt = .now.addingTimeInterval(-TaskTrash.retention)
+        let model = AppModel(tasks: [task], preventsSleepWhileDownloading: false)
+        let engine = FakeEngine()
+        let coordinator = DownloadCoordinator(model: model, engines: [engine])
+        await coordinator.start(options: EngineOptions(downloadDirectory: FileManager.default.temporaryDirectory))
+        await engine.setSnapshots([EngineTaskSnapshot(
+            engineTaskID: "completed-http", name: "archive.bin", totalBytes: 100, receivedBytes: 100,
+            downloadRate: 0, uploadRate: 0, status: .completed, connections: 0,
+            savePath: nil, sourceURL: URL(string: link.original), errorMessage: nil
+        )])
+        if expire { model.purgeExpiredTrash() }
+        else { model.removeRecord(task.id) }
+        await coordinator.poll()
+        #expect(model.tasks.isEmpty)
+        await coordinator.stop()
+    }
+
     @Test func handoffPreservesContextThroughDraftAndHistory() throws {
         var components = URLComponents()
         components.scheme = "mulee"

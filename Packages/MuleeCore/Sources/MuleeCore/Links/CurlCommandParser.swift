@@ -80,8 +80,7 @@ public enum CurlCommandParser {
                     ? String(option.prefix(80).prefix { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") })
                     : String(option.prefix(2))
                 unknown.append(safeName)
-                if attached == nil, index < words.count, !words[index].hasPrefix("-"),
-                   URL(string: words[index])?.scheme == nil { index += 1 }
+                if attached == nil, index < words.count, !words[index].hasPrefix("-") { index += 1 }
             } else if let url = URL(string: word), ["http", "https", "ftp"].contains(url.scheme?.lowercased() ?? ""), url.host != nil {
                 urls.append(word)
             }

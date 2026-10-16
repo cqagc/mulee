@@ -1,7 +1,7 @@
 import Foundation
 import MuleeCore
 
-struct ExtractionJob {
+nonisolated struct ExtractionJob: Sendable {
     let id = UUID()
     var taskIDs: Set<DownloadTask.ID>
     var archive: URL

@@ -844,11 +844,20 @@ json::object Session::manage(const std::string& method, const json::object& para
             auto name = original ? std::string(original->as_string()) : info->files().file_path(index);
             if (name == from || name.compare(0, from.size() + 1, from + "/") == 0) {
                 auto replacement = to + name.substr(from.size());
-                auto destination = fs::path(handle.status().save_path) / replacement;
-                if (replacement != name && fs::exists(destination)) throw RequestError("conflict", "Rename destination exists");
-                for (auto other : info->files().file_range())
-                    if (other != index && info->files().file_path(other) == replacement)
+                auto current = info->files().file_path(index);
+                auto storage_replacement = replacement + (original && current != name ? ".mulee" : "");
+                auto directory = fs::path(handle.status().save_path);
+                if (replacement != name && (fs::exists(directory / replacement) || fs::exists(directory / storage_replacement)))
+                    throw RequestError("conflict", "Rename destination exists");
+                for (auto other : info->files().file_range()) {
+                    if (other == index) continue;
+                    auto other_storage = info->files().file_path(other);
+                    auto other_original = torrent.metadata.original_paths.if_contains(std::to_string(static_cast<int>(other)));
+                    auto other_name = other_original ? std::string(other_original->as_string()) : other_storage;
+                    if (other_storage == replacement || other_storage == storage_replacement
+                        || other_name == replacement || other_name == storage_replacement)
                         throw RequestError("conflict", "Rename collides with another torrent file");
+                }
                 changes.emplace_back(index, replacement);
             }
         }
@@ -879,7 +888,18 @@ json::object Session::execute(const std::string& method, const json::object& par
     if (method == "list") {
         json::array result;
         for (auto& entry : torrents_) {
-            update_incomplete_files(entry.second);
+            std::string update_error;
+            try { update_incomplete_files(entry.second); }
+            catch (const RequestError& error) { update_error = error.code; }
+            catch (const std::exception&) { update_error = "io_error"; }
+            if (!update_error.empty()) {
+                auto snapshot = serialize_torrent(entry.first, entry.second);
+                snapshot["state"] = "error";
+                snapshot["error"] = update_error;
+                snapshot["is_finished"] = false;
+                result.push_back(std::move(snapshot));
+                continue;
+            }
             auto status = entry.second.handle.status();
             auto& metadata = entry.second.metadata;
             auto duration = status.finished_duration.count();

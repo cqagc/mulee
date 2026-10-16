@@ -3,6 +3,25 @@ import Testing
 @testable import MuleeCore
 
 @Suite struct TorrentEngineTests {
+    @Test("单任务改名冲突映射为可读错误，其他快照正常返回")
+    func isolatedSnapshotConflict() async throws {
+        let fake = TorrentFakeTransport()
+        try await TorrentFixtures.withEngine(fake: fake) { engine, root in
+            try await engine.start(options: EngineOptions(downloadDirectory: root))
+            await fake.setResult("list", .object(["torrents": .array([
+                TorrentFixtures.task(["state": .string("error"), "error": .string("conflict"),
+                                      "paused": .bool(true), "is_finished": .bool(false)]),
+                TorrentFixtures.task(["id": .string("healthy-task")])
+            ])]))
+            let snapshots = try await engine.snapshots()
+            #expect(snapshots.count == 2)
+            let failed = try #require(snapshots.first { $0.engineTaskID == TorrentFixtures.id })
+            #expect(failed.status == .failed)
+            #expect(failed.errorMessage == "文件改名遇到同名文件，暂时无法完成下载；请移走或重命名冲突文件后重试。")
+            #expect(snapshots.last?.status == .seeding)
+        }
+    }
+
     @Test("仅在辅助进程确认 resume 刷盘后缩短网络关闭等待", arguments: [true, false])
     func shutdownRequiresSavedAcknowledgement(saved: Bool) async throws {
         let fake = TorrentFakeTransport()

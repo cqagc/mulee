@@ -13,6 +13,26 @@ actor Aria2HTTPServer {
     private(set) var rangeRequests = 0
     private(set) var receivedHeaders: [[String: String]] = []
     private var stopped = false
+    private var redirect: URL?
+    private var holdsHEAD = false
+    private var headWaiters: [CheckedContinuation<Void, Never>] = []
+
+    var suspendedHEADRequests: Int { headWaiters.count }
+
+    func holdHEADRequests() {
+        holdsHEAD = true
+    }
+
+    func releaseHEADRequests() {
+        holdsHEAD = false
+        let waiting = headWaiters
+        headWaiters.removeAll()
+        for continuation in waiting { continuation.resume() }
+    }
+
+    func setRedirect(_ url: URL?) {
+        redirect = url
+    }
 
     init(payload: Data) throws {
         self.payload = payload
@@ -41,6 +61,7 @@ actor Aria2HTTPServer {
 
     func stop() async {
         stopped = true
+        releaseHEADRequests()
         listener.cancel()
         let tasks = Array(requests.values)
         for task in tasks { task.cancel() }
@@ -102,6 +123,13 @@ actor Aria2HTTPServer {
             return (String(line[..<colon]).lowercased(), String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces))
         }, uniquingKeysWith: { _, new in new })
         receivedHeaders.append(headers)
+        if first[0] == "HEAD", holdsHEAD {
+            await withCheckedContinuation { headWaiters.append($0) }
+        }
+        if let redirect {
+            try await send(Data("HTTP/1.1 302 Found\r\nLocation: \(redirect.absoluteString)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8), on: connection)
+            return
+        }
         for code in [401, 403, 410] where path == "/status-\(code).bin" {
             try await send(Data("HTTP/1.1 \(code) Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8), on: connection)
             return

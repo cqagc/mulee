@@ -74,6 +74,74 @@ import Testing
         #expect(!FileManager.default.fileExists(atPath: file.path))
     }
 
+    @Test func incompleteFileRetriesUntilThreeStableParsingFailures() async throws {
+        let folder = try temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let file = folder.appending(path: "partial.magnet")
+        try Data("magnet:?xt=".utf8).write(to: file)
+        let watcher = TorrentWatchFolderService()
+        let start = Date(timeIntervalSince1970: 1000)
+        let handler: TorrentWatchFolderService.Handler = { _, _, _ in true }
+        await watcher.scan(folders: [folder], autoStart: true, now: start, handler: handler)
+        for second in 1...2 {
+            await watcher.scan(folders: [folder], autoStart: true, now: start.addingTimeInterval(Double(second)), handler: handler)
+            #expect(watcher.lastError == nil)
+        }
+        await watcher.scan(folders: [folder], autoStart: true, now: start.addingTimeInterval(3), handler: handler)
+        #expect(watcher.lastError != nil)
+        #expect(FileManager.default.fileExists(atPath: file.path))
+        try Data(magnet.utf8).write(to: file)
+        await watcher.scan(folders: [folder], autoStart: true, now: start.addingTimeInterval(4), handler: handler)
+        await watcher.scan(folders: [folder], autoStart: true, now: start.addingTimeInterval(5), handler: handler)
+        #expect(!FileManager.default.fileExists(atPath: file.path))
+    }
+
+    @Test func periodicScanFindsChangesWithoutDirectoryEvents() async throws {
+        let folder = try temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let watcher = TorrentWatchFolderService()
+        let start = Date(timeIntervalSince1970: 1000)
+        var calls = 0
+        let handler: TorrentWatchFolderService.Handler = { _, _, _ in
+            calls += 1
+            return true
+        }
+        await watcher.scan(folders: [folder], autoStart: true, now: start, handler: handler)
+        let file = folder.appending(path: "missed-event.magnet")
+        try Data(magnet.utf8).write(to: file)
+        #expect(!watcher.shouldScan(at: start.addingTimeInterval(29)))
+        #expect(watcher.shouldScan(at: start.addingTimeInterval(30)))
+        await watcher.scan(folders: [folder], autoStart: true, now: start.addingTimeInterval(30), handler: handler)
+        #expect(watcher.shouldScan(at: start.addingTimeInterval(31)))
+        await watcher.scan(folders: [folder], autoStart: true, now: start.addingTimeInterval(31), handler: handler)
+        #expect(calls == 1)
+        #expect(!watcher.shouldScan(at: start.addingTimeInterval(60)))
+    }
+
+    @Test func fileChangesResetStableParsingFailureCount() async throws {
+        let folder = try temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let file = folder.appending(path: "growing.magnet")
+        try Data("magnet:?".utf8).write(to: file)
+        let watcher = TorrentWatchFolderService()
+        let start = Date(timeIntervalSince1970: 1000)
+        let handler: TorrentWatchFolderService.Handler = { _, _, _ in true }
+        for second in 0...2 {
+            await watcher.scan(folders: [folder], autoStart: true, now: start.addingTimeInterval(Double(second)), handler: handler)
+        }
+        #expect(watcher.lastError == nil)
+        #expect(watcher.shouldScan(at: start.addingTimeInterval(3)))
+        try Data("magnet:?xt=".utf8).write(to: file)
+        for second in 3...5 {
+            await watcher.scan(folders: [folder], autoStart: true, now: start.addingTimeInterval(Double(second)), handler: handler)
+        }
+        #expect(watcher.lastError == nil)
+        try Data(magnet.utf8).write(to: file)
+        await watcher.scan(folders: [folder], autoStart: true, now: start.addingTimeInterval(6), handler: handler)
+        await watcher.scan(folders: [folder], autoStart: true, now: start.addingTimeInterval(7), handler: handler)
+        #expect(!FileManager.default.fileExists(atPath: file.path))
+    }
+
     @Test func parsesMagnetTextAndRejectsOtherContent() throws {
         let folder = try temporaryFolder()
         defer { try? FileManager.default.removeItem(at: folder) }

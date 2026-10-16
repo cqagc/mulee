@@ -62,6 +62,16 @@ final class NewTaskLinkModel: Identifiable {
         return torrentInfo?.infoHash
     }
 
+    static func existingTorrent(infoHash: String, tasks: [DownloadTask]) -> DownloadTask? {
+        tasks.first { task in
+            guard task.kind == .bittorrent else { return false }
+            if task.engineTaskID?.lowercased() == infoHash.lowercased() { return true }
+            return SmartPasteParser.parse(task.sourceLink).flatMap(\.links).contains { link in
+                NewTaskLinkModel(link: link).infoHash?.lowercased() == infoHash.lowercased()
+            }
+        }
+    }
+
     var trackers: [String] {
         if let info = torrentInfo { return info.trackers }
         guard case .magnet(_, _, let original) = link else { return [] }

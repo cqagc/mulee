@@ -70,7 +70,8 @@ final class DiskReserveMonitor {
             let fallback = task.savePath?.deletingLastPathComponent()
                 ?? model.coordinator?.diskProtectionDirectory(for: task.id)
                 ?? URL(filePath: settings.saveDirectory)
-            let directories = task.writeDirectories.flatMap { $0.isEmpty ? nil : $0 } ?? [fallback]
+            let directories = task.status == .extracting ? [fallback]
+                : task.writeDirectories.flatMap { $0.isEmpty ? nil : $0 } ?? [fallback]
             for directory in directories {
                 guard let key = try? volume(directory).standardizedFileURL else {
                     unknownVolumes.insert(task.id)
@@ -147,6 +148,10 @@ final class DiskReserveMonitor {
     }
 
     private func pause(_ task: DownloadTask) async {
+        if task.status == .extracting {
+            await model.extractionCoordinator?.cancelForDiskSpace(task.id)
+            return
+        }
         if task.postDownload.extractionState == .queued, task.status == .completed { return }
         if let coordinator = model.coordinator {
             await coordinator.pauseForDiskSpace(task.id)
@@ -172,7 +177,7 @@ final class DiskReserveMonitor {
     }
 
     private static func needsProtection(_ task: DownloadTask) -> Bool {
-        [.downloading, .queued, .waitingForSources, .postProcessing].contains(task.status)
+        [.downloading, .queued, .waitingForSources, .postProcessing, .extracting].contains(task.status)
     }
 
     nonisolated static func volumeURL(_ directory: URL) throws -> URL {

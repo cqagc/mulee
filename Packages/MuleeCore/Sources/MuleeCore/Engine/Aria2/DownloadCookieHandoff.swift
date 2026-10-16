@@ -4,9 +4,18 @@ import Foundation
 /// 沿用已授权的共享容器；一次性交接文件最多保留六十秒。
 public enum DownloadCookieHandoff {
     public static func directory() throws -> URL {
-        let directory = try VideoCookieHandoff.directory().appendingPathComponent("download-cookies", isDirectory: true)
+        let directory = try location()
         try prepare(directory)
         return directory
+    }
+
+    /// 查询不会创建目录；运行中的定时清理不应产生新的交接文件夹。
+    public static func location() throws -> URL {
+        guard let root = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: VideoCookieHandoff.groupIdentifier) else {
+            throw EngineError.unsupportedLink
+        }
+        return root.appendingPathComponent("VideoLogin", isDirectory: true)
+            .appendingPathComponent("download-cookies", isDirectory: true)
     }
 
     private static func prepare(_ directory: URL) throws {

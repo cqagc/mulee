@@ -82,7 +82,7 @@ import Testing
         tasks[5].status = .completed
         let model = AppModel(tasks: tasks, preventsSleepWhileDownloading: false)
         let controller = TransferScheduleController(
-            model: model, settings: settings, now: { clock }, calendar: { calendar }, scheduleWake: { _ in 0 }, cancelWake: { _ in 0 }
+            model: model, settings: settings, now: { clock }, calendar: { calendar }, scheduleWake: { _ in 0 }, cancelWake: { _ in 0 }, copyScheduledEvents: { [] }
         )
         await controller.refresh()
         #expect(model.tasks[0].pauseReason == .schedule)
@@ -121,7 +121,7 @@ import Testing
         var result = kIOReturnNotPrivileged
         let controller = TransferScheduleController(
             model: model, settings: settings, now: { clock }, calendar: { calendar },
-            scheduleWake: { calls.append($0); return result }, cancelWake: { cancelled.append($0); return 0 }
+            scheduleWake: { calls.append($0); return result }, cancelWake: { cancelled.append($0); return 0 }, copyScheduledEvents: { [] }
         )
         await controller.refresh()
         await controller.refresh()
@@ -139,6 +139,55 @@ import Testing
         #expect(!model.isTransferScheduleActive)
     }
 
+    @Test func startupAndScheduleChangesRemovePersistedOwnedPowerEvents() async throws {
+        let defaults = try TemporaryDefaults(prefix: "TransferWakeRecovery-")
+        defer { defaults.clean() }
+        let settings = SettingsModel(defaults: defaults.defaults)
+        let clock = try date("2026-10-16T00:00:00Z")
+        let calendar = calendar()
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        typealias PowerEvent = TransferScheduleController.PowerEvent
+        let owned = [
+            PowerEvent(date: clock.addingTimeInterval(600), owner: "com.cqagc.mulee", type: kIOPMAutoWake),
+            PowerEvent(date: clock.addingTimeInterval(1200), owner: "com.cqagc.mulee", type: kIOPMAutoWakeOrPowerOn)
+        ]
+        let other = PowerEvent(date: clock.addingTimeInterval(600), owner: "example.other", type: kIOPMAutoWake)
+        var events = owned + [other]
+        var cancelled: [PowerEvent] = []
+        var scheduled: [Date] = []
+        let controller = TransferScheduleController(
+            model: model, settings: settings, now: { clock }, calendar: { calendar },
+            scheduleWake: { scheduled.append($0); return 0 }, cancelWake: { _ in 0 },
+            copyScheduledEvents: { events }, cancelPowerEvent: { event in
+                cancelled.append(event)
+                events.removeAll { $0 == event }
+                return 0
+            }
+        )
+        // 计划关闭的启动也必须回收上次异常退出留下的事件。
+        await controller.refresh()
+        #expect(cancelled == owned)
+        #expect(events == [other])
+        #expect(scheduled.isEmpty)
+
+        settings.transferScheduleEnabled = true
+        events.append(owned[0])
+        await controller.refresh()
+        #expect(cancelled == owned + [owned[0]])
+        #expect(scheduled.count == 1)
+        events.append(owned[1])
+        settings.transferScheduleStartTime = "02:00"
+        await controller.refresh()
+        #expect(cancelled == owned + owned)
+        #expect(scheduled.count == 2)
+        events.append(owned[0])
+        settings.transferScheduleEnabled = false
+        await controller.refresh()
+        #expect(events == [other])
+        #expect(cancelled.count == 5)
+        controller.stop()
+    }
+
     @Test func coordinatorPausesAndResumesThroughTheExistingQueue() async throws {
         let defaults = try TemporaryDefaults(prefix: "TransferScheduleEngine-")
         defer { defaults.clean() }
@@ -152,7 +201,7 @@ import Testing
         await coordinator.start(options: EngineOptions(downloadDirectory: URL(filePath: "/tmp")))
         await coordinator.add(links: LinkParser.parse("https://example.com/file"), autoExtract: false)
         let controller = TransferScheduleController(
-            model: model, settings: settings, now: { clock }, calendar: { calendar }, scheduleWake: { _ in 0 }, cancelWake: { _ in 0 }
+            model: model, settings: settings, now: { clock }, calendar: { calendar }, scheduleWake: { _ in 0 }, cancelWake: { _ in 0 }, copyScheduledEvents: { [] }
         )
         await controller.refresh()
         #expect(await engine.pausedIDs.contains("task-1"))
@@ -180,6 +229,66 @@ import Testing
         #expect(merged.first?.status == .paused)
         #expect(merged.first?.pauseReason == .schedule)
         #expect(merged.first?.downloadRate == 0)
+    }
+
+    @Test func scheduledSeederSurvivesCompletedSnapshotAndResumesNextWindow() async throws {
+        let defaults = try TemporaryDefaults(prefix: "ScheduledSeeder-")
+        defer { defaults.clean() }
+        let settings = SettingsModel(defaults: defaults.defaults)
+        settings.transferScheduleEnabled = true
+        var clock = try date("2026-10-16T08:00:00Z")
+        let calendar = calendar()
+        var task = try #require(MockData.tasks.first { $0.kind == .bittorrent })
+        task.engineTaskID = "scheduled-seeder"
+        task.status = .seeding
+        task.totalBytes = 100
+        task.receivedBytes = 100
+        let model = AppModel(tasks: [task], preventsSleepWhileDownloading: false)
+        let engine = FakeEngine(kind: .bittorrent)
+        let coordinator = DownloadCoordinator(model: model, engines: [engine])
+        let snapshot = EngineTaskSnapshot(
+            engineTaskID: "scheduled-seeder", name: task.name, totalBytes: 100, receivedBytes: 100,
+            downloadRate: 0, uploadRate: 20, status: .seeding, connections: 1,
+            savePath: nil, sourceURL: nil, errorMessage: nil
+        )
+        await engine.setSnapshots([snapshot])
+        await coordinator.start(options: EngineOptions(downloadDirectory: URL(filePath: "/tmp")))
+        let controller = TransferScheduleController(
+            model: model, settings: settings, now: { clock }, calendar: { calendar }, scheduleWake: { _ in 0 }, cancelWake: { _ in 0 }, copyScheduledEvents: { [] }
+        )
+        await controller.refresh()
+        model.tasks = EngineSnapshotMerger.merge(tasks: model.tasks, snapshots: [.bittorrent: [EngineTaskSnapshot(
+            engineTaskID: "scheduled-seeder", name: task.name, totalBytes: 100, receivedBytes: 100,
+            downloadRate: 0, uploadRate: 20, status: .completed, connections: 1,
+            savePath: nil, sourceURL: nil, errorMessage: nil
+        )]], now: clock)
+        #expect(model.tasks[0].status == .paused)
+        #expect(model.tasks[0].pauseReason == .schedule)
+        clock = try date("2026-10-17T01:00:00Z")
+        await controller.refresh()
+        #expect(await engine.resumedIDs.contains("scheduled-seeder"))
+        #expect(model.tasks[0].status == .seeding)
+        #expect(model.tasks[0].pauseReason == nil)
+        await coordinator.stop()
+    }
+
+    @Test(arguments: [DownloadTask.PauseReason.diskSpace, .schedule])
+    func completedDownloadClearsPauseReason(reason: DownloadTask.PauseReason) {
+        var task = MockData.tasks[0]
+        task.kind = .bittorrent
+        task.engineTaskID = "protected-task"
+        task.status = .paused
+        task.pauseReason = reason
+        task.totalBytes = 100
+        task.receivedBytes = 10
+        let snapshot = EngineTaskSnapshot(
+            engineTaskID: "protected-task", name: task.name, totalBytes: 100, receivedBytes: 100,
+            downloadRate: 0, uploadRate: 0, status: .completed, connections: 1,
+            savePath: nil, sourceURL: nil, errorMessage: nil
+        )
+        let merged = EngineSnapshotMerger.merge(tasks: [task], snapshots: [.bittorrent: [snapshot]], now: .now)
+        #expect(merged.first?.pauseReason == nil)
+        #expect(merged.first?.status == .completed)
     }
 
     @Test func defaultsAndPersistenceRemainSeparateFromScheduledSpeedLimits() throws {

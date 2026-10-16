@@ -226,6 +226,7 @@ final class AppModel {
     func purgeExpiredTrash(now: Date = .now) {
         let expired = tasks.filter { TaskTrash.isExpired($0, now: now) }
         guard !expired.isEmpty else { return }
+        for task in expired { coordinator?.forgetHTTPTransfer(task) }
         let ids = Set(expired.map(\.id))
         tasks.removeAll { ids.contains($0.id) }
         if let selectedTaskID, ids.contains(selectedTaskID) { self.selectedTaskID = nil }
@@ -248,6 +249,7 @@ final class AppModel {
     }
 
     func removeRecord(_ id: DownloadTask.ID) {
+        if let task = tasks.first(where: { $0.id == id }) { coordinator?.forgetHTTPTransfer(task) }
         userPausedTaskIDs.remove(id)
         tasks.removeAll { $0.id == id }
         if selectedTaskID == id {

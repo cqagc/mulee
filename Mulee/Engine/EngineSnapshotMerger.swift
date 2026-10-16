@@ -63,10 +63,15 @@ enum EngineSnapshotMerger {
                 task.name = snapshot.name
                 let pathExtension = URL(filePath: snapshot.name).pathExtension
                 task.fileExtension = pathExtension.isEmpty ? nil : pathExtension
+                // 暂停后的做种快照会报告完成；仅按合并前的完成进度保留计划暂停。
+                let keepsScheduledSeedPause = kind == .bittorrent && task.pauseReason == .schedule
+                    && ([.seeding, .completed].contains(task.status)
+                        || task.totalBytes.map { $0 > 0 && task.receivedBytes >= $0 } == true)
+                    && [.completed, .seeding].contains(snapshot.status)
                 task.totalBytes = snapshot.totalBytes
                 task.receivedBytes = snapshot.receivedBytes
                 let isExtractionPause = task.pauseReason == .diskSpace && task.postDownload.extractionState == .queued
-                if !isExtractionPause, [.completed, .seeding, .failed].contains(snapshot.status) {
+                if !isExtractionPause, !keepsScheduledSeedPause, [.completed, .seeding, .failed].contains(snapshot.status) {
                     task.pauseReason = nil
                 }
                 task.downloadRate = snapshot.downloadRate

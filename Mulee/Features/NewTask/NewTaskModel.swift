@@ -174,14 +174,7 @@ final class NewTaskModel {
         var seenHashes = Set<String>()
         for item in links {
             guard let hash = item.infoHash else { continue }
-            let existing = model.tasks.first { task in
-                guard task.kind == .bittorrent, task.deletedAt == nil else { return false }
-                if task.engineTaskID?.lowercased() == hash { return true }
-                return SmartPasteParser.parse(task.sourceLink).flatMap(\.links).contains { link in
-                    if case .magnet(let existingHash, _, _) = link { return existingHash == hash }
-                    return false
-                }
-            }
+            let existing = NewTaskLinkModel.existingTorrent(infoHash: hash, tasks: model.tasks)
             let repeated = !seenHashes.insert(hash).inserted
             guard existing != nil || repeated else {
                 item.duplicateMessage = nil
@@ -192,7 +185,9 @@ final class NewTaskModel {
             }
             item.duplicateTaskID = existing?.engineTaskID
             item.canMergeTrackers = false
-            if repeated, existing == nil {
+            if existing?.deletedAt != nil {
+                item.duplicateMessage = String(localized: "这个种子已在最近删除里，请恢复任务，或彻底删除后再添加。")
+            } else if repeated, existing == nil {
                 item.duplicateMessage = String(localized: "本次列表中已有相同种子。请保留第一项，跳过本次重复项。")
             } else if item.torrentInfo?.isPrivate == true {
                 item.duplicateMessage = String(localized: "这个私有种子已存在，不会合并 tracker。请使用已有任务。")

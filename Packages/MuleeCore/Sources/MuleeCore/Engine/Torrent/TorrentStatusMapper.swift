@@ -15,7 +15,8 @@ struct TorrentStatusMapper: Sendable {
     static func snapshot(_ value: TorrentdTask) -> EngineTaskSnapshot {
         let completed = value.state == "finished" || value.state == "seeding"
             || (value.hasMetadata && value.totalWantedDone >= value.totalWanted)
-        let status = status(state: value.state, paused: value.paused, queued: value.queued, completed: completed)
+        let status: TaskStatus = value.state == "error" ? .failed
+            : status(state: value.state, paused: value.paused, queued: value.queued, completed: completed)
         let source = value.source.flatMap { text in
             text.hasPrefix("/") ? URL(fileURLWithPath: text) : URL(string: text)
         }

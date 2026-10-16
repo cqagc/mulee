@@ -180,6 +180,39 @@ import Testing
         #expect(model.pendingNewTaskContexts.values.allSatisfy { $0.requestContext.cookie == nil })
     }
 
+    @Test func routerAutomaticallyCleansExpiredHandoffsWhileRunning() async throws {
+        let root = directory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let defaults = try TemporaryDefaults(prefix: "ExtensionHandoffTimer-")
+        defer { defaults.clean() }
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let router = OpenURLRouter(model: model, settings: SettingsModel(defaults: defaults.defaults),
+                                   cookieDirectory: root, cleanupInterval: 0.02)
+        try DownloadCookieHandoff.save(DownloadCookieRequest.parse(payload()), directory: root)
+        try FileManager.default.setAttributes([.modificationDate: Date.now.addingTimeInterval(-61)],
+                                             ofItemAtPath: root.appendingPathComponent(token).path)
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+        withExtendedLifetime(router) {}
+    }
+
+    @Test func cleanupDoesNotCreateDirectoryAndStopsAtExit() async throws {
+        let root = directory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let defaults = try TemporaryDefaults(prefix: "ExtensionHandoffExit-")
+        defer { defaults.clean() }
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let router = OpenURLRouter(model: model, settings: SettingsModel(defaults: defaults.defaults),
+                                   cookieDirectory: root, cleanupInterval: 0.02)
+        try await Task.sleep(for: .milliseconds(60))
+        #expect(!FileManager.default.fileExists(atPath: root.path))
+        try DownloadCookieHandoff.save(DownloadCookieRequest.parse(payload()), directory: root)
+        try FileManager.default.setAttributes([.modificationDate: Date.now.addingTimeInterval(-61)],
+                                             ofItemAtPath: root.appendingPathComponent(token).path)
+        router.stopCookieCleanup()
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
     @Test func routerCleansExpiredHandoffsAtStartup() throws {
         let root = directory()
         defer { try? FileManager.default.removeItem(at: root) }

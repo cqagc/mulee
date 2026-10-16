@@ -22,6 +22,12 @@ struct TorrentErrorDescriptions: Sendable {
 
     static func taskMessage(_ message: String) -> String {
         let lowercased = message.lowercased()
+        if lowercased == "conflict" {
+            return String(localized: "文件改名遇到同名文件，暂时无法完成下载；请移走或重命名冲突文件后重试。", bundle: .module)
+        }
+        if lowercased == "io_error" {
+            return String(localized: "文件改名失败，暂时无法完成下载；请检查磁盘空间和保存目录的访问权限后重试。", bundle: .module)
+        }
         if lowercased.contains("space") { return String(localized: "磁盘空间不足", bundle: .module) }
         if lowercased.contains("permission") || lowercased.contains("denied") { return String(localized: "没有文件访问权限", bundle: .module) }
         if lowercased.contains("no such file") { return String(localized: "下载文件不存在", bundle: .module) }

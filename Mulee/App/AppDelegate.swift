@@ -116,6 +116,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    func applicationWillTerminate(_ notification: Notification) {
+        openURLRouter?.stopCookieCleanup()
+    }
+
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         !(settings?.closeKeepsRunning ?? true)
     }

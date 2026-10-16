@@ -3,6 +3,13 @@ import Testing
 @testable import MuleeCore
 
 struct Aria2HTTPContextTests {
+    @Test func credentialHostComparisonIncludesPortAndIgnoresCase() throws {
+        let original = try #require(URL(string: "https://EXAMPLE.org/file"))
+        #expect(HTTPResourceProbe.sameHost(original, URL(string: "https://example.org:443/other")!))
+        #expect(!HTTPResourceProbe.sameHost(original, URL(string: "https://example.org:8443/other")!))
+        #expect(!HTTPResourceProbe.sameHost(original, URL(string: "https://other.example.org/file")!))
+    }
+
     @Test(arguments: [(401, HTTPDownloadFailure.needsLogin), (403, .expiredLink), (404, .missingFile), (410, .expiredLink)])
     func humanReadableHTTPFailures(_ status: Int, _ expected: HTTPDownloadFailure) {
         #expect(HTTPDownloadFailure.classify(statusCode: status) == expected)

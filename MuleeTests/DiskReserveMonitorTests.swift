@@ -163,6 +163,37 @@ import Testing
         try await context.clean()
     }
 
+    @Test(arguments: [false, true])
+    func runningExtractionStopsAtReserveAndCanBeRetriedManually(multipart: Bool) async throws {
+        let context = try ExtractionTestContext(suspends: true)
+        var available: Int64 = 20_000_000_000
+        let monitor = DiskReserveMonitor(model: context.model, settings: context.settings, volume: { _ in URL(filePath: "/") }) { _ in available }
+        let task = try context.task(multipart ? "fixture.7z.001" : "fixture.zip", status: .completed)
+        context.model.tasks = multipart ? [task, try context.task("fixture.7z.002", status: .completed)] : [task]
+        context.coordinator.start()
+        try await context.waitUntil { await context.extractor.calls.count == 1 }
+
+        available = 10_000_000_000
+        await monitor.refresh(force: true)
+        #expect(context.model.diskReserveWarnings.first?.isPaused == true)
+        #expect(context.model.tasks[0].status == .completed)
+        #expect(context.model.tasks[0].postDownload.extractionState == .cancelled)
+        #expect(context.model.tasks[0].postDownload.extractionFailure?.contains("因磁盘空间不足未完成解压") == true)
+        #expect(FileManager.default.fileExists(atPath: task.savePath!.path))
+
+        available = 20_000_000_000
+        await monitor.refresh(force: true)
+        #expect(await context.extractor.calls.count == 1)
+        // 修复前先释放仍在运行的假解压器，保证失败测试也能清理。
+        await context.extractor.release()
+        try await context.waitUntil { context.model.tasks[0].status == .completed }
+        context.coordinator.requestExtraction(context.model.tasks.last!.id)
+        try await context.waitUntil { await context.extractor.calls.count == 2 }
+        await context.extractor.release()
+        try await context.waitUntil { context.model.tasks.allSatisfy { $0.postDownload.extractionState == .succeeded } }
+        try await context.clean()
+    }
+
     @Test func persistedProtectionKeepsHysteresisAfterRestart() async throws {
         let defaults = try TemporaryDefaults(prefix: "DiskReserveRestart-")
         defer { defaults.clean() }

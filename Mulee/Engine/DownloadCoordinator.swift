@@ -26,17 +26,26 @@ final class DownloadCoordinator {
     private var checksumJobs: [UUID: Task<Void, Never>] = [:]
     private var checkedCompletions: Set<UUID> = []
     private var replacingHTTPTasks: Set<UUID> = []
+    private var resubmittingTaskIDs: Set<UUID> = []
+    private var resubmissionAttempts: [UUID: UUID] = [:]
+    private var httpResumeAttempts: [UUID: UUID] = [:]
+    private var forgettingHTTPTasks: [UUID: Task<Void, Never>] = [:]
     private var checkedHTTPFiles: Set<URL> = []
     private var httpFileIssues: [URL: String] = [:]
     private let fileProgressPublisher = DownloadFileProgressPublisher()
     private let scheduling: DownloadScheduling
+    private let inspectHTTP: (URL, DownloadRequestContext, Bool) async throws -> HTTPResourceIdentity
 
     init(
         model: AppModel, engines: [any DownloadEngine], videoBootstrap: VideoEngineBootstrap? = nil,
         videoEngineFactory: (@MainActor (VideoEngineConfiguration) async throws -> any DownloadEngine)? = nil,
-        schedulingDefaults: UserDefaults? = nil
+        schedulingDefaults: UserDefaults? = nil,
+        inspectHTTP: @escaping (URL, DownloadRequestContext, Bool) async throws -> HTTPResourceIdentity = {
+            try await HTTPResourceProbe.inspect($0, context: $1, expectsHTML: $2)
+        }
     ) {
         self.model = model
+        self.inspectHTTP = inspectHTTP
         scheduling = DownloadScheduling(defaults: schedulingDefaults ?? (AppEnvironment.isRunningUnitTests ? nil : .standard))
         self.engines = engines
         self.videoBootstrap = videoBootstrap
@@ -164,6 +173,9 @@ final class DownloadCoordinator {
 
     func stop() async {
         generation = nil
+        httpResumeAttempts.removeAll()
+        for job in forgettingHTTPTasks.values { await job.value }
+        forgettingHTTPTasks.removeAll()
         fileProgressPublisher.stop()
         await StreamingPlayback.shared.stop()
         for job in checksumJobs.values { job.cancel() }
@@ -252,6 +264,11 @@ final class DownloadCoordinator {
     ) async {
         var insertionIndex = 0
         for link in links {
+            if link.kind == .bittorrent, let hash = NewTaskLinkModel(link: link).infoHash,
+               NewTaskLinkModel.existingTorrent(infoHash: hash, tasks: model.tasks.filter { $0.deletedAt != nil }) != nil {
+                model.openURLIssue = String(localized: "这个种子已在最近删除里，请恢复任务，或彻底删除后再添加。")
+                continue
+            }
             var task = DownloadTask(link: link, autoExtract: autoExtract)
             task.requestContext = requestContexts[link]?.withoutCookie
             task.checksum = checksums[link]
@@ -262,6 +279,9 @@ final class DownloadCoordinator {
             if let entry = videoEntries[link] { task.name = entry.taskTitle }
             let ruleResult = applyDownloadRule(to: &task, link: link, context: requestContexts[link] ?? .init(), directory: directory)
             let directory = ruleResult.directory
+            if let saveDirectory = directory ?? latestOptions?.downloadDirectory {
+                task.writeDirectories = [saveDirectory]
+            }
             let requestContext = ruleResult.context
             if let detail = videoConfiguration.detail(for: link) {
                 task.detail = detail
@@ -332,6 +352,9 @@ final class DownloadCoordinator {
                         task.engineTaskID = try await engine.addQueued(link: link, directory: directory)
                     } else {
                         task.engineTaskID = try await engine.add(link: link, directory: directory)
+                    }
+                    if task.kind == .bittorrent, let id = task.engineTaskID {
+                        excludedTaskIDs[.bittorrent]?.remove(id)
                     }
                     if queued { scheduling.queue(task) }
                     task.status = .queued
@@ -715,6 +738,17 @@ final class DownloadCoordinator {
         }
     }
 
+    /// 彻底删除和过期清理不触碰文件，但必须移除引擎的完成结果。
+    func forgetHTTPTransfer(_ task: DownloadTask) {
+        guard task.kind == .http, let id = task.engineTaskID else { return }
+        excludeFromSnapshots(task)
+        guard let http = engines.first(where: { $0.kind == .http }) as? Aria2Engine else { return }
+        forgettingHTTPTasks[task.id] = Task {
+            do { try await http.forgetTransfer(id) }
+            catch { model.taskHistoryIssue = EngineStatusPresentation.errorMessage(error) }
+        }
+    }
+
     /// 同步保存删除意图并移除列表；引擎失败不能撤销用户删除，也不能删除成品。
     @discardableResult
     func removeCompletedVideo(_ task: DownloadTask) -> Task<Void, Never> {
@@ -782,6 +816,17 @@ final class DownloadCoordinator {
 
     private func perform(_ id: DownloadTask.ID, action: Action) async {
         guard let task = model.tasks.first(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+        if action == .resume, resubmittingTaskIDs.contains(id) { return }
+        if action == .pause { resubmissionAttempts[id] = nil }
+        let resumeAttempt = UUID()
+        if task.kind == .http {
+            httpResumeAttempts[id] = action == .resume ? resumeAttempt : nil
+        }
+        let token = generation
+        if action == .resume, task.engineTaskID == nil, waitingVideoLinks[id] == nil {
+            await resubmit(task, token: token, resumeAttempt: resumeAttempt)
+            return
+        }
         if let engineTaskID = task.engineTaskID {
             guard let engine = engine(for: task.kind) else {
                 setError(String(localized: "下载引擎未运行"), for: id)
@@ -801,13 +846,18 @@ final class DownloadCoordinator {
                         throw error
                     }
                 case .resume:
-                    if engine is Aria2Engine, let identity = task.httpIdentity,
+                    if task.kind == .http, let identity = task.httpIdentity,
                        let url = URL(string: task.sourceLink), ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
                         var context = task.requestContext ?? DownloadRequestContext()
                         if task.hasRequestCookie == true {
                             context.cookie = try await DownloadRequestCookieStore.shared.load(taskID: id)
                         }
-                        let current = try await HTTPResourceProbe.inspect(url, context: context, expectsHTML: identity.contentType == "text/html")
+                        let current = try await inspectHTTP(url, context, identity.contentType == "text/html")
+                        guard generation == token, httpResumeAttempts[id] == resumeAttempt,
+                              !model.userPausedTaskIDs.contains(id),
+                              model.tasks.contains(where: {
+                                  $0.id == id && $0.deletedAt == nil && $0.engineTaskID == engineTaskID && $0.status == task.status
+                              }) else { return }
                         try identity.validateReplacement(current)
                     }
                     scheduling.userResume(task)
@@ -820,6 +870,8 @@ final class DownloadCoordinator {
                 }
                 revisions[task.kind, default: 0] += 1
             } catch {
+                if task.kind == .http, action == .resume,
+                   (generation != token || httpResumeAttempts[id] != resumeAttempt || model.userPausedTaskIDs.contains(id)) { return }
                 setError(EngineStatusPresentation.errorMessage(error), for: id)
                 if let failure = error as? HTTPDownloadFailure,
                    let index = model.tasks.firstIndex(where: { $0.id == id }) {
@@ -849,6 +901,102 @@ final class DownloadCoordinator {
             if waitingVideoLinks[id] != nil { await submitWaitingVideos() }
         }
         await refreshScheduling(sample: false)
+    }
+
+    private func resubmit(_ task: DownloadTask, token: UUID?, resumeAttempt: UUID) async {
+        let id = task.id
+        guard resubmittingTaskIDs.insert(id).inserted else { return }
+        resubmissionAttempts[id] = resumeAttempt
+        defer {
+            resubmittingTaskIDs.remove(id)
+            resubmissionAttempts[id] = nil
+        }
+        guard let engine = engine(for: task.kind) else {
+            resubmissionFailed(String(localized: "下载引擎尚未运行，任务仍处于暂停状态；请稍后重试。"), id: id)
+            return
+        }
+        guard let link = LinkParser.parse(task.sourceLink).first(where: { $0.kind == task.kind }) else {
+            resubmissionFailed(String(localized: "找不到任务的原始链接，尚未恢复下载；请重新添加原始链接。"), id: id)
+            return
+        }
+        pendingAdds[task.kind, default: 0] += 1
+        revisions[task.kind, default: 0] += 1
+        defer {
+            pendingAdds[task.kind, default: 0] -= 1
+            revisions[task.kind, default: 0] += 1
+        }
+        do {
+            var directory = task.savePath?.deletingLastPathComponent() ?? task.writeDirectories?.first
+                ?? latestOptions?.downloadDirectory
+            var retainedIncomplete = false
+            if task.kind == .http, let working = directory,
+               working.lastPathComponent == id.uuidString,
+               working.deletingLastPathComponent().lastPathComponent == ".mulee-incomplete" {
+                directory = working.deletingLastPathComponent().deletingLastPathComponent()
+                retainedIncomplete = true
+            }
+            if task.kind == .http, let directory {
+                let retained = IncompleteHTTPTransfer(taskID: id, destination: directory)
+                retainedIncomplete = retainedIncomplete || FileManager.default.fileExists(atPath: retained.directory.path)
+            }
+            let engineID: String
+            if let http = engine as? Aria2Engine {
+                var context = task.requestContext ?? DownloadRequestContext()
+                if task.hasRequestCookie == true {
+                    context.cookie = try await DownloadRequestCookieStore.shared.load(taskID: id)
+                }
+                // 使用原文件名和任务 ID，aria2 才会读回保留的分块及控制文件。
+                if retainedIncomplete { context.suggestedFilename = task.savePath?.lastPathComponent }
+                if let identity = task.httpIdentity, case .http(let url, _, _) = link,
+                   ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
+                    let current = try await inspectHTTP(url, context, identity.contentType == "text/html")
+                    try identity.validateReplacement(current)
+                }
+                guard generation == token, httpResumeAttempts[id] == resumeAttempt,
+                      !model.userPausedTaskIDs.contains(id),
+                      model.tasks.contains(where: { $0.id == id && $0.deletedAt == nil && $0.engineTaskID == nil }) else { return }
+                engineID = try await http.add(
+                    link: link, directory: directory, context: context, checksum: task.checksum, paused: true,
+                    incompleteTaskID: retainedIncomplete || (model.downloadSettings?.markIncomplete ?? true) ? id : nil
+                )
+            } else if let torrent = engine as? TorrentEngine {
+                engineID = try await torrent.add(
+                    link: link, directory: task.writeDirectories?.first ?? directory, filePriorities: nil, paused: true,
+                    markIncomplete: model.downloadSettings?.markIncomplete ?? true
+                )
+            } else {
+                engineID = try await engine.addQueued(link: link, directory: directory)
+            }
+            guard generation == token, let index = model.tasks.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else {
+                try await engine.remove(engineID, deleteFiles: false)
+                return
+            }
+            model.tasks[index].engineTaskID = engineID
+            excludedTaskIDs[task.kind]?.remove(engineID)
+            if model.userPausedTaskIDs.contains(id) || resubmissionAttempts[id] != resumeAttempt
+                || (task.kind == .http && httpResumeAttempts[id] != resumeAttempt) {
+                scheduling.userPause(model.tasks[index])
+                model.tasks[index].status = .paused
+                return
+            }
+            scheduling.userResume(model.tasks[index])
+            scheduling.queue(model.tasks[index])
+            model.tasks[index].status = .queued
+            model.tasks[index].errorMessage = nil
+            model.tasks[index].httpValidationError = nil
+            await refreshScheduling(sample: false)
+        } catch {
+            guard generation == token, resubmissionAttempts[id] == resumeAttempt, !model.userPausedTaskIDs.contains(id),
+                  task.kind != .http || httpResumeAttempts[id] == resumeAttempt else { return }
+            let reason = EngineStatusPresentation.errorMessage(error)
+            resubmissionFailed(String(localized: "未能恢复下载：\(reason)。任务仍处于暂停状态，请检查原始链接和保存目录后重试。"), id: id)
+        }
+    }
+
+    private func resubmissionFailed(_ message: String, id: DownloadTask.ID) {
+        guard let index = model.tasks.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+        model.tasks[index].status = .paused
+        model.tasks[index].errorMessage = message
     }
 
     private func failWaitingVideos(reason: String) {

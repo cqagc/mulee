@@ -152,6 +152,8 @@ public actor ArchiveExtractor {
             let result = ExtractionResult(status: .succeeded, failure: nil, matchedRule: matchedRule(for: usedSource, match: match, rules: rules),
                                           passwordSource: usedSource, encoding: encoding, topLevelItems: items,
                                           originalVolumes: originals, warnings: warnings, nestedResults: nested)
+            // 嵌套解压会吸收取消并返回失败结果；原包处理前必须再次检查。
+            try Task.checkCancellation()
             do { try options.postAction.apply(to: result) }
             catch { warnings.append(String(localized: "解压成功，但原压缩包处理失败：\(error.localizedDescription)", bundle: .module)) }
             return ExtractionResult(status: .succeeded, failure: nil, matchedRule: result.matchedRule, passwordSource: usedSource,

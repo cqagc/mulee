@@ -7,14 +7,33 @@ final class OpenURLRouter {
     private let model: AppModel
     private let settings: SettingsModel
     private let cookieDirectory: URL?
+    private var cookieCleanupTask: Task<Void, Never>?
 
-    init(model: AppModel, settings: SettingsModel, cookieDirectory: URL? = nil) {
+    init(model: AppModel, settings: SettingsModel, cookieDirectory: URL? = nil, cleanupInterval: TimeInterval = 30) {
         self.model = model
         self.settings = settings
-        self.cookieDirectory = cookieDirectory ?? (AppEnvironment.isRunningUnitTests ? nil : try? DownloadCookieHandoff.directory())
-        if let directory = self.cookieDirectory {
-            try? DownloadCookieHandoff.cleanup(directory: directory)
+        self.cookieDirectory = cookieDirectory ?? (AppEnvironment.isRunningUnitTests ? nil : try? DownloadCookieHandoff.location())
+        cleanupCookieHandoffs()
+        cookieCleanupTask = Task { @concurrent [weak self] in
+            while !Task.isCancelled {
+                do { try await Task.sleep(for: .seconds(cleanupInterval)) }
+                catch { return }
+                guard !Task.isCancelled else { return }
+                await self?.cleanupCookieHandoffs()
+            }
         }
+    }
+
+    deinit { cookieCleanupTask?.cancel() }
+
+    func cleanupCookieHandoffs() {
+        if let cookieDirectory { try? DownloadCookieHandoff.cleanup(directory: cookieDirectory) }
+    }
+
+    func stopCookieCleanup() {
+        cookieCleanupTask?.cancel()
+        cookieCleanupTask = nil
+        cleanupCookieHandoffs()
     }
 
     /// 从服务菜单接收选中文本，沿用浏览器入口的远程链接和数量限制。
