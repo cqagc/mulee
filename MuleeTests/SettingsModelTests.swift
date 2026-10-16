@@ -3,15 +3,10 @@ import Testing
 @testable import Mulee
 
 @Suite struct SettingsModelTests {
-    private func makeDefaults() throws -> (UserDefaults, String) {
-        let name = "mulee.tests.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: name))
-        return (defaults, name)
-    }
-
     @Test func defaultValues() throws {
-        let (defaults, name) = try makeDefaults()
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "mulee.tests.")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let model = SettingsModel(defaults: defaults)
         #expect(model.closeKeepsRunning)
         #expect(!model.watchClipboard)
@@ -38,8 +33,9 @@ import Testing
     }
 
     @Test func changesPersist() throws {
-        let (defaults, name) = try makeDefaults()
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "mulee.tests.")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let model = SettingsModel(defaults: defaults)
         model.maxConcurrentTasks = 7
         model.watchClipboard = true
@@ -58,8 +54,9 @@ import Testing
     }
 
     @Test func everyPickerDefaultIsSelectable() throws {
-        let (defaults, name) = try makeDefaults()
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "mulee.tests.")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let model = SettingsModel(defaults: defaults)
 
         #expect(SettingsModel.downloadLimitOptions.contains(model.downloadLimit))
@@ -74,8 +71,9 @@ import Testing
 
     @Test("上传限速支持小数且仍以 MB/s 持久化", arguments: [0.0, 0.5, 1, 2, 5, 10])
     func uploadLimitPersistsInMegabytes(_ limit: Double) throws {
-        let (defaults, name) = try makeDefaults()
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "mulee.tests.")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let model = SettingsModel(defaults: defaults)
 
         model.uploadLimit = limit
@@ -87,8 +85,9 @@ import Testing
 
     @Test("既有整数上传限速按 MB/s 读取", arguments: [0, 1, 2, 5, 10, 20])
     func legacyIntegerUploadLimitKeepsItsUnit(_ limit: Int) throws {
-        let (defaults, name) = try makeDefaults()
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "mulee.tests.")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         defaults.set(limit, forKey: "network.uploadLimitMBps")
 
         #expect(SettingsModel(defaults: defaults).uploadLimit == Double(limit))

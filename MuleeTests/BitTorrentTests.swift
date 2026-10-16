@@ -7,9 +7,9 @@ import Testing
 @Suite @MainActor struct BitTorrentTests {
     @Test("设置映射保留默认发现与加密，端口、策略、限速和目录使用用户值")
     func configuration() throws {
-        let suite = "BitTorrentTests." + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "BitTorrentTests.")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let settings = SettingsModel(defaults: defaults)
         settings.btPort = 12345
         settings.portMapping = false

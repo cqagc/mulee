@@ -38,9 +38,9 @@ import Testing
     }
 
     @Test func scheduleBoundariesAndOvernight() throws {
-        let name = "SettingsSchedule-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "SettingsSchedule-")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let settings = SettingsModel(defaults: defaults)
         #expect(!settings.scheduledLimit)
         settings.scheduledLimit = true
@@ -60,9 +60,9 @@ import Testing
     }
 
     @Test func injectedClockUpdatesOptionsWithoutAWindow() throws {
-        let name = "SettingsRuntime-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "SettingsRuntime-")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let settings = SettingsModel(defaults: defaults)
         settings.scheduledLimit = true
         // Runtime uses the local calendar, just as the DatePickers do.

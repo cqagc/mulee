@@ -201,3 +201,8 @@ schemes:
     test:
       targets:
         - MuleeTests
+      postActions:
+        - name: Sweep temporary test defaults
+          # 测试用的临时 UserDefaults 统一以 mulee.tests. 开头；cfprefsd 可能在测试结束后才写回空文件，所以稍等再清理。
+          script: |
+            (sleep 5; find "$HOME/Library/Preferences" -maxdepth 1 -name 'mulee.tests.*.plist' -delete) >/dev/null 2>&1 &

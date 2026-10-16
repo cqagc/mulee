@@ -5,9 +5,9 @@ import Testing
 
 @Suite @MainActor struct EngineOptionsMappingTests {
     @Test func mapsEveryEngineSettingWithDecimalMegabytes() throws {
-        let name = "mulee.engine-options.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "mulee.engine-options.")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let settings = SettingsModel(defaults: defaults)
         settings.saveDirectory = "/tmp/chosen"
         settings.maxConcurrentTasks = 7

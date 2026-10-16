@@ -55,9 +55,9 @@ import Testing
     }
 
     @Test func settingsMapEveryVideoOptionAndPersistCaptions() throws {
-        let name = "mulee.video-options.\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "mulee.video-options.")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let settings = SettingsModel(defaults: defaults)
         #expect(VideoEngineConfiguration.configuration(from: settings) == VideoEngineConfiguration())
         settings.videoQuality = .best

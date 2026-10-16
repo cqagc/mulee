@@ -36,9 +36,9 @@ import Testing
 
     @Test("电驴设置使用用户值，目录与限速采用十进制单位，设置能够持久保存")
     func settingsMapping() throws {
-        let suite = "Ed2kWiringTests." + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "Ed2kWiringTests.")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let settings = SettingsModel(defaults: defaults)
         #expect(settings.ed2kConnectToServers && settings.ed2kEnableKad)
         settings.ed2kTCPPort = 40123

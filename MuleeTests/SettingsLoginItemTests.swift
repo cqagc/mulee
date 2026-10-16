@@ -39,9 +39,9 @@ import Testing
     }
 
     @Test func reflectsSystemStateApprovalFailureAndUnregister() throws {
-        let name = "SettingsLogin-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "SettingsLogin-")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let settings = SettingsModel(defaults: defaults)
         let service = Service()
         let controller = LoginItemController(service: service)

@@ -51,9 +51,9 @@ import Testing
     }
 
     @Test func pauseReasonsSurviveRestart() throws {
-        let name = "BandwidthQueue-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "BandwidthQueue-")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let queued = task(.bittorrent, "queue", .paused)
         let manual = task(.ed2k, "manual", .paused)
         let first = QueuePauseStore(defaults: defaults)
@@ -170,9 +170,9 @@ import Testing
     }
 
     @Test func restartedSchedulerRestoresQueueReasonWithoutResumingUserPause() async throws {
-        let name = "BandwidthRestart-" + UUID().uuidString
-        let defaults = try #require(UserDefaults(suiteName: name))
-        defer { defaults.removePersistentDomain(forName: name) }
+        let temporaryDefaults = try TemporaryDefaults(prefix: "BandwidthRestart-")
+        defer { temporaryDefaults.clean() }
+        let defaults = temporaryDefaults.defaults
         let manual = task(.http, "manual", .paused)
         let queued = task(.http, "queue", .paused)
         let first = DownloadScheduling(defaults: defaults)

@@ -7,7 +7,7 @@ import Testing
 final class ExtractionTestContext {
     let root: URL
     let defaults: UserDefaults
-    let suiteName: String
+    let temporaryDefaults: TemporaryDefaults
     let settings: SettingsModel
     let model: AppModel
     let extractor: ExtractionFakeExtractor
@@ -16,8 +16,8 @@ final class ExtractionTestContext {
     init(suspends: Bool = false, outcome: ExtractionOutcome = ExtractionOutcome(status: .succeeded)) throws {
         root = FileManager.default.temporaryDirectory.appendingPathComponent("MuleeAppExtraction-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        suiteName = "MuleeAppExtraction-" + UUID().uuidString
-        defaults = try #require(UserDefaults(suiteName: suiteName))
+        temporaryDefaults = try TemporaryDefaults(prefix: "MuleeAppExtraction-")
+        defaults = temporaryDefaults.defaults
         settings = SettingsModel(defaults: defaults)
         settings.originalAction = .keep
         settings.saveDirectory = root.path
@@ -49,7 +49,7 @@ final class ExtractionTestContext {
 
     func clean() async throws {
         await coordinator.stop()
-        defaults.removePersistentDomain(forName: suiteName)
+        temporaryDefaults.clean()
         try FileManager.default.removeItem(at: root)
     }
 }

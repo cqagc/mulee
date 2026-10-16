@@ -84,7 +84,7 @@ import Testing
         let router = OpenURLRouter(model: context.model, settings: context.settings)
         #expect(router.open([try request(["https://example.org/a.zip"], text: "密码：secret")]))
         #expect(context.model.pendingNewTaskContexts.values.allSatisfy { $0.password == nil })
-        context.defaults.removePersistentDomain(forName: context.suiteName)
+        context.temporaryDefaults.clean()
         try FileManager.default.removeItem(at: context.root)
     }
 
