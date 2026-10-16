@@ -198,4 +198,64 @@ import Testing
         #expect(app.pendingNewTaskText.isEmpty)
         #expect(draft.linkCount == 3)
     }
+
+    @Test("启动预填在面板初始化前后都保留", arguments: [false, true], [false, true])
+    func startupPrefillSurvivesSheetPreparation(_ consumeBeforeAppearance: Bool, _ includesDirectory: Bool) throws {
+        let temporary = try TemporaryDefaults(prefix: "startup-prefill.")
+        defer { temporary.clean() }
+        let settings = SettingsModel(defaults: temporary.defaults)
+        settings.saveDirectory = "/tmp/fictional-downloads"
+        settings.autoExtract = false
+        let app = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let magnet = "magnet:?xt=urn:btih:" + String(repeating: "a", count: 40)
+        let second = "https://example.org/second.zip"
+        let link = try #require(LinkParser.parse(second).first)
+        let sourcePage = try #require(URL(string: "https://example.org/page"))
+        app.showNewTask(prefill: magnet)
+        app.pendingNewTaskContexts[link] = NewTaskContext(sourcePageURL: sourcePage, password: "fictional")
+        if includesDirectory {
+            app.pendingNewTaskDirectory = URL(filePath: "/tmp/fictional-intent", directoryHint: .isDirectory)
+        }
+        app.showNewTask(prefill: second)
+        app.showNewTask()
+        var draft = NewTaskModel()
+        var needsSettingsDefaults = true
+
+        // 模拟 onChange 先于 onAppear，预填已经从全局状态取走。
+        if consumeBeforeAppearance { draft.consumePendingText(from: app) }
+        let originalDraft = draft
+        let earlyItem = draft.links.first
+        earlyItem?.sequentialDownload = true
+        NewTaskSheet.prepareDraft(&draft, needsSettingsDefaults: &needsSettingsDefaults, settings: settings, model: app)
+
+        #expect(draft === originalDraft)
+        if let earlyItem {
+            #expect(draft.links.first === earlyItem)
+            #expect(draft.links.first?.sequentialDownload == true)
+        }
+        #expect(draft.inputText == magnet + "\n" + second)
+        #expect(draft.linkCount == 2)
+        #expect(draft.saveDirectory.path == (includesDirectory ? "/tmp/fictional-intent" : settings.saveDirectory))
+        #expect(!draft.autoExtract)
+        #expect(!needsSettingsDefaults)
+        #expect(app.pendingNewTaskText.isEmpty)
+        #expect(app.pendingNewTaskContexts.isEmpty)
+        #expect(app.pendingNewTaskDirectory == nil)
+        #expect(app.tasks.isEmpty)
+
+        let originalItem = try #require(draft.links.first)
+        originalItem.sequentialDownload = true
+        app.showNewTask(prefill: "https://example.org/third.zip")
+        draft.consumePendingText(from: app)
+        NewTaskSheet.prepareDraft(&draft, needsSettingsDefaults: &needsSettingsDefaults, settings: settings, model: app)
+
+        #expect(draft.inputText == magnet + "\n" + second + "\nhttps://example.org/third.zip")
+        #expect(draft.linkCount == 3)
+        #expect(draft.links.first === originalItem)
+        #expect(draft.links.first?.sequentialDownload == true)
+        draft.createTasks(in: app)
+        let task = try #require(app.tasks.first { $0.sourceLink == second })
+        #expect(task.sourcePageURL == sourcePage)
+        #expect(app.pagePasswords[task.id] == "fictional")
+    }
 }

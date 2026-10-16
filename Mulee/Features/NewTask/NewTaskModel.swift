@@ -24,6 +24,7 @@ final class NewTaskModel {
     private var lastCheckedBytes: Int64?
     var autoExtract: Bool
     private var contexts: [ParsedLink: NewTaskContext] = [:]
+    private var hasPrefilledDirectory = false
 
     private let parser: ((String) -> [ParsedLink])?
     private let metadataProvider: (any TorrentMetadataProvider)?
@@ -81,12 +82,21 @@ final class NewTaskModel {
         return path
     }
 
+    func applySettingsDefaults(from settings: SettingsModel) {
+        // 面板出现前可能已收到预填；只补默认值，不能替换草稿或覆盖交接指定的目录。
+        if !hasPrefilledDirectory {
+            saveDirectory = URL(filePath: settings.saveDirectory, directoryHint: .isDirectory)
+        }
+        autoExtract = settings.autoExtract
+    }
+
     /// 从全局状态取走预填文本，追加到已有草稿；空预填不改变草稿。
     func consumePendingText(from model: AppModel) {
         let pendingText = model.pendingNewTaskText
         guard !pendingText.isEmpty else { return }
         if let directory = model.pendingNewTaskDirectory {
             saveDirectory = directory
+            hasPrefilledDirectory = true
             model.pendingNewTaskDirectory = nil
         }
         contexts.merge(model.pendingNewTaskContexts) { _, new in new }

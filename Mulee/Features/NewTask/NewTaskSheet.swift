@@ -133,17 +133,23 @@ struct NewTaskSheet: View {
     }
 
     private func prepareDraft() {
+        Self.prepareDraft(&draft, needsSettingsDefaults: &needsSettingsDefaults, settings: settings, model: model)
+    }
+
+    static func prepareDraft(
+        _ draft: inout NewTaskModel, needsSettingsDefaults: inout Bool,
+        settings: SettingsModel, model: AppModel
+    ) {
         if needsSettingsDefaults {
-            draft = NewTaskModel(
-                saveDirectory: URL(filePath: settings.saveDirectory, directoryHint: .isDirectory),
-                autoExtract: settings.autoExtract
-            )
+            draft.applySettingsDefaults(from: settings)
             needsSettingsDefaults = false
         }
-        consumePendingText()
+        draft.consumePendingText(from: model)
     }
 
     private func consumePendingText() {
+        // onChange 可能早于 onAppear；先留在全局队列，等面板完成准备再取走。
+        guard !needsSettingsDefaults else { return }
         draft.consumePendingText(from: model)
     }
 
