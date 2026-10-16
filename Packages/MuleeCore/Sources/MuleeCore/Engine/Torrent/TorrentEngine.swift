@@ -12,6 +12,9 @@ public actor TorrentEngine: DownloadEngine {
     private let readyTimeout: Duration
     private let requestTimeout: Duration
     private let restartBackoff: Duration
+    private var publicTrackers: [String] = []
+    private var trackerRevision = UUID()
+    private var trackerDeliveries: [String: UUID] = [:]
     private var extraPortMappings = ExtraPortMappings()
     private var settings: TorrentEngineSettings
     private var options: EngineOptions?
@@ -177,6 +180,7 @@ public actor TorrentEngine: DownloadEngine {
             throw EngineError.unsupportedLink
         }
         let result: TorrentdAddResult = try await client.call("add", params)
+        if !result.duplicate { trackerDeliveries[result.id] = nil }
         return result.id
     }
 
@@ -195,6 +199,7 @@ public actor TorrentEngine: DownloadEngine {
         let _: TorrentdEmpty = try await client.call(
             "remove", TorrentdRemoveParameters(id: engineTaskID, deleteFiles: deleteFiles)
         )
+        trackerDeliveries[engineTaskID] = nil
     }
 
     public func taskInfo(_ id: String) async throws -> TorrentTaskInfo {
@@ -248,6 +253,15 @@ public actor TorrentEngine: DownloadEngine {
         return try await client.call("session_status", TorrentdEmpty())
     }
 
+    /// 空列表关闭自动追加；更改列表或重新开启后，现有公共任务也会重新检查。
+    public func configurePublicTrackers(_ urls: [String]) {
+        let validated = Array(PublicTrackerList.parse(urls.joined(separator: "\n")).prefix(50))
+        guard validated != publicTrackers else { return }
+        publicTrackers = validated
+        trackerRevision = UUID()
+        trackerDeliveries.removeAll()
+    }
+
     public func snapshots() async throws -> [EngineTaskSnapshot] {
         let client = try await runningClient()
         let result: TorrentdListResult = try await client.call("list", TorrentdEmpty())
@@ -266,7 +280,40 @@ public actor TorrentEngine: DownloadEngine {
                 )
             }
         }
+        let currentIDs = Set(result.torrents.map(\.id))
+        trackerDeliveries = trackerDeliveries.filter { currentIDs.contains($0.key) }
+        for torrent in result.torrents where torrent.hasMetadata && !torrent.isPrivate {
+            await appendPublicTrackers(to: torrent.id, using: client)
+        }
         return result.torrents.map(TorrentStatusMapper.snapshot)
+    }
+
+    private func appendPublicTrackers(to id: String, using rpc: TorrentdClient) async {
+        guard !publicTrackers.isEmpty, trackerDeliveries[id] != trackerRevision,
+              let session = sessionID, client === rpc else { return }
+        let revision = trackerRevision
+        trackerDeliveries[id] = revision
+        var remaining = publicTrackers
+        var count = remaining.count
+        while count > 0, trackerRevision == revision, sessionID == session, !Task.isCancelled {
+            do {
+                let result: TorrentTrackerAdditionResult = try await rpc.call(
+                    "add_trackers", TorrentdTrackersParameters(id: id, urls: Array(remaining.prefix(count)))
+                )
+                remaining.removeFirst(count)
+                count = min(remaining.count, max(0, 50 - result.total))
+            } catch EngineError.rpc(code: 10, message: _) {
+                // Helper rejects the whole batch at its total limit; reduce until a batch fits.
+                count /= 2
+            } catch EngineError.rpc(code: 9, message: _) {
+                // Metadata may have changed after list; helper remains the final privacy guard.
+                return
+            } catch {
+                if trackerRevision == revision, sessionID == session { trackerDeliveries[id] = nil }
+                return
+            }
+        }
+        if Task.isCancelled, trackerRevision == revision, sessionID == session { trackerDeliveries[id] = nil }
     }
 
     private func runningClient() async throws -> TorrentdClient {
@@ -328,6 +375,7 @@ public actor TorrentEngine: DownloadEngine {
         monitor?.cancel()
         monitor = nil
         sessionID = nil
+        trackerDeliveries.removeAll()
         guard let rpc = client else { return }
         client = nil
         let deadline = ContinuousClock.now.advanced(by: .seconds(10))
@@ -352,6 +400,7 @@ public actor TorrentEngine: DownloadEngine {
     private func didExit(_ id: UUID, client exited: TorrentdClient) {
         guard sessionID == id else { return }
         sessionID = nil
+        trackerDeliveries.removeAll()
         client = nil
         monitor = nil
         // 退出先对 App 可见；只对同一运行周期的首次意外退出自动重启。

@@ -39,6 +39,7 @@ final class BitTorrentController {
 
     func stop() {
         isRunning = false
+        model?.publicTrackers?.stop()
         monitor?.cancel()
         monitor = nil
         configurationTask?.cancel()

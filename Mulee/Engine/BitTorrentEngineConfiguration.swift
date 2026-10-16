@@ -11,6 +11,7 @@ enum BitTorrentEngineConfiguration {
         )
         // Match aria2's M suffix (MiB); SettingsModel constrains the slider to 32...512.
         configuration.diskCacheBytes = Int64(min(512, max(0, settings.diskCacheMB))) * 1_048_576
+        configuration.blockedClients = settings.blockLeechingClients ? TorrentEngineSettings.defaultBlockedClients : []
         return configuration
     }
 }

@@ -18,6 +18,13 @@ struct BitTorrentSettingsTab: View {
                 }
             }
             Section {
+                Toggle(isOn: $model.blockLeechingClients) {
+                    Text("屏蔽只下载不上传的客户端")
+                    Text("按客户端标识识别（目前为迅雷 -XL），可能误判。")
+                }
+            }
+            PublicTrackerSettingsSection()
+            Section {
                 Toggle("自动端口映射", isOn: $model.portMapping)
                 LabeledContent("BT 端口") {
                     TextField("BT 端口", value: $model.btPort, format: .number.grouping(.never))
@@ -34,4 +41,5 @@ struct BitTorrentSettingsTab: View {
 #Preview {
     BitTorrentSettingsTab()
         .environment(SettingsModel())
+        .environment(AppModel())
 }

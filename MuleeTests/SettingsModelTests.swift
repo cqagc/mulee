@@ -19,6 +19,10 @@ import Testing
         #expect(model.seedingAction == .throttle)
         #expect(model.privateIgnoresRatio)
         #expect(model.btPort == 51413)
+        #expect(model.publicTrackersEnabled)
+        #expect(!model.blockLeechingClients)
+        #expect(!model.trackerSubscriptions.isEmpty)
+        #expect(model.customTrackers.isEmpty)
         #expect(model.ed2kTCPPort == 4662)
         #expect(model.ed2kUDPPort == 4672)
         #expect(model.ed2kShare)
@@ -37,6 +41,10 @@ import Testing
         defer { temporaryDefaults.clean() }
         let defaults = temporaryDefaults.defaults
         let model = SettingsModel(defaults: defaults)
+        model.publicTrackersEnabled = false
+        model.blockLeechingClients = true
+        model.trackerSubscriptions = "https://example.com/trackers.txt"
+        model.customTrackers = "udp://tracker.example.com:80/announce"
         model.maxConcurrentTasks = 7
         model.watchClipboard = true
         model.seedingAction = .stop
@@ -45,6 +53,10 @@ import Testing
         model.saveDirectory = "/tmp/x"
 
         let reloaded = SettingsModel(defaults: defaults)
+        #expect(!reloaded.publicTrackersEnabled)
+        #expect(reloaded.blockLeechingClients)
+        #expect(reloaded.trackerSubscriptions == model.trackerSubscriptions)
+        #expect(reloaded.customTrackers == model.customTrackers)
         #expect(reloaded.maxConcurrentTasks == 7)
         #expect(reloaded.watchClipboard)
         #expect(reloaded.seedingAction == .stop)

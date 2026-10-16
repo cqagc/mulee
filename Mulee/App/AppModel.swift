@@ -25,6 +25,7 @@ final class AppModel {
     var mainWindowRequest = 0
     @ObservationIgnored weak var settingsRuntime: SettingsRuntime?
     var bitTorrent: BitTorrentController?
+    var publicTrackers: PublicTrackerController?
     var ed2k: Ed2kController?
     var networkStatus: NetworkStatus
     var engineStates: [TaskKind: EngineState] = Dictionary(uniqueKeysWithValues: TaskKind.allCases.map { ($0, .unavailable) })

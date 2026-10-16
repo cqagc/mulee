@@ -17,6 +17,7 @@ actor TorrentFakeTransport: TorrentdTransport {
     private(set) var finishTerminationGrace: Duration?
     private(set) var addedTorrent: Data?
     private var results: [String: TorrentdValue] = [:]
+    private var errors: [String: String] = [:]
 
     init(sendsReady: Bool = true, automaticReplies: Bool = true) {
         self.sendsReady = sendsReady
@@ -41,6 +42,14 @@ actor TorrentFakeTransport: TorrentdTransport {
             addedTorrent = try Data(contentsOf: URL(fileURLWithPath: path))
         }
         guard automaticReplies else { return }
+        if let code = errors[request.method] {
+            var data = try JSONEncoder().encode(TorrentdResponse(
+                id: request.id, result: nil, error: TorrentdError(code: code, message: code)
+            ))
+            data.append(10)
+            emit(data)
+            return
+        }
         let result: TorrentdValue
         if let configured = results[request.method] {
             result = configured
@@ -63,6 +72,8 @@ actor TorrentFakeTransport: TorrentdTransport {
         try reply(request, result: result)
         if request.method == "shutdown" { crash() }
     }
+
+    func setError(_ method: String, code: String?) { errors[method] = code }
 
     func setResult(_ method: String, _ value: TorrentdValue) {
         results[method] = value

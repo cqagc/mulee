@@ -1,4 +1,5 @@
 import Foundation
+import MuleeCore
 import Observation
 
 /// 设置窗口里所有设置项。每一项变化时立即写入注入的 UserDefaults。
@@ -79,6 +80,10 @@ final class SettingsModel {
         static let seedingAction = "bt.seedingAction"
         static let privateIgnoresRatio = "bt.privateIgnoresRatio"
         static let btPort = "bt.port"
+        static let publicTrackersEnabled = "bt.publicTrackersEnabled"
+        static let trackerSubscriptions = "bt.trackerSubscriptions"
+        static let customTrackers = "bt.customTrackers"
+        static let blockLeechingClients = "bt.blockLeechingClients"
         static let ed2kTCPPort = "ed2k.tcpPort"
         static let ed2kUDPPort = "ed2k.udpPort"
         static let ed2kShare = "ed2k.shareCompleted"
@@ -138,6 +143,10 @@ final class SettingsModel {
     var seedingAction: SeedingAction { didSet { defaults.set(seedingAction.rawValue, forKey: Key.seedingAction) } }
     var privateIgnoresRatio: Bool { didSet { defaults.set(privateIgnoresRatio, forKey: Key.privateIgnoresRatio) } }
     var btPort: Int { didSet { defaults.set(btPort, forKey: Key.btPort) } }
+    var publicTrackersEnabled: Bool { didSet { defaults.set(publicTrackersEnabled, forKey: Key.publicTrackersEnabled) } }
+    var trackerSubscriptions: String { didSet { defaults.set(trackerSubscriptions, forKey: Key.trackerSubscriptions) } }
+    var customTrackers: String { didSet { defaults.set(customTrackers, forKey: Key.customTrackers) } }
+    var blockLeechingClients: Bool { didSet { defaults.set(blockLeechingClients, forKey: Key.blockLeechingClients) } }
 
     // MARK: 电驴
     var ed2kTCPPort: Int { didSet { defaults.set(ed2kTCPPort, forKey: Key.ed2kTCPPort) } }
@@ -186,6 +195,10 @@ final class SettingsModel {
         seedingAction = Self.raw(defaults, Key.seedingAction, .throttle)
         privateIgnoresRatio = Self.bool(defaults, Key.privateIgnoresRatio, true)
         btPort = Self.int(defaults, Key.btPort, 51413)
+        publicTrackersEnabled = Self.bool(defaults, Key.publicTrackersEnabled, true)
+        trackerSubscriptions = defaults.string(forKey: Key.trackerSubscriptions) ?? PublicTrackerList.defaultSubscriptions
+        customTrackers = defaults.string(forKey: Key.customTrackers) ?? ""
+        blockLeechingClients = Self.bool(defaults, Key.blockLeechingClients, false)
         ed2kTCPPort = Self.int(defaults, Key.ed2kTCPPort, 4662)
         ed2kUDPPort = Self.int(defaults, Key.ed2kUDPPort, 4672)
         ed2kShare = Self.bool(defaults, Key.ed2kShare, true)

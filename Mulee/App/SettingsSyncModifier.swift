@@ -22,6 +22,15 @@ struct SettingsSyncModifier: ViewModifier {
             .onChange(of: BitTorrentEngineConfiguration.configuration(from: settings)) {
                 model.bitTorrent?.configure(BitTorrentEngineConfiguration.configuration(from: settings))
             }
+            .onChange(of: settings.publicTrackersEnabled) {
+                model.publicTrackers?.settingsChanged()
+            }
+            .onChange(of: settings.trackerSubscriptions) {
+                model.publicTrackers?.settingsChanged()
+            }
+            .onChange(of: settings.customTrackers) {
+                model.publicTrackers?.settingsChanged()
+            }
             .onChange(of: Ed2kEngineConfiguration.configuration(from: settings)) {
                 model.ed2k?.configure(Ed2kEngineConfiguration.configuration(from: settings))
             }

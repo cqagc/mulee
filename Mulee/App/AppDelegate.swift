@@ -49,6 +49,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         model.bitTorrent = BitTorrentController(
             engine: torrent, model: model, configuration: BitTorrentEngineConfiguration.configuration(from: settings)
         )
+        model.publicTrackers = PublicTrackerController(
+            service: PublicTrackerSubscriptionService(fileURL: URL.applicationSupportDirectory.appending(path: "Mulee/public-trackers.json")),
+            engine: torrent, settings: settings
+        )
+        model.publicTrackers?.start()
         let ed2k = Ed2kEngine(
             stateDirectory: URL.applicationSupportDirectory.appending(path: "Mulee/amule", directoryHint: .isDirectory),
             settings: Ed2kEngineConfiguration.configuration(from: settings)

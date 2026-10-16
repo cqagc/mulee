@@ -9,7 +9,10 @@ import Testing
         let source = try String(contentsOf: app.appending(path: "Features/Settings/SettingsModel.swift"), encoding: .utf8)
         // Top-level settings, including newly added properties without persistence observers.
         let properties = source.matches(of: #/(?m)^    var (\w+)(?::|[ \t]*=)/#).map { String($0.1) }
-        #expect(properties.count >= 32)
+        #expect(properties.count >= 36)
+        for name in ["publicTrackersEnabled", "trackerSubscriptions", "customTrackers", "blockLeechingClients"] {
+            #expect(properties.contains(name))
+        }
         let files = try #require(FileManager.default.enumerator(at: app, includingPropertiesForKeys: nil))
         var consumers = ""
         for case let file as URL in files where file.pathExtension == "swift" && !file.path.contains("/Features/Settings/") {

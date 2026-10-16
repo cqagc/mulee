@@ -82,7 +82,7 @@ Mulee 支持 HTTP / HTTPS / FTP、BT / 磁力链接、电驴和视频下载。�
 | 功能 | 说明 |
 |---|---|
 | HTTP / HTTPS / FTP | aria2 引擎，多连接下载、断点续传，重启后恢复任务。 |
-| BT / 磁力 / .torrent | libtorrent 2.0 引擎，可选择下载文件；分享率达到 1:1 后降速或停止，私有种子可不受此限制。 |
+| BT / 磁力 / .torrent | libtorrent 2.0 引擎，可选择下载文件；分享率达到 1:1 后降速或停止，私有种子可不受此限制。支持公共 tracker 订阅。 |
 | 电驴 ed2k | 使用 aMule 3.1（`amuled`），冷门资源可以挂几周等待来源。显示排队名次、来源数、完整来源最后出现时间和近 14 天来源记录。等待来源是正常任务状态。 |
 | 视频 | 使用 yt-dlp，主要支持 Bilibili / YouTube；B 站弹幕可转为 ASS 字幕。yt-dlp、Deno、ffmpeg 由 Mulee 自行下载并校验。 |
 | 迅雷链接 | 解析 `thunder://` 中的原始链接，交给对应引擎。 |

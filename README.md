@@ -82,7 +82,7 @@ All tasks shown are sample data. Click an image to view it at full size.
 | Feature | Description |
 |---|---|
 | HTTP / HTTPS / FTP | aria2 handles multi-connection downloads, resuming, and restoring tasks after a restart. |
-| BitTorrent / magnet / .torrent | libtorrent 2.0 supports file selection and seeding policies: throttle or stop at a 1:1 share ratio, with an optional exemption for private torrents. |
+| BitTorrent / magnet / .torrent | libtorrent 2.0 supports file selection and seeding policies: throttle or stop at a 1:1 share ratio, with an optional exemption for private torrents. Public tracker subscriptions are supported. |
 | eD2k | Uses aMule 3.1 (`amuled`). Downloads of rare files can wait for sources for weeks. Shows queue position, source counts, when a complete source was last seen, and source activity over the past 14 days. Waiting for sources is a normal task state. |
 | Video | Uses yt-dlp, with Bilibili and YouTube as the main supported sites. Bilibili danmaku can be converted to ASS subtitles. Mulee downloads and verifies yt-dlp, Deno, and ffmpeg itself. |
 | Thunder links | Decodes `thunder://` links and passes the original URL to the appropriate engine. |
