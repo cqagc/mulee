@@ -17,7 +17,7 @@ import Testing
             #expect(snapshots.count == 2)
             let failed = try #require(snapshots.first { $0.engineTaskID == TorrentFixtures.id })
             #expect(failed.status == .failed)
-            #expect(failed.errorMessage == "文件改名遇到同名文件，暂时无法完成下载；请移走或重命名冲突文件后重试。")
+            #expect(failed.errorMessage == String(localized: "文件改名遇到同名文件，暂时无法完成下载；请移走或重命名冲突文件后重试。", bundle: .module))
             #expect(snapshots.last?.status == .seeding)
         }
     }

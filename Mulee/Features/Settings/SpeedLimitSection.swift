@@ -60,6 +60,7 @@ struct SpeedLimitSection: View {
                     Slider(value: $model.diskCacheMB, in: SettingsModel.diskCacheRange, step: 32) {
                         Text("磁盘缓存")
                     }
+                    .labelsHidden()
                     .frame(width: 180)
                     Text("\(Int(model.diskCacheMB)) MB")
                         .monospacedDigit()

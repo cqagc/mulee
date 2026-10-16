@@ -8,10 +8,12 @@ struct TaskInformationCard: View {
             LabeledContent("类型", value: presentation.typeLabel)
             LabeledContent("大小", value: presentation.size)
             LabeledContent("状态", value: presentation.statusTitle)
-            Text(presentation.metadata)
-                .foregroundStyle(.secondary)
-                .textSelection(.enabled)
-                .fixedSize(horizontal: false, vertical: true)
+            if presentation.metadata != presentation.size {
+                Text(presentation.metadata)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }

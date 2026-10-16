@@ -7,6 +7,7 @@ public enum SmartPasteParser {
         public let links: [ParsedLink]
         public let context: DownloadRequestContext
         public let message: String
+        public var isInfoHash: Bool = false
     }
 
     public static func parse(_ text: String) -> [Row] {
@@ -71,7 +72,8 @@ public enum SmartPasteParser {
                     }
                 } else {
                     rows.append(Row(line: line, links: links, context: context,
-                                    message: links.isEmpty ? "未识别到可下载的链接，请检查地址或文件类型。" : message + "（\(links.count) 个）"))
+                                    message: links.isEmpty ? "未识别到可下载的链接，请检查地址或文件类型。" : message + "（\(links.count) 个）",
+                                    isInfoHash: !isCurl && InfoHashLink.magnet(for: input) != nil))
                 }
             } catch BatchURLExpander.ExpansionError.tooMany {
                 return [Row(line: line, links: [], context: DownloadRequestContext(),

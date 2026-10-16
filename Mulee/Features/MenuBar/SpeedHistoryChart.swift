@@ -20,6 +20,7 @@ struct SpeedHistoryChart: View {
         .chartXScale(domain: timeRange ?? Date(timeIntervalSince1970: 0)...Date(timeIntervalSince1970: Double(max(1, samples.count - 1))))
         .chartYAxis(.hidden)
         .frame(height: 34)
+        .clipped()
         .accessibilityLabel(isUpload ? "最近上传速度曲线" : "最近下载速度曲线")
         .accessibilityValue("\(ByteCountFormatter.string(fromByteCount: samples.last ?? 0, countStyle: .file))/s")
     }

@@ -35,6 +35,10 @@ struct DownloadSettingsTab: View {
                     Text("覆盖已有文件").tag(DownloadRequestContext.DuplicateAction.overwrite)
                     Text("每次询问").tag(DownloadRequestContext.DuplicateAction.ask)
                 }
+                Toggle(isOn: $model.markIncomplete) {
+                    Text("未完成的文件单独存放")
+                    Text("HTTP 下载先存到 .mulee-incomplete 文件夹，完成后移到保存目录；BT 未完成文件带 .mulee 后缀。仅影响新任务。")
+                }
                 Picker("HTTP 每任务线程数", selection: $model.httpThreads) {
                     ForEach(SettingsModel.httpThreadOptions, id: \.self) { count in
                         Text("\(count)").tag(count)

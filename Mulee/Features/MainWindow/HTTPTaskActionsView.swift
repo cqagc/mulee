@@ -13,6 +13,12 @@ struct HTTPTaskActionsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            if let reason = task.httpValidationError ?? (task.status == .failed ? task.errorMessage : nil) {
+                Text(reason)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Text("换个链接继续")
                 .font(.subheadline.weight(.semibold))
             TextField("粘贴新的下载链接", text: $replacement)

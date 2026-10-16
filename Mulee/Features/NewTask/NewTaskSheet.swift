@@ -59,12 +59,13 @@ struct NewTaskSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(draft.inputRows, id: \.line) { row in
-                        Text("第 \(row.line) 行：\(row.message)")
+                        Text("第 \(row.line) 行：\(row.isInfoHash ? String(localized: "已识别为磁力链接") : row.message)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
                 if draft.links.isEmpty {
                     ContentUnavailableView("等待粘贴链接", systemImage: MuleeSymbol.add.name)

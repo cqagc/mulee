@@ -31,6 +31,22 @@ import Testing
         }
     }
 
+    @Test @MainActor func incompleteAndJunkSettingsPersistNormalizedRules() throws {
+        let storage = try TemporaryDefaults(prefix: "settings-controls.")
+        defer { storage.clean() }
+        let settings = SettingsModel(defaults: storage.defaults)
+        #expect(settings.markIncomplete)
+        #expect(settings.skipJunkFiles)
+        settings.markIncomplete = false
+        settings.skipJunkFiles = false
+        settings.junkFilePatterns = BitTorrentSettingsTab.normalizedPatterns(" *.url \n\n*.lnk\r\n*.url\n ")
+        let restored = SettingsModel(defaults: storage.defaults)
+        #expect(!restored.markIncomplete)
+        #expect(!restored.skipJunkFiles)
+        #expect(restored.junkFilePatterns == ["*.url", "*.lnk"])
+        #expect(BitTorrentSettingsTab.normalizedPatterns(" \n\t").isEmpty)
+    }
+
     @Test func diskCacheHasAConsumerInEveryEngine() throws {
         let root = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
         let bt = try String(contentsOf: root.appending(path: "Mulee/Engine/BitTorrentEngineConfiguration.swift"), encoding: .utf8)

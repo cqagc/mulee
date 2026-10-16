@@ -131,6 +131,7 @@ import Testing
             #expect(parsedHash.count == length)
             #expect(parsedHash == parsedHash.lowercased())
             #expect(SmartPasteParser.parse(hash).first?.links.count == 1)
+            #expect(SmartPasteParser.parse(hash).first?.isInfoHash == true)
         }
         for hash in ["", String(repeating: "G", count: 40), String(repeating: "0", count: 32), String(repeating: "a", count: 63)] {
             #expect(InfoHashLink.magnet(for: hash) == nil)
@@ -138,6 +139,7 @@ import Testing
     }
 
     @Test func mixedRowsKeepErrorsAndLineNumbers() {
+        #expect(SmartPasteParser.parse("https://example.com/file.zip").first?.isInfoHash == false)
         let rows = SmartPasteParser.parse("https://example.com/[1-3].zip\n\n无效输入\ncurl https://example.com/file | cat")
         #expect(rows.map(\.line) == [1, 3, 4])
         #expect(rows.map { $0.links.count } == [3, 0, 0])
