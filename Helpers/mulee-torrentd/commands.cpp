@@ -133,6 +133,12 @@ json::object Session::configure(const json::object& params) {
     settings.set_int(lt::settings_pack::in_enc_policy, policy);
     settings.set_int(lt::settings_pack::out_enc_policy, policy);
     settings.set_bool(lt::settings_pack::prefer_rc4, encryption == "prefer");
+    bool listener_changed = port != listen_port();
+    if (listener_changed || mapping != port_mapping_enabled_) {
+        clear_extra_port_mapping_handles();
+        bt_mappings_.clear();
+    }
+    port_mapping_enabled_ = mapping;
     session_.apply_settings(settings);
     // get_settings() is synchronous and is ordered after apply_settings(). It prevents
     // returning the previous listener's port while the network thread rebinds.
@@ -143,9 +149,54 @@ json::object Session::configure(const json::object& params) {
         alerts();
     }
     if (listen_port() == 0) throw RequestError("io_error", "Cannot open listening socket");
+    update_extra_port_mappings();
     download_dir_ = directory;
     if (!dht) dht_nodes_.clear();
     return {{"listen_port", listen_port()}};
+}
+
+json::object Session::set_extra_port_mappings(const json::object& params) {
+    std::map<std::pair<std::string, int>, ExtraMapping> requested;
+    for (const auto& protocol : {"tcp", "udp"}) {
+        auto* ports = params.if_contains(protocol);
+        if (!ports || !ports->is_array())
+            throw RequestError("invalid_params", "tcp and udp must be arrays");
+        for (const auto& value : ports->as_array()) {
+            if (!value.is_int64() || value.as_int64() < 1 || value.as_int64() > 65535)
+                throw RequestError("invalid_params", "Ports must be integers from 1 to 65535");
+            requested.emplace(std::make_pair(protocol, static_cast<int>(value.as_int64())), ExtraMapping{});
+        }
+    }
+    // Validate the entire request before changing any router mappings.
+    for (auto& entry : extra_mappings_) {
+        auto found = requested.find(entry.first);
+        if (found != requested.end()) found->second = std::move(entry.second);
+        else for (auto handle : entry.second.handles) session_.delete_port_mapping(handle);
+    }
+    extra_mappings_ = std::move(requested);
+    update_extra_port_mappings();
+    json::object result{{"tcp", json::array{}}, {"udp", json::array{}},
+        {"enabled", port_mapping_enabled_}};
+    for (const auto& entry : extra_mappings_)
+        result[entry.first.first].as_array().push_back(entry.first.second);
+    return result;
+}
+
+void Session::clear_extra_port_mapping_handles() {
+    for (auto& entry : extra_mappings_) {
+        for (auto handle : entry.second.handles) session_.delete_port_mapping(handle);
+        entry.second.handles.clear();
+        entry.second.results.clear();
+    }
+}
+
+void Session::update_extra_port_mappings() {
+    if (!port_mapping_enabled_) return;
+    for (auto& entry : extra_mappings_) {
+        if (!entry.second.handles.empty()) continue;
+        auto protocol = entry.first.first == "tcp" ? lt::portmap_protocol::tcp : lt::portmap_protocol::udp;
+        entry.second.handles = session_.add_port_mapping(protocol, entry.first.second, entry.first.second);
+    }
 }
 
 json::object Session::add(const json::object& params) {
@@ -221,6 +272,7 @@ json::object Session::add(const json::object& params) {
 
 json::object Session::execute(const std::string& method, const json::object& params) {
     if (method == "configure") return configure(params);
+    if (method == "set_extra_port_mappings") return set_extra_port_mappings(params);
     if (method == "add") return add(params);
     if (method == "list") {
         json::array result;

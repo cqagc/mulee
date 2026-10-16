@@ -170,6 +170,43 @@ public actor Ed2kEngine: DownloadEngine {
         return try Ed2kNetworkStatus(tag: tag)
     }
 
+    /// 从运行中的 EC 偏好读取；amuled 3.1.0 的服务器 UDP 使用 TCP + 3。
+    public func listeningPorts() async throws -> ExtraPortMappings {
+        try await lock()
+        defer { busy = false }
+        let response = try await runningClient().request(ECPacket(opcode: ECCode.Op.getPreferences, tags: [
+            .number(ECCode.Tag.selectPreferences, 4), .number(ECCode.Tag.detail, 2)
+        ])).checked(ECCode.Op.setPreferences)
+        guard let preferences = response.tag(ECCode.Tag.connectionPreferences) else {
+            throw ECError.malformed(String(localized: "暂时无法确认电驴实际监听端口", bundle: .module))
+        }
+        return try Self.portMappings(from: preferences)
+    }
+
+    static func portMappings(from preferences: ECTag) throws -> ExtraPortMappings {
+        guard let tcp = preferences.tag(ECCode.Tag.tcpPort)?.number, tcp > 0, tcp <= 65532,
+              let udp = preferences.tag(ECCode.Tag.udpPort)?.number, udp > 0, udp <= 65535 else {
+            throw ECError.malformed(String(localized: "暂时无法确认电驴实际监听端口", bundle: .module))
+        }
+        let udpEnabled = preferences.tag(ECCode.Tag.udpDisabled) == nil
+        return ExtraPortMappings(tcp: [Int(tcp)], udp: udpEnabled ? [Int(tcp) + 3, Int(udp)] : [Int(tcp) + 3])
+    }
+
+    /// 映射首次就绪后重新获取服务器和 Kad 的连入判断。
+    public func recheckConnectivity() async throws {
+        try await lock()
+        defer { busy = false }
+        let rpc = try runningClient()
+        let status = try Ed2kNetworkStatus(tag: await connectionTag(using: rpc))
+        if settings.connectToServers, status.ed2kID != .high {
+            _ = try await rpc.request(ECPacket(opcode: ECCode.Op.serverDisconnect)).checked()
+        }
+        if settings.enableKad, status.kad != .open {
+            _ = try await rpc.request(ECPacket(opcode: ECCode.Op.kadStop)).checked()
+        }
+        try await maintainNetworks(using: rpc, force: true)
+    }
+
     private func lock() async throws {
         while busy { try await Task.sleep(for: .milliseconds(10)) }
         try Task.checkCancellation()

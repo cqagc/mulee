@@ -12,8 +12,14 @@ struct PortConnectivitySection: View {
     var body: some View {
         @Bindable var model = model
         let status = appModel.networkStatus
+        let noPublicIPv4 = diagnostics.snapshot.publicIPv4Status == .noPublicIPv4
         let mapping = NetworkPresentation.portMapping(succeeded: status.portMappingSucceeded)
         Section(NetworkPresentation.portCardTitle) {
+            let wan = NetworkPresentation.publicIPv4Line(diagnostics.snapshot)
+            LabeledContent(NetworkPresentation.publicIPv4Title) {
+                Text(wan.text)
+                    .foregroundStyle(wan.isAbnormal ? Theme.wait : .secondary)
+            }
             NetworkPortStatusRow(title: NetworkPresentation.btPortTitle,
                                  port: model.btPort, transport: "TCP / UDP",
                                  line: NetworkPresentation.bittorrentPort(reachable: status.bittorrentPortReachable))
@@ -23,10 +29,31 @@ struct PortConnectivitySection: View {
             NetworkPortStatusRow(title: NetworkPresentation.ed2kUDPTitle,
                                  port: model.ed2kUDPPort, transport: "UDP",
                                  line: NetworkPresentation.kadBadge(status.kad))
-            Text(NetworkPresentation.portSummary(status))
+            LabeledContent(NetworkPresentation.ed2kMappingTitle) {
+                VStack(alignment: .trailing, spacing: 4) {
+                    if noPublicIPv4 {
+                        Text(NetworkPresentation.noPublicMapping)
+                    } else if !model.portMapping {
+                        Text(NetworkPresentation.mappingDisabled)
+                    } else if let mappings = appModel.ed2k?.portMappings, !mappings.isEmpty {
+                        ForEach(mappings, id: \.self) { mapping in
+                            let line = NetworkPresentation.extraPortMapping(mapping)
+                            Text(line.text)
+                                .foregroundStyle(line.isAbnormal ? Theme.wait : Theme.success)
+                        }
+                    } else {
+                        Text(NetworkPresentation.mappingPending)
+                    }
+                }
+                .font(.caption)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(NetworkPresentation.portSummary(status, network: diagnostics.snapshot))
                 .font(.callout)
                 .foregroundStyle(.secondary)
-            if status.bittorrentPortReachable != true || status.ed2kID != .high || status.kad != .open {
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+            if !noPublicIPv4 && (status.bittorrentPortReachable != true || status.ed2kID != .high || status.kad != .open) {
                 Text(instructions)
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -40,7 +67,7 @@ struct PortConnectivitySection: View {
                     Toggle(NetworkPresentation.mappingTitle, isOn: $model.portMapping)
                         .toggleStyle(.switch)
                         .labelsHidden()
-                    if let mapping {
+                    if let mapping, !noPublicIPv4 {
                         Text(mapping.text)
                             .font(.caption)
                             .foregroundStyle(mapping.isAbnormal ? Theme.wait : Theme.success)
@@ -48,7 +75,9 @@ struct PortConnectivitySection: View {
                 }
             } label: {
                 Text(NetworkPresentation.mappingTitle)
-                Text(NetworkPresentation.mappingAdvice)
+                if !noPublicIPv4 {
+                    Text(NetworkPresentation.mappingAdvice)
+                }
             }
         }
     }

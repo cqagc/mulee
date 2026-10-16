@@ -223,6 +223,23 @@ def run_tests(binary, root):
     port_a = a.configure(seed_path)
     print("PASS 启动、ready、configure", flush=True)
 
+    mappings = {"tcp": [40123, 40123], "udp": [40126, 40133]}
+    expected = {"tcp": [40123], "udp": [40126, 40133], "enabled": False}
+    assert a.request("set_extra_port_mappings", mappings) == expected
+    assert a.request("set_extra_port_mappings", mappings) == expected
+    assert len(a.request("session_status")["extra_port_mappings"]) == 3
+    for invalid in ({}, {"tcp": [0], "udp": []}, {"tcp": [], "udp": [65536]},
+                    {"tcp": [True], "udp": []}, {"tcp": [1.5], "udp": []},
+                    {"tcp": "40123", "udp": []}, {"tcp": [], "udp": [-1]}):
+        a.request("set_extra_port_mappings", invalid, error="invalid_params")
+    assert a.request("set_extra_port_mappings", mappings) == expected
+    assert a.request("set_extra_port_mappings", {"tcp": [], "udp": [40134]}) == {
+        "tcp": [], "udp": [40134], "enabled": False,
+    }
+    a.request("set_extra_port_mappings", {"tcp": [], "udp": []})
+    assert a.request("session_status")["extra_port_mappings"] == []
+    print("PASS 额外端口映射：校验、幂等、更新、清空、关闭时不申请映射", flush=True)
+
     a.request("unknown", error="unknown_method")
     a.raw("{bad-json", None, "invalid_request")
     a.raw('{"id":99}', 99, "invalid_request")
@@ -322,7 +339,8 @@ def run_tests(binary, root):
     b.event("finished")
     status = b.request("session_status")
     assert set(status) == {"listen_port", "dht_nodes", "has_incoming_connections",
-                           "download_rate", "upload_rate", "external_address"}
+                           "download_rate", "upload_rate", "external_address", "port_mapping_enabled",
+                           "port_mappings", "extra_port_mappings"}
     assert status["dht_nodes"] == 0
     assert type(status["has_incoming_connections"]) is bool
     assert a.request("session_status")["has_incoming_connections"]

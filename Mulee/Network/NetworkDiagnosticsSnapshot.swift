@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import MuleeCore
 
 /// 探测证据。nil 表示探测未完成或不可用，不把未知当作直连。
 nonisolated struct NetworkDiagnosticsSnapshot: Sendable, Equatable {
@@ -16,6 +17,11 @@ nonisolated struct NetworkDiagnosticsSnapshot: Sendable, Equatable {
     var localIP: String?
     var subnetMask: String?
     var gateway: String?
+    var routerWANAddress: String?
+
+    var publicIPv4Status: RouterWANIPv4Status {
+        RouterWANIPv4.status(address: routerWANAddress)
+    }
 
     static let unknown = Self()
 

@@ -11,6 +11,8 @@ import Testing
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let engine = TorrentEngine(stateDirectory: root, restartBackoff: .milliseconds(150), transportFactory: { sequence.make() })
         do {
+            let mappings = ExtraPortMappings(tcp: [40123], udp: [40126, 40133])
+            try await engine.setExtraPortMappings(mappings)
             try await engine.start(options: EngineOptions(downloadDirectory: root))
             await first.crash()
             await #expect(throws: EngineError.notRunning) { try await engine.snapshots() }
@@ -31,6 +33,9 @@ import Testing
                     try await Task.sleep(for: .milliseconds(5))
                 }
             }
+            let forwarded = await second.sent.first { $0.method == "set_extra_port_mappings" }
+            #expect(forwarded?.parameters["tcp"] == .array([.integer(40123)]))
+            #expect(forwarded?.parameters["udp"] == .array([.integer(40126), .integer(40133)]))
             await second.crash()
             try await Task.sleep(for: .milliseconds(250))
             #expect(sequence.created == 2)

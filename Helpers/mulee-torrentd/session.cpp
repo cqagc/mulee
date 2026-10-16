@@ -27,7 +27,8 @@ lt::settings_pack defaults() {
     settings.set_bool(lt::settings_pack::enable_upnp, false);
     settings.set_bool(lt::settings_pack::enable_natpmp, false);
     settings.set_int(lt::settings_pack::alert_mask, static_cast<std::uint32_t>(lt::alert_category::status
-        | lt::alert_category::error | lt::alert_category::storage | lt::alert_category::tracker));
+        | lt::alert_category::error | lt::alert_category::storage | lt::alert_category::tracker
+        | lt::alert_category::port_mapping));
     return settings;
 }
 }
@@ -143,6 +144,14 @@ void Session::alerts() {
                 protocol_.send({{"event", "torrent_error"}, {"id", torrent_id(error->info_hashes)},
                     {"message", error->error.message()}});
                 persistence_.log(error->message());
+            } else if (auto* mapped = lt::alert_cast<lt::portmap_alert>(alert)) {
+                port_mapping_alert(mapped->mapping, mapped->map_transport, mapped->external_port,
+                    mapped->map_protocol, mapped->local_address.to_string(), "");
+            } else if (auto* failed = lt::alert_cast<lt::portmap_error_alert>(alert)) {
+                port_mapping_alert(failed->mapping, failed->map_transport, 0,
+                    lt::portmap_protocol::none, failed->local_address.to_string(), failed->error.message());
+            } else if (lt::alert_cast<lt::listen_succeeded_alert>(alert)) {
+                refresh_extra_mappings_ = true;
             } else if (auto* external = lt::alert_cast<lt::external_ip_alert>(alert)) {
                 external_address_ = external->external_address.to_string();
             } else if (auto* stats = lt::alert_cast<lt::session_stats_alert>(alert)) {
@@ -174,9 +183,67 @@ void Session::alerts() {
     }
 }
 
+void Session::port_mapping_alert(lt::port_mapping_t handle, lt::portmap_transport transport,
+    int external_port, lt::portmap_protocol protocol, const std::string& address, const std::string& error) {
+    if (!port_mapping_enabled_) return;
+    auto found = extra_mappings_.end();
+    int candidates = 0;
+    for (auto entry = extra_mappings_.begin(); entry != extra_mappings_.end(); ++entry) {
+        if (std::find(entry->second.handles.begin(), entry->second.handles.end(), handle)
+            == entry->second.handles.end()) continue;
+        if (protocol != lt::portmap_protocol::none
+            && (entry->first.first == "tcp") != (protocol == lt::portmap_protocol::tcp)) continue;
+        found = entry;
+        ++candidates;
+        if (error.empty() && entry->first.second == external_port) {
+            candidates = 1;
+            break;
+        }
+    }
+    // Mapping indices belong to individual interfaces and mapper mechanisms.
+    // An ambiguous error has no port/protocol; forward it without guessing a port.
+    if (candidates > 1) {
+        protocol_.send({{"event", error.empty() ? "portmap" : "portmap_error"}, {"scope", "unknown"},
+            {"mapping", static_cast<int>(handle)}, {"external_port", external_port},
+            {"transport", transport == lt::portmap_transport::upnp ? "upnp" : "natpmp"},
+            {"local_address", address}, {"succeeded", error.empty()}, {"message", error}});
+        return;
+    }
+    // Deleted mappings can report external_port=0; never treat deletion as success.
+    if (error.empty() && external_port == 0) return;
+    const std::string name = transport == lt::portmap_transport::upnp ? "upnp" : "natpmp";
+    json::object result{{"scope", found == extra_mappings_.end() ? "bittorrent" : "extra"},
+        {"transport", name}, {"external_port", external_port}, {"succeeded", error.empty()},
+        {"local_address", address}, {"message", error}};
+    if (found != extra_mappings_.end()) {
+        result["protocol"] = found->first.first;
+        result["local_port"] = found->first.second;
+    } else {
+        result["protocol"] = protocol == lt::portmap_protocol::tcp ? "tcp"
+            : protocol == lt::portmap_protocol::udp ? "udp" : "unknown";
+        result["local_port"] = listen_port();
+    }
+    auto& results = found == extra_mappings_.end() ? bt_mappings_ : found->second.results;
+    auto previous = std::find_if(results.begin(), results.end(), [&](const auto& value) {
+        const auto& object = value.as_object();
+        return object.at("transport") == result.at("transport")
+            && object.at("local_address") == result.at("local_address")
+            && object.at("protocol") == result.at("protocol");
+    });
+    if (previous == results.end()) results.push_back(result);
+    else *previous = result;
+    result["event"] = error.empty() ? "portmap" : "portmap_error";
+    protocol_.send(result);
+}
+
 void Session::poll() {
     for (const auto& message : take_dns_logs()) persistence_.log(message);
     alerts();
+    if (refresh_extra_mappings_) {
+        refresh_extra_mappings_ = false;
+        clear_extra_port_mapping_handles();
+    }
+    update_extra_port_mappings();
     auto now = std::chrono::steady_clock::now();
     if (now - last_stats_request_ >= std::chrono::seconds(1)) {
         session_.post_session_stats();
@@ -191,6 +258,8 @@ void Session::poll() {
 
 void Session::shutdown() {
     stopping_ = true;
+    clear_extra_port_mapping_handles();
+    extra_mappings_.clear();
     session_.pause();
     save_all(true);
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
@@ -212,7 +281,13 @@ json::object Session::session_status() {
     } while (generation == stats_generation_ && std::chrono::steady_clock::now() < deadline);
     int nodes = 0;
     for (const auto& entry : dht_nodes_) nodes += entry.second;
-    return {{"listen_port", listen_port()}, {"dht_nodes", nodes}, {"has_incoming_connections", incoming_},
+    json::array extra;
+    for (const auto& entry : extra_mappings_) {
+        extra.push_back(json::object{{"protocol", entry.first.first}, {"local_port", entry.first.second},
+            {"results", entry.second.results}});
+    }
+    return {{"port_mapping_enabled", port_mapping_enabled_}, {"port_mappings", bt_mappings_},
+        {"extra_port_mappings", extra}, {"listen_port", listen_port()}, {"dht_nodes", nodes}, {"has_incoming_connections", incoming_},
         {"download_rate", download_rate_}, {"upload_rate", upload_rate_},
         {"external_address", external_address_.empty() ? json::value(nullptr) : json::value(external_address_)}};
 }

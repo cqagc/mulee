@@ -149,3 +149,44 @@ import Testing
         }
     }
 }
+
+@Test("额外端口关闭时保留期望值，更新和清空会下发")
+func extraPortMappingsLifecycle() async throws {
+    let fake = TorrentFakeTransport()
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    let engine = TorrentEngine(stateDirectory: root, transportFactory: { fake })
+    do {
+        try await engine.start(options: EngineOptions(downloadDirectory: root))
+        try await engine.setExtraPortMappings(ExtraPortMappings(tcp: [40123], udp: [40126, 40133]))
+        try await engine.configure(TorrentEngineSettings(portMapping: false))
+        try await engine.configure(TorrentEngineSettings(portMapping: true))
+        let requests = await fake.sent.filter { $0.method == "set_extra_port_mappings" }
+        #expect(requests.count == 3)
+        #expect(requests.last?.parameters["tcp"] == .array([.integer(40123)]))
+        try await engine.setExtraPortMappings(ExtraPortMappings())
+        #expect(await fake.sent.last?.parameters["tcp"] == .array([]))
+        await engine.stop()
+        try FileManager.default.removeItem(at: root)
+    } catch {
+        await engine.stop()
+        try? FileManager.default.removeItem(at: root)
+        throw error
+    }
+}
+
+@Test("任一映射机制成功即可，改写外部端口不能算就绪")
+func extraMappingResultInterpretation() throws {
+    let decoder = JSONDecoder()
+    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    let json = """
+        {"protocol":"tcp","local_port":40123,"results":[
+            {"transport":"natpmp","external_port":0,"local_port":40123,
+             "protocol":"tcp","succeeded":false,"message":"unavailable"},
+            {"transport":"upnp","external_port":40123,"local_port":40123,
+             "protocol":"tcp","succeeded":true,"message":""}
+        ]}
+        """
+    #expect(try decoder.decode(ExtraPortMappingStatus.self, from: Data(json.utf8)).succeeded == true)
+    let alternate = json.replacingOccurrences(of: "\"external_port\":40123", with: "\"external_port\":40124")
+    #expect(try decoder.decode(ExtraPortMappingStatus.self, from: Data(alternate.utf8)).succeeded == false)
+}

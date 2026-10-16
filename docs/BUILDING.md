@@ -445,3 +445,36 @@ Developer ID、时间戳、runtime、团队与无调试权限检查，深度严�
 新增代码没有编译警告；Release 仍报告 `MuleeApp.swift` 未改动的四处示例数据不可达分支，
 Xcode 仍报告无 AppIntents.framework 的元数据抽取警告。本次未公证、未发版、未上传。
 验证工程、缓存副本及日志位于 `build/sparkle-verification/`，DerivedData 位于 `build/dd/`。
+
+### 电驴自动端口映射
+
+amuled 自带的 UPnP 仍关闭。Mulee 从已就绪引擎的 EC 连接偏好读取 TCP 和客户端 UDP 端口；aMule 3.1.0 另有服务器 UDP socket，使用 TCP + 3。客户端 UDP 同时承担 Kad 和客户端扩展协议，EC 控制端口仅监听回环地址，不映射。TCP 超过 65532 时无法按该规则确认服务器 UDP，诊断不会声称映射已就绪。
+
+BT 辅助进程接收 `set_extra_port_mappings {tcp:[...],udp:[...]}`，完整替换期望端口集合，重复请求幂等，空数组撤销。仅在 `port_mapping` 开启时向 libtorrent 申请。设置关闭会撤销句柄并保留期望集合；重新开启、监听接口变化或辅助进程重启后重新申请。`portmap` / `portmap_error` 事件及 `session_status.extra_port_mappings` 包含协议、本机端口、外部端口、映射机制和结果。外部端口与本机端口不同时，不能认定电驴已可连入。
+
+适用范围是电脑与家庭路由器在同一网段、路由器支持 UPnP / NAT-PMP。路由器接受映射不代表宽带有公网 IPv4；诊断确认没有公网 IPv4 时，网络页会说明应向宽带运营商申请，停止建议手工转发。未确认时保留原有说明。诊断分别展示路由器是否接受映射与服务器 / Kad 是否确认可连入。三个电驴端口映射就绪后，App 会通过现有 EC 连接命令重新连接尚不可连入的网络，避免重复重连已确认可连入的会话。
+
+```bash
+scripts/build-torrentd.sh --standalone
+python3 -I scripts/test-torrentd.py
+swift test --package-path Packages/MuleeCore --scratch-path build/core-tests
+python3 -I scripts/test-ed2k-portmap.py
+```
+
+实网脚本仅使用 `build/` 内的临时目录与非默认空闲端口，先记录未映射的服务器 / Kad 状态，再申请三个电驴端口映射并重新连接。它比较 EC Client ID 所表示的地址与路由器公网出口；无法确认直连或地址不一致时报告失败，不调整代理、路由或系统网络。测试退出时正常结束两个子进程，并通过路由器只读接口检查测试映射已撤销，随后删除临时目录。发现阶段无法读取路由器服务时会报告验证受阻，不能把这种情况算成测试通过。
+
+### 宽带公网 IPv4 诊断与隔离验证
+
+网络诊断从物理接口绑定 SSDP 多播（包括 `IP_MULTICAST_IF`），发现 InternetGatewayDevice 后只读取 `GetExternalIPAddress`。仅接受同网段默认网关的私有 IPv4 LOCATION，设备描述中的 URLBase / controlURL 也必须通过相同检查；禁用 HTTP 重定向、系统 HTTP 代理、凭据及 cookie 存储。SSDP 响应最多 8 KiB，XML 响应最多 64 KiB，拒绝 DTD、实体声明、过深嵌套和过多节点，不解析外部实体。发现约等待 1.2 秒，每次 HTTP 请求最多 0.7 秒，探测在并发执行器上运行。
+
+WAN 位于私有地址或共享地址范围时显示“运营商没有分配公网 IPv4”；公网地址显示“正常”。发现失败、跨网段、不支持、超时、无效或保留地址、多个服务返回不同地址均保持“未确认”。这项证据只说明路由器报告的 WAN IPv4，不代替 BT 的实际入站连接证据，也不能证明所有上游网络拓扑。没有公网 IPv4 时，设置页与侧边栏说明电驴仍能下载但来源较少，建议申请公网 IPv4；只有 BT 已实际确认可连入时才显示 BT 不受影响。
+
+```bash
+# 先构建 Debug App；本模式直接复用 App 的诊断链路，不创建窗口、引擎或用户存储。
+python3 -I scripts/test-ed2k-portmap.py --diagnose-only
+
+# 家庭网络使用，当前公司网络不执行此模式。
+python3 -I scripts/test-ed2k-portmap.py --mapping-only
+```
+
+`--mapping-only` 启动隔离的临时 amuled 和 `build/thirdparty/bin/mulee-torrentd`，即使 WAN 不是公网 IPv4 也申请映射。申请前确认候选端口未被映射；使用 `GetSpecificPortMappingEntry` 核对电驴 TCP、客户端 UDP、服务器 UDP 的内部端口、内部地址和启用状态。撤销后再次查询确认删除；退出时清理 BT 映射、两个子进程及临时目录。此模式不连接电驴服务器或 Kad，不以能否从外部连入作为映射成功的判据，不修改代理规则或路由器管理配置。

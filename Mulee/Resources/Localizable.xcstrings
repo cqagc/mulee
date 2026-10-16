@@ -14096,6 +14096,441 @@
           }
         }
       }
+    },
+    "%@：已映射": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@：已映射"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: mapped"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@：已對應"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@：マッピング済み"
+          }
+        }
+      }
+    },
+    "%@：暂未自动打开，请检查路由器或手工转发": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@：暂未自动打开，请检查路由器或手工转发"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: not opened automatically yet. Check the router or forward the port manually"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@：暫未自動開啟，請檢查路由器或手動轉送"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@：まだ自動で開けていません。ルーターを確認するか、手動でポート転送してください"
+          }
+        }
+      }
+    },
+    "%@：等待路由器确认": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@：等待路由器确认"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: waiting for the router"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@：等待路由器確認"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@：ルーターの確認を待っています"
+          }
+        }
+      }
+    },
+    "BT 已确认可从外部连入，不受影响。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT 已确认可从外部连入，不受影响。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BitTorrent is confirmed reachable from outside and is not affected."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT 已確認可從外部連入，不受影響。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTは外部から接続できることを確認済みのため、影響はありません。"
+          }
+        }
+      }
+    },
+    "你的宽带没有公网 IPv4 地址。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的宽带没有公网 IPv4 地址。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your broadband connection has no public IPv4 address."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "你的寬頻沒有公網 IPv4 位址。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ご利用のブロードバンド回線にはパブリック IPv4 アドレスがありません。"
+          }
+        }
+      }
+    },
+    "宽带公网 IPv4": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "宽带公网 IPv4"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Public IPv4"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "寬頻公網 IPv4"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パブリック IPv4"
+          }
+        }
+      }
+    },
+    "正在等待路由器确认；映射后还需确认外部能否连入。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在等待路由器确认；映射后还需确认外部能否连入。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the router. After mapping, Mulee still checks whether connections from outside get through."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在等待路由器確認；對應後還需確認外部能否連入。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルーターの確認を待っています。マッピング後も、外部から接続できるかを確認します。"
+          }
+        }
+      }
+    },
+    "正常": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正常"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正常"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正常"
+          }
+        }
+      }
+    },
+    "电脑与路由器在同一网段且路由器支持时，会尝试自动打开 BT 和电驴端口。未成功时仍可下载，但来源和速度可能受限，可按说明手工转发。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电脑与路由器在同一网段且路由器支持时，会尝试自动打开 BT 和电驴端口。未成功时仍可下载，但来源和速度可能受限，可按说明手工转发。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When this Mac and the router are on the same network and the router supports it, Mulee tries to open the BitTorrent and eD2k ports automatically. If that fails you can still download, but sources and speed may be limited; follow the instructions to forward the ports manually."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電腦與路由器在同一網段且路由器支援時，會嘗試自動開啟 BT 和電驢連接埠。未成功時仍可下載，但來源和速度可能受限，可依照說明手動轉送。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Macとルーターが同じネットワークにあり、ルーターが対応している場合は、BTとeD2kのポートを自動で開きます。うまくいかなくてもダウンロードはできますが、ソースや速度が限られることがあります。説明に従って手動でポート転送してください。"
+          }
+        }
+      }
+    },
+    "电驴仍能下载，但能连上的来源会少一些。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电驴仍能下载，但能连上的来源会少一些。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k can still download, but it will reach fewer sources."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電驢仍能下載，但能連上的來源會少一些。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kはダウンロードできますが、接続できるソースが少なくなります。"
+          }
+        }
+      }
+    },
+    "电驴端口映射": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电驴端口映射"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2k port mapping"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電驢連接埠對應"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kのポートマッピング"
+          }
+        }
+      }
+    },
+    "自动映射已关闭；外部无法连入时可手工转发端口。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动映射已关闭；外部无法连入时可手工转发端口。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic mapping is off. If connections from outside can't get through, forward the ports manually."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動對應已關閉；外部無法連入時可手動轉送連接埠。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動マッピングはオフです。外部から接続できない場合は、手動でポート転送してください。"
+          }
+        }
+      }
+    },
+    "请向宽带运营商申请公网 IPv4 地址。当前路由器端口转发和自动映射都无法解决电驴无法从外部连入的问题。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请向宽带运营商申请公网 IPv4 地址。当前路由器端口转发和自动映射都无法解决电驴无法从外部连入的问题。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask your broadband provider for a public IPv4 address. Until then, neither port forwarding on the router nor automatic mapping can make eD2k reachable from outside."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請向寬頻業者申請公網 IPv4 位址。目前路由器的連接埠轉送和自動對應都無法讓電驢從外部連入。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブロードバンド事業者にパブリック IPv4 アドレスを申請してください。現状では、ルーターのポート転送も自動マッピングも、eD2kへの外部からの接続を可能にできません。"
+          }
+        }
+      }
+    },
+    "路由器映射无法解决当前宽带没有公网 IPv4 地址的问题。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "路由器映射无法解决当前宽带没有公网 IPv4 地址的问题。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Router mapping can't help while your broadband has no public IPv4 address."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "路由器對應無法解決目前寬頻沒有公網 IPv4 位址的問題。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブロードバンド回線にパブリック IPv4 アドレスがない間は、ルーターのマッピングでは解決できません。"
+          }
+        }
+      }
+    },
+    "运营商没有分配公网 IPv4": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "运营商没有分配公网 IPv4"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No public IPv4 from your provider"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "業者沒有分配公網 IPv4"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "事業者からパブリック IPv4 が割り当てられていません"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

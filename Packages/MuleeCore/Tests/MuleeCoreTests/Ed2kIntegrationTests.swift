@@ -27,6 +27,10 @@ struct Ed2kIntegrationTests {
             let status = try await engine.networkStatus()
             #expect(status.ed2kID == .disconnected)
             #expect(status.kad == .disconnected)
+            #expect(try await engine.listeningPorts() == ExtraPortMappings(
+                tcp: [Int(settings.tcpPort)], udp: [Int(settings.tcpPort) + 3]
+            ))
+            try await engine.recheckConnectivity()
             let id = try await engine.add(link: link, directory: alternate)
             #expect(id == "0123456789ABCDEF0123456789ABCDEF")
             var snapshot = try #require(try await engine.snapshots().first { $0.engineTaskID == id })
@@ -66,6 +70,9 @@ struct Ed2kIntegrationTests {
             #expect(config.contains("[Cat\\#1]"))
             #expect(!config.contains("[Cat\\#2]"))
             #expect(config.contains("Port=\(changed.tcpPort)\n"))
+            #expect(try await engine.listeningPorts() == ExtraPortMappings(
+                tcp: [Int(changed.tcpPort)], udp: [Int(changed.tcpPort) + 3]
+            ))
             #expect(try await engine.snapshots().count == 2)
             try await engine.remove(secondID, deleteFiles: true)
             try await engine.remove(id, deleteFiles: false)

@@ -44,7 +44,8 @@ import Testing
     }
 
     @Test func injectedProbeUpdatesOnlyDiagnosticFields() async {
-        let result = NetworkDiagnosticsSnapshot(routedThroughTunnel: true, trackerAddresses: ["198.18.0.1"])
+        let result = NetworkDiagnosticsSnapshot(routedThroughTunnel: true, trackerAddresses: ["198.18.0.1"],
+                                                routerWANAddress: "10.0.0.1")
         let probe = NetworkDiagnosticsProbeStub(result: result)
         let service = NetworkDiagnosticsService(probe: probe)
         let status = NetworkStatus(ed2kID: .high, kad: .open, bittorrentPortReachable: true,
@@ -55,6 +56,7 @@ import Testing
         service.stop()
         #expect(await probe.calls == 1)
         #expect(service.snapshot == result)
+        #expect(service.snapshot.publicIPv4Status == .noPublicIPv4)
         #expect(model.networkStatus.p2pRoutedThroughProxy)
         #expect(model.networkStatus.ed2kID == .high)
         #expect(model.networkStatus.kad == .open)

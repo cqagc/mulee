@@ -23,6 +23,8 @@ enum ECCode {
         static let createCategory: UInt8 = 0x41
         static let serverUpdate: UInt8 = 0x32
         static let kadUpdate: UInt8 = 0x4D
+        static let serverDisconnect: UInt8 = 0x2E
+        static let kadStop: UInt8 = 0x49
         static let serverConnect: UInt8 = 0x2F
         static let kadStart: UInt8 = 0x48
         static let authSalt: UInt8 = 0x4F

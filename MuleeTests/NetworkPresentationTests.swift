@@ -1,3 +1,4 @@
+import Foundation
 import MuleeCore
 import Testing
 @testable import Mulee
@@ -34,4 +35,27 @@ import Testing
         #expect(NetworkPresentation.portMapping(succeeded: nil) == nil)
         #expect(NetworkPresentation.portMapping(succeeded: false)?.text == "暂未自动打开端口")
     }
+    @Test func extraMappingStates() throws {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let pending = try decoder.decode(ExtraPortMappingStatus.self, from: Data("""
+            {"protocol":"tcp","local_port":40123,"results":[]}
+            """.utf8))
+        #expect(NetworkPresentation.extraPortMapping(pending).text == "TCP 40123：等待路由器确认")
+        let success = try decoder.decode(ExtraPortMappingStatus.self, from: Data("""
+            {"protocol":"udp","local_port":40126,"results":[
+                {"protocol":"udp","local_port":40126,"external_port":40126,
+                 "transport":"upnp","succeeded":true,"message":""}
+            ]}
+            """.utf8))
+        #expect(NetworkPresentation.extraPortMapping(success).text == "UDP 40126：已映射")
+        let different = try decoder.decode(ExtraPortMappingStatus.self, from: Data("""
+            {"protocol":"udp","local_port":40126,"results":[
+                {"protocol":"udp","local_port":40126,"external_port":40127,
+                 "transport":"natpmp","succeeded":true,"message":""}
+            ]}
+            """.utf8))
+        #expect(NetworkPresentation.extraPortMapping(different).isAbnormal)
+    }
+
 }

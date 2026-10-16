@@ -4321,6 +4321,35 @@
           }
         }
       }
+    },
+    "暂时无法确认电驴实际监听端口": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时无法确认电驴实际监听端口"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't confirm the eD2k listening ports yet"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫時無法確認電驢實際監聽的連接埠"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kの待ち受けポートをまだ確認できません"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

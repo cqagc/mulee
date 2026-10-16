@@ -3,6 +3,7 @@ import SwiftUI
 
 struct NetworkStatusView: View {
     @Environment(AppModel.self) private var model
+    @State private var diagnostics = NetworkDiagnosticsService.shared
     let status: NetworkStatus
 
     var body: some View {
@@ -30,7 +31,11 @@ struct NetworkStatusView: View {
                     .help(issue)
             }
             NetworkStatusRow(title: String(localized: "电驴"), value: NetworkPresentation.sidebarReachability(ed2k: status.ed2kID), isHealthy: status.ed2kID == .disconnected ? nil : status.ed2kID == .high)
+                .help(NetworkPresentation.ed2kExplanation(status, network: diagnostics.snapshot))
+                .accessibilityHint(NetworkPresentation.ed2kExplanation(status, network: diagnostics.snapshot))
             NetworkStatusRow(title: "Kad", value: NetworkPresentation.sidebarReachability(kad: status.kad), isHealthy: status.kad == .disconnected ? nil : status.kad == .open)
+                .help(NetworkPresentation.ed2kExplanation(status, network: diagnostics.snapshot, kad: true))
+                .accessibilityHint(NetworkPresentation.ed2kExplanation(status, network: diagnostics.snapshot, kad: true))
             NetworkStatusRow(title: String(localized: "BT 端口"), value: NetworkPresentation.bittorrentPort(reachable: status.bittorrentPortReachable).text, isHealthy: status.bittorrentPortReachable)
             if status.p2pRoutedThroughProxy {
                 NetworkProxyWarningButton()

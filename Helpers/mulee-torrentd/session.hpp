@@ -32,6 +32,20 @@ private:
     std::string download_dir_;
     bool stopping_ = false;
     bool incoming_ = false;
+    bool port_mapping_enabled_ = false;
+    bool refresh_extra_mappings_ = false;
+    struct ExtraMapping {
+        std::vector<lt::port_mapping_t> handles;
+        json::array results;
+    };
+    std::map<std::pair<std::string, int>, ExtraMapping> extra_mappings_;
+    json::array bt_mappings_;
+    json::object set_extra_port_mappings(const json::object& params);
+    void update_extra_port_mappings();
+    void clear_extra_port_mapping_handles();
+    void port_mapping_alert(lt::port_mapping_t handle, lt::portmap_transport transport,
+        int external_port, lt::portmap_protocol protocol, const std::string& address,
+        const std::string& error);
     std::string external_address_;
     std::int64_t downloaded_ = 0;
     std::int64_t uploaded_ = 0;

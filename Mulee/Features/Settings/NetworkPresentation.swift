@@ -17,8 +17,8 @@ enum NetworkPresentation {
     static let fakeIPAdvice = String(localized: "检测到代理虚拟地址。BT 会自动尝试获取真实地址，无需额外设置。电驴通常直接使用来源地址；若使用域名的服务器无法连接，可为该域名关闭虚拟地址解析，或改用服务器的真实地址。")
     static let differentSubnet = String(localized: "你的电脑和路由器不在同一网段，自动映射不起作用。需要由网络管理员手工转发端口。")
     static let unknownSubnet = String(localized: "暂时无法确认电脑和路由器是否在同一网段。")
-    static let mappingTitle = String(localized: "BT 自动端口映射")
-    static let mappingAdvice = String(localized: "路由器支持时，BT 引擎会尝试自动打开端口；电驴端口需要在路由器里手工转发。")
+    static let mappingTitle = String(localized: "自动端口映射")
+    static let mappingAdvice = String(localized: "电脑与路由器在同一网段且路由器支持时，会尝试自动打开 BT 和电驴端口。未成功时仍可下载，但来源和速度可能受限，可按说明手工转发。")
     static let portImpact = String(localized: "外部暂时无法主动连入时，仍可尝试连接其他来源，但能找到的来源可能较少，速度也可能较慢。")
     static let portPending = String(localized: "尚未连接或未确认的端口暂时无法判断，等待连接后再查看。")
     static let portsOpen = String(localized: "这些连接已收到外部可连入的证据，更容易找到来源。")
@@ -44,7 +44,39 @@ enum NetworkPresentation {
         }
     }
 
-    static func portSummary(_ status: NetworkStatus) -> String {
+    static let publicIPv4Title = String(localized: "宽带公网 IPv4")
+    static let noPublicIPv4 = String(localized: "你的宽带没有公网 IPv4 地址。")
+    static let noPublicIPv4Impact = String(localized: "电驴仍能下载，但能连上的来源会少一些。")
+    static let btUnaffected = String(localized: "BT 已确认可从外部连入，不受影响。")
+    static let publicIPv4Remedy = String(localized: "请向宽带运营商申请公网 IPv4 地址。当前路由器端口转发和自动映射都无法解决电驴无法从外部连入的问题。")
+    static let noPublicMapping = String(localized: "路由器映射无法解决当前宽带没有公网 IPv4 地址的问题。")
+
+    static func publicIPv4Line(_ network: NetworkDiagnosticsSnapshot) -> Line {
+        switch network.publicIPv4Status {
+        case .unknown: Line(text: String(localized: "未确认"), isAbnormal: false)
+        case .noPublicIPv4: Line(text: String(localized: "运营商没有分配公网 IPv4"), isAbnormal: true)
+        case .publicIPv4: Line(text: String(localized: "正常"), isAbnormal: false)
+        }
+    }
+
+    static func noPublicIPv4Explanation(btReachable: Bool?) -> String {
+        var lines = [noPublicIPv4, noPublicIPv4Impact]
+        if btReachable == true { lines.append(btUnaffected) }
+        lines.append(publicIPv4Remedy)
+        return lines.joined(separator: "\n")
+    }
+
+    static func ed2kExplanation(_ status: NetworkStatus, network: NetworkDiagnosticsSnapshot, kad: Bool = false) -> String {
+        if network.publicIPv4Status == .noPublicIPv4 {
+            return noPublicIPv4Explanation(btReachable: status.bittorrentPortReachable)
+        }
+        return kad ? kadDescription(status.kad) : ed2kID(status.ed2kID).text
+    }
+
+    static func portSummary(_ status: NetworkStatus, network: NetworkDiagnosticsSnapshot = .unknown) -> String {
+        if network.publicIPv4Status == .noPublicIPv4 {
+            return noPublicIPv4Explanation(btReachable: status.bittorrentPortReachable)
+        }
         if status.bittorrentPortReachable == false || status.ed2kID == .low || status.kad == .firewalled {
             return portImpact
         }
@@ -55,6 +87,9 @@ enum NetworkPresentation {
     }
 
     static func forwardingInstructions(btPort: Int, tcpPort: Int, udpPort: Int, network: NetworkDiagnosticsSnapshot) -> String {
+        if network.publicIPv4Status == .noPublicIPv4 {
+            return noPublicIPv4Explanation(btReachable: nil)
+        }
         let target = network.localIP.map { String(localized: "转发到这台电脑的局域网地址 \($0)。") }
             ?? String(localized: "暂时未读到本机局域网地址，请连接局域网后重新检测，再确认转发目标。")
         let router = network.gateway.map { String(localized: "打开路由器（\($0)）的管理页面，找到端口转发设置。") }
@@ -147,6 +182,22 @@ enum NetworkPresentation {
         case .some(false): Line(text: String(localized: "无法连入"), isAbnormal: true)
         case .none: Line(text: String(localized: "未确认"), isAbnormal: false)
         }
+    }
+
+    static let ed2kMappingTitle = String(localized: "电驴端口映射")
+    static let mappingPending = String(localized: "正在等待路由器确认；映射后还需确认外部能否连入。")
+    static let mappingDisabled = String(localized: "自动映射已关闭；外部无法连入时可手工转发端口。")
+
+    static func extraPortMapping(_ mapping: ExtraPortMappingStatus) -> Line {
+        let port = mapping.localPort.formatted(.number.grouping(.never))
+        let label = "\(mapping.protocol.uppercased()) \(port)"
+        if mapping.succeeded == true {
+            return Line(text: String(localized: "\(label)：已映射"), isAbnormal: false)
+        }
+        if mapping.results.isEmpty {
+            return Line(text: String(localized: "\(label)：等待路由器确认"), isAbnormal: false)
+        }
+        return Line(text: String(localized: "\(label)：暂未自动打开，请检查路由器或手工转发"), isAbnormal: true)
     }
 
     /// UPnP / NAT-PMP 映射结果；未启用时为 nil（不显示标签）。

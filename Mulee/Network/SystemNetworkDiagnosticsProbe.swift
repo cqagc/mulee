@@ -3,20 +3,23 @@ import Darwin
 import Foundation
 import SystemConfiguration
 
-/// 只读系统路由、接口、代理设置及公开 tracker 的解析结果。
+/// 只读系统路由、接口、代理、tracker 解析及路由器 WAN 地址。
 nonisolated struct SystemNetworkDiagnosticsProbe: NetworkDiagnosticsProbing {
     @concurrent
     func probe() async -> NetworkDiagnosticsSnapshot {
         let store = SCDynamicStoreCreate(nil, "Mulee 网络诊断" as CFString, nil, nil)
         let network = store.flatMap(physicalNetwork)
         let local = localAddress(interface: network?.interface)
+        let wanAddress = await RouterWANIPv4Probe().probe(interface: network?.interface, localIP: local?.ip,
+                                                        mask: local?.mask, gateway: network?.gateway)
         return NetworkDiagnosticsSnapshot(
             routedThroughTunnel: tunnelRoute(),
             trackerAddresses: trackerAddresses(),
             systemProxyEnabled: systemProxyEnabled(),
             localIP: local?.ip,
             subnetMask: local?.mask,
-            gateway: network?.gateway
+            gateway: network?.gateway,
+            routerWANAddress: wanAddress
         )
     }
 

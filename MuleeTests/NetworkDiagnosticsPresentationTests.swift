@@ -58,7 +58,8 @@ import Testing
                     NetworkPresentation.checking, NetworkPresentation.rulesCopied, NetworkPresentation.instructionsCopied,
                     NetworkPresentation.copyInstructions, NetworkPresentation.processRecognition, NetworkPresentation.fakeIPAdvice,
                     NetworkPresentation.differentSubnet, NetworkPresentation.unknownSubnet, NetworkPresentation.mappingTitle,
-                    NetworkPresentation.mappingAdvice, NetworkPresentation.portImpact, NetworkPresentation.portPending,
+                    NetworkPresentation.mappingAdvice, NetworkPresentation.mappingDisabled,
+                    NetworkPresentation.mappingPending, NetworkPresentation.ed2kMappingTitle, NetworkPresentation.portImpact, NetworkPresentation.portPending,
                     NetworkPresentation.portsOpen, NetworkPresentation.btPortTitle, NetworkPresentation.ed2kTCPTitle,
                     NetworkPresentation.ed2kUDPTitle, NetworkPresentation.exitDescription(nil),
                     NetworkPresentation.exitDescription("192.0.2.3"), NetworkPresentation.maskedIP("2001:db8::1")]
@@ -84,6 +85,46 @@ import Testing
             for term in ["Low ID", "High ID", "firewalled", "NAT", "UPnP"] {
                 #expect(!text.localizedCaseInsensitiveContains(term), "文案包含禁用术语：\(text)")
             }
+        }
+    }
+
+    @Test func missingPublicIPv4ExplainsImpactAndNeverRecommendsForwarding() {
+        let network = NetworkDiagnosticsSnapshot(routerWANAddress: "10.0.0.1")
+        #expect(network.publicIPv4Status == .noPublicIPv4)
+        #expect(NetworkPresentation.publicIPv4Line(network).isAbnormal)
+        for bt in [true, false, nil] as [Bool?] {
+            let status = status(bt: bt, ed2k: .low, kad: .firewalled)
+            let summary = NetworkPresentation.portSummary(status, network: network)
+            #expect(summary.contains(NetworkPresentation.noPublicIPv4))
+            #expect(summary.contains(NetworkPresentation.noPublicIPv4Impact))
+            #expect(summary.contains(NetworkPresentation.publicIPv4Remedy))
+            #expect(summary.contains(NetworkPresentation.btUnaffected) == (bt == true))
+            #expect(NetworkPresentation.ed2kExplanation(status, network: network) == summary)
+            #expect(NetworkPresentation.ed2kExplanation(status, network: network, kad: true) == summary)
+            #expect(!summary.contains("手工转发"))
+            #expect(!summary.contains("打开路由器"))
+            for term in ["Low ID", "High ID", "firewalled", "CGNAT", "UPnP", "NAT-PMP"] {
+                #expect(!summary.localizedCaseInsensitiveContains(term))
+            }
+        }
+        let copied = instructions(network)
+        #expect(copied.contains(NetworkPresentation.publicIPv4Remedy))
+        #expect(!copied.contains("TCP / UDP"))
+        #expect(!copied.contains("手工转发"))
+        #expect(!copied.contains("打开路由器"))
+    }
+
+    @Test func unknownWANPreservesExistingCopyAndEvidence() {
+        let status = status(bt: nil, ed2k: .disconnected, kad: .disconnected)
+        for network in [NetworkDiagnosticsSnapshot.unknown, NetworkDiagnosticsSnapshot(routerWANAddress: "invalid")] {
+            #expect(network.publicIPv4Status == .unknown)
+            #expect(NetworkPresentation.publicIPv4Line(network).text == "未确认")
+            #expect(!NetworkPresentation.publicIPv4Line(network).isAbnormal)
+            #expect(NetworkPresentation.portSummary(status, network: network) == NetworkPresentation.portPending)
+            #expect(NetworkPresentation.ed2kExplanation(status, network: network) == NetworkPresentation.ed2kID(.disconnected).text)
+            #expect(NetworkPresentation.ed2kExplanation(status, network: network, kad: true) == NetworkPresentation.kadDescription(.disconnected))
+            #expect(instructions(network).contains("找到端口转发设置"))
+            #expect(!instructions(network).contains(NetworkPresentation.noPublicIPv4))
         }
     }
 

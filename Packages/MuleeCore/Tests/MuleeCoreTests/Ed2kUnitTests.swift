@@ -4,6 +4,21 @@ import Testing
 @testable import MuleeCore
 
 struct Ed2kUnitTests {
+    @Test("映射使用 EC 实际端口，UDP 关闭标志按存在与否读取")
+    func portMappings() throws {
+        var preferences = ECTag.empty(ECCode.Tag.connectionPreferences, children: [
+            .number(ECCode.Tag.tcpPort, 40123), .number(ECCode.Tag.udpPort, 40133)
+        ])
+        #expect(try Ed2kEngine.portMappings(from: preferences) == ExtraPortMappings(tcp: [40123], udp: [40126, 40133]))
+        preferences.children.append(.empty(ECCode.Tag.udpDisabled))
+        #expect(try Ed2kEngine.portMappings(from: preferences) == ExtraPortMappings(tcp: [40123], udp: [40126]))
+        preferences.children[0] = .number(ECCode.Tag.tcpPort, 40223)
+        #expect(try Ed2kEngine.portMappings(from: preferences).udp == [40226])
+        preferences.children[0] = .number(ECCode.Tag.tcpPort, 65533)
+        #expect(throws: ECError.self) { try Ed2kEngine.portMappings(from: preferences) }
+        #expect(throws: ECError.self) { try Ed2kEngine.portMappings(from: .empty(ECCode.Tag.connectionPreferences)) }
+    }
+
     @Test("aMule 所有文件状态映射", arguments: [
         (UInt64(0), TaskStatus.waitingForSources), (1, .waitingForSources),
         (2, .downloading), (3, .downloading), (4, .failed), (5, .failed),

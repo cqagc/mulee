@@ -12,6 +12,7 @@ public actor TorrentEngine: DownloadEngine {
     private let readyTimeout: Duration
     private let requestTimeout: Duration
     private let restartBackoff: Duration
+    private var extraPortMappings = ExtraPortMappings()
     private var settings: TorrentEngineSettings
     private var options: EngineOptions?
     private var client: TorrentdClient?
@@ -125,6 +126,15 @@ public actor TorrentEngine: DownloadEngine {
         guard let options else { throw EngineError.notRunning }
         try await sendConfiguration(options: options, settings: settings, using: client)
         self.settings = settings
+    }
+
+    /// 保留期望值，辅助进程尚未启动或重启后也会重新下发。
+    public func setExtraPortMappings(_ mappings: ExtraPortMappings) async throws {
+        extraPortMappings = mappings
+        // 启动期间的变更在会话发布后再确认一次，避免落在最后一次下发与发布之间。
+        if let starting { try await starting.value }
+        guard let client, await client.isRunning() else { return }
+        let _: TorrentdEmpty = try await client.call("set_extra_port_mappings", extraPortMappings)
     }
 
     public func add(link: ParsedLink, directory: URL?) async throws -> String {
@@ -253,6 +263,9 @@ public actor TorrentEngine: DownloadEngine {
         let _: TorrentdConfigureResult = try await client.call(
             "configure", TorrentdConfigureParameters(options: options, settings: settings)
         )
+        if !extraPortMappings.tcp.isEmpty || !extraPortMappings.udp.isEmpty {
+            let _: TorrentdEmpty = try await client.call("set_extra_port_mappings", extraPortMappings)
+        }
     }
 
     private func launch(options: EngineOptions) async throws {

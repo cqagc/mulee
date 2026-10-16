@@ -13,6 +13,8 @@ final class BitTorrentController {
     private var configurationTask: Task<Void, Never>?
     private var reachability = BitTorrentPortReachability()
     private var listenPort: Int?
+    private var ed2kPortMappings: ExtraPortMappings?
+    private var mappingTask: Task<Void, Never>?
     var issue: String?
 
     init(engine: TorrentEngine, model: AppModel, configuration: TorrentEngineSettings) {
@@ -41,12 +43,18 @@ final class BitTorrentController {
         monitor = nil
         configurationTask?.cancel()
         model?.networkStatus.bittorrentPortReachable = nil
+        model?.networkStatus.portMappingSucceeded = nil
+        model?.ed2k?.clearPortMappings()
     }
 
     func configure(_ configuration: TorrentEngineSettings) {
         if self.configuration.listenPort != configuration.listenPort {
             reachability = BitTorrentPortReachability()
             model?.networkStatus.bittorrentPortReachable = nil
+        }
+        if !configuration.portMapping {
+            model?.networkStatus.portMappingSucceeded = nil
+            model?.ed2k?.clearPortMappings()
         }
         self.configuration = configuration
         guard isRunning else { return }
@@ -59,6 +67,20 @@ final class BitTorrentController {
                 self.issue = nil
             } catch {
                 guard !Task.isCancelled else { return }
+                self.issue = EngineStatusPresentation.errorMessage(error)
+            }
+        }
+    }
+
+    func setEd2kPortMappings(_ mappings: ExtraPortMappings) {
+        guard mappings != ed2kPortMappings else { return }
+        ed2kPortMappings = mappings
+        let previous = mappingTask
+        mappingTask = Task { [weak self] in
+            await previous?.value
+            guard let self else { return }
+            do { try await self.engine.setExtraPortMappings(mappings) } catch {
+                if self.ed2kPortMappings == mappings { self.ed2kPortMappings = nil }
                 self.issue = EngineStatusPresentation.errorMessage(error)
             }
         }
@@ -83,12 +105,23 @@ final class BitTorrentController {
             }
             listenPort = status.listenPort
             model?.networkStatus.bittorrentPortReachable = reachability.observe(incoming: status.hasIncomingConnections)
+            if status.portMappingEnabled == true {
+                let results = status.portMappings ?? []
+                model?.networkStatus.portMappingSucceeded = ["tcp", "udp"].allSatisfy { proto in
+                    results.contains { $0.protocol == proto && $0.usesRequestedPort }
+                } ? true : results.isEmpty ? nil : false
+            } else {
+                model?.networkStatus.portMappingSucceeded = nil
+            }
+            await model?.ed2k?.updatePortMappings(status)
             issue = nil
         } catch {
             guard isRunning, !Task.isCancelled else { return }
             reachability = BitTorrentPortReachability()
             listenPort = nil
             model?.networkStatus.bittorrentPortReachable = nil
+            model?.networkStatus.portMappingSucceeded = nil
+            model?.ed2k?.clearPortMappings()
             issue = EngineStatusPresentation.errorMessage(error)
         }
     }
