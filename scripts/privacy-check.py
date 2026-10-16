@@ -137,8 +137,10 @@ def check_repo(repo: str, denylist: list) -> list:
         for hit in scan_bytes(chunk, rules, emails=True):
             problems.append(f"[{label}] 提交 {commit}：{hit}")
 
-    # 4. 工作区里已跟踪文件的当前内容（含未提交的修改）
-    for path in filter(None, tracked):
+    # 4. 工作区里已跟踪文件的当前内容（含未提交的修改），以及还没 git add 的新文件
+    #    （不含被忽略的文件）。只扫已跟踪文件会漏掉新建文件，提交后才在历史扫描里报出来。
+    untracked = git(repo, "ls-files", "-z", "--others", "--exclude-standard").decode().split("\0")
+    for path in filter(None, tracked + untracked):
         full = os.path.join(repo, path)
         if os.path.isfile(full) and not os.path.islink(full):
             with open(full, "rb") as stream:
