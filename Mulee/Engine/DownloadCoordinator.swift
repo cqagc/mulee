@@ -222,6 +222,7 @@ final class DownloadCoordinator {
     func add(
         links: [ParsedLink], autoExtract: Bool, directory: URL? = nil,
         filePriorities: [ParsedLink: [Int]] = [:],
+        torrentDownloadModes: [ParsedLink: (sequentialDownload: Bool, firstLastPriority: Bool)] = [:],
         videoEntries: [ParsedLink: YtDlpPlaylistEntry] = [:]
     ) async {
         var insertionIndex = 0
@@ -250,9 +251,17 @@ final class DownloadCoordinator {
                 do {
                     let queued = shouldQueueNewTask()
                     if let torrent = engine as? TorrentEngine {
-                        task.engineTaskID = try await torrent.add(
-                            link: link, directory: directory, filePriorities: filePriorities[link], paused: queued
+                        let mode = torrentDownloadModes[link]
+                        let id = try await torrent.add(
+                            link: link, directory: directory, filePriorities: filePriorities[link], paused: queued || mode != nil
                         )
+                        task.engineTaskID = id
+                        if let mode {
+                            try await torrent.setDownloadMode(
+                                id, sequentialDownload: mode.sequentialDownload, firstLastPriority: mode.firstLastPriority
+                            )
+                            if !queued { try await torrent.resume(id) }
+                        }
                     } else if queued {
                         task.engineTaskID = try await engine.addQueued(link: link, directory: directory)
                     } else {

@@ -25,6 +25,14 @@ struct NewTaskTorrentFilesView: View {
                 Text(item.metadataError ?? String(localized: "开始后可在详情里选择要下载的文件"))
                     .foregroundStyle(.secondary)
             }
+            Divider()
+            Toggle("按顺序下载", isOn: $item.sequentialDownload)
+                .toggleStyle(.checkbox)
+            Toggle("优先下载文件首尾", isOn: $item.firstLastPriority)
+                .toggleStyle(.checkbox)
+            Text("便于边下边预览，但可能让整体完成变慢。")
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .font(.caption)
         .padding(.vertical, 10)

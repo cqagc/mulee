@@ -71,6 +71,11 @@ import Testing
         let draft = NewTaskModel(parser: { _ in sampleLinks }, metadataProvider: ExampleTorrentMetadataProvider())
         let torrent = try #require(draft.links.first)
         let video = try #require(draft.links.last)
+        #expect(torrent.sequentialDownload == false)
+        #expect(torrent.firstLastPriority == false)
+        #expect(draft.torrentDownloadModes.count == 1)
+        torrent.sequentialDownload = true
+        torrent.firstLastPriority = true
         torrent.files?[0].isSelected = false
         video.videoQuality = .bestQuality
         video.danmakuToASS = false
@@ -81,6 +86,8 @@ import Testing
         #expect(draft.links.first === torrent)
         #expect(draft.links.last === video)
         #expect(torrent.selectedSize == 512_048_000)
+        #expect(draft.torrentDownloadModes[torrent.link]?.sequentialDownload == true)
+        #expect(draft.torrentDownloadModes[torrent.link]?.firstLastPriority == true)
         #expect(video.videoQuality == .bestQuality)
         #expect(!video.danmakuToASS)
         #expect(!video.ccSubtitles)

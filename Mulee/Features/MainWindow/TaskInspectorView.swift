@@ -4,10 +4,12 @@ import SwiftUI
 struct TaskInspectorView: View {
     @Environment(SettingsModel.self) private var settings
     let task: DownloadTask?
+    @State private var torrentModel = BitTorrentFilesModel()
 
     var body: some View {
         if let task {
-            let presentation = TaskPresentation(task: task, seedingAction: settings.seedingAction)
+            let displayTask = task.kind == .bittorrent ? torrentModel.displayTask(task) : task
+            let presentation = TaskPresentation(task: displayTask, seedingAction: settings.seedingAction)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -30,7 +32,7 @@ struct TaskInspectorView: View {
                         TaskInformationCard(presentation: presentation)
                     }
                     if task.kind == .bittorrent {
-                        BitTorrentInspectorView(task: task)
+                        BitTorrentInspectorView(task: task, model: torrentModel)
                     }
                     PostDownloadCard(presentation: presentation)
                 }

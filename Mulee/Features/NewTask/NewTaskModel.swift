@@ -40,6 +40,11 @@ final class NewTaskModel {
         })
     }
     var hasVideoLinks: Bool { links.contains { $0.link.kind == .video } }
+    var torrentDownloadModes: [ParsedLink: (sequentialDownload: Bool, firstLastPriority: Bool)] {
+        Dictionary(uniqueKeysWithValues: links.filter { $0.link.kind == .bittorrent }.map {
+            ($0.link, (sequentialDownload: $0.sequentialDownload, firstLastPriority: $0.firstLastPriority))
+        })
+    }
     var showsAutoExtract: Bool { links.isEmpty || links.contains { $0.link.kind != .video } }
 
     var videoLoginSites: [VideoSite] {
@@ -104,7 +109,8 @@ final class NewTaskModel {
         }
         model.addTasks(
             from: downloadLinks, autoExtract: autoExtract, directory: saveDirectory,
-            filePriorities: filePriorities, videoEntries: videoEntries, contexts: expandedContexts
+            filePriorities: filePriorities, torrentDownloadModes: torrentDownloadModes,
+            videoEntries: videoEntries, contexts: expandedContexts
         )
     }
 

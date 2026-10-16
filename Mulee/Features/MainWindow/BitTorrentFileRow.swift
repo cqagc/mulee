@@ -26,11 +26,12 @@ struct BitTorrentFileRow: View {
             .foregroundStyle(.secondary)
             ProgressView(value: progress)
                 .accessibilityLabel("文件下载进度")
+                .accessibilityValue(progress.formatted(.percent.precision(.fractionLength(0))))
         }
     }
 
     private var progress: Double {
-        file.size > 0 ? min(1, max(0, Double(file.done) / Double(file.size))) : 1
+        BitTorrentFilesModel.progress(for: file)
     }
 
     private func setSelected(_ selected: Bool) {

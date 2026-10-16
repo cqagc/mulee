@@ -17,6 +17,8 @@ final class NewTaskLinkModel: Identifiable {
     var videoQuality = NewTaskVideoQuality.compatible1080p
     var danmakuToASS = true
     var ccSubtitles = true
+    var sequentialDownload = false
+    var firstLastPriority = false
 
     var id: ParsedLink { link }
 
