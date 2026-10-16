@@ -5,6 +5,53 @@ import Testing
 @testable import Mulee
 
 @Suite @MainActor struct MainWindowTests {
+    @Test func menuPanelRecreationDoesNotReplayWindowRequest() {
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        #expect(!model.consumeMainWindowRequest(0))
+        model.mainWindowRequest += 1
+        #expect(model.consumeMainWindowRequest(model.mainWindowRequest))
+        // 面板和标签重建都会重新执行 initial 回调，但不能再次呈现窗口。
+        #expect(!model.consumeMainWindowRequest(model.mainWindowRequest))
+        #expect(!model.consumeMainWindowRequest(model.mainWindowRequest))
+        model.mainWindowRequest += 1
+        #expect(model.consumeMainWindowRequest(model.mainWindowRequest))
+    }
+
+    @Test func activationDoesNotRequestWindowButDockReopenDoes() throws {
+        let temporary = try TemporaryDefaults(prefix: "window-activation.")
+        defer { temporary.clean() }
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let delegate = AppDelegate()
+        delegate.configure(model: model, settings: SettingsModel(defaults: temporary.defaults), usesSampleData: true)
+        defer { delegate.openURLRouter?.stopCookieCleanup() }
+        let entry: any NSApplicationDelegate = delegate
+        entry.applicationDidBecomeActive?(Notification(name: NSApplication.didBecomeActiveNotification))
+        #expect(model.mainWindowRequest == 0)
+        #expect(!delegate.applicationShouldHandleReopen(NSApplication.shared, hasVisibleWindows: true))
+        #expect(model.mainWindowRequest == 1)
+    }
+
+    @Test func nativeSplitViewRegistersDropsAboveAllThreePanes() throws {
+        let temporary = try TemporaryDefaults(prefix: "window-drop.")
+        defer { temporary.clean() }
+        let state = MainWindowState(defaults: temporary.defaults)
+        let controller = makeController(state: state)
+        controller.view.frame = NSRect(x: 0, y: 0, width: 1240, height: 780)
+        controller.view.layoutSubtreeIfNeeded()
+        let receiver = try #require(controller.splitView as? MainWindowDropView)
+        let pasteboard = NSPasteboard.withUniqueName()
+        defer { pasteboard.releaseGlobally() }
+        pasteboard.setString("https://example.com/download.zip", forType: .string)
+        #expect(receiver.dropOperation(for: pasteboard, allowed: .copy) == .copy)
+        #expect(receiver.dropOperation(for: pasteboard, allowed: .link) == .link)
+        #expect(receiver.dropOperation(for: pasteboard, allowed: .move).isEmpty)
+        #expect(Set(controller.splitView.registeredDraggedTypes).isSuperset(of: OpenURLDropHandler.pasteboardTypes))
+        #expect(controller.splitViewItems.count == 3)
+        for item in controller.splitViewItems {
+            #expect(item.viewController.view.isDescendant(of: controller.splitView))
+        }
+    }
+
     @Test func restoresCollapseStateAndExpandedWidths() throws {
         let temporary = try TemporaryDefaults(prefix: "main-window.")
         defer { temporary.clean() }

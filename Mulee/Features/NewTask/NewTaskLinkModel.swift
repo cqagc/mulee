@@ -15,6 +15,9 @@ final class NewTaskLinkModel: Identifiable {
     private(set) var videoFormatsError: String?
     private var didLoadVideoFormats = false
     var videoFormatID = ""
+    var duplicateRecordID: UUID?
+    var duplicateIsPrivate: Bool?
+    var duplicateWasDeleted = false
     var duplicateTaskID: String?
     var duplicateMessage: String?
     var canMergeTrackers = false

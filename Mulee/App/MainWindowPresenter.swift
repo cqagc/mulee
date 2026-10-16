@@ -8,7 +8,7 @@ struct MainWindowPresenter: ViewModifier {
 
     func body(content: Content) -> some View {
         content.onChange(of: model.mainWindowRequest, initial: true) { _, request in
-            guard request > 0 else { return }
+            guard model.consumeMainWindowRequest(request) else { return }
             present()
         }
     }

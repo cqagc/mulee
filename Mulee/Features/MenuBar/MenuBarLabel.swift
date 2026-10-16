@@ -37,33 +37,15 @@ struct MenuBarLabel: View {
 struct NewTaskDropReceiver: ViewModifier {
     @Environment(AppModel.self) private var model
 
+    var showsHint = false
+    @State private var isTargeted = false
+
     func body(content: Content) -> some View {
-        content.onDrop(of: [.fileURL, .url, .plainText], isTargeted: nil) { providers in
-            let accepted = providers.filter { provider in
-                provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier)
-                    || provider.hasItemConformingToTypeIdentifier(UTType.url.identifier)
-                    || provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier)
-            }
-            guard !accepted.isEmpty else { return false }
-            for provider in accepted {
-                let type = provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) ? UTType.fileURL
-                    : provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) ? UTType.url : UTType.plainText
-                provider.loadItem(forTypeIdentifier: type.identifier, options: nil) { value, _ in
-                    let text: String?
-                    if let url = value as? URL {
-                        text = NewTaskModel.droppedURLText(url)
-                    } else if let data = value as? Data, let value = String(data: data, encoding: .utf8) {
-                        text = NewTaskModel.droppedText(value)
-                    } else if let value = value as? String {
-                        text = NewTaskModel.droppedText(value)
-                    } else {
-                        text = nil
-                    }
-                    guard let text, !text.isEmpty else { return }
-                    Task { @MainActor in model.showNewTask(prefill: text) }
-                }
-            }
-            return true
+        content.onDrop(of: OpenURLDropHandler.types, isTargeted: $isTargeted) { providers in
+            OpenURLDropHandler.accept(providers, model: model)
+        }
+        .overlay {
+            if showsHint && isTargeted { NewTaskDropHint() }
         }
     }
 }

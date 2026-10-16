@@ -3,6 +3,25 @@ import Testing
 @testable import MuleeCore
 
 @Suite struct SmartPasteParserTests {
+    @Test func localTorrentPathsShareTotalExpansionLimit() {
+        let rows = SmartPasteParser.parse("https://example.com/[1-1000].zip\n/tmp/sample.torrent")
+        #expect(rows.flatMap(\.links).isEmpty)
+        #expect(rows.first?.message.contains("1000") == true)
+    }
+
+    @Test func absoluteTorrentPathsKeepSpacesUnicodeHashAndLiteralRanges() throws {
+        let path = "/tmp/拖我 [1-3] #100% 测试.torrent"
+        let rows = SmartPasteParser.parse(path)
+        #expect(rows.count == 1)
+        let links = rows.flatMap(\.links)
+        #expect(links.count == 1)
+        guard case .torrentFile(let url, _) = try #require(links.first) else {
+            Issue.record("绝对路径应识别为本地种子")
+            return
+        }
+        #expect(url.path == path)
+    }
+
     @Test func torrentFilesHaveTheirOwnRecognitionMessage() throws {
         let rows = SmartPasteParser.parse("file:///tmp/sample.torrent")
         #expect(rows.first?.links.count == 1)

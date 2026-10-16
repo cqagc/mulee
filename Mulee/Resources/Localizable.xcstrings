@@ -15360,6 +15360,35 @@
         }
       }
     },
+    "松开以添加下载": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "松开以添加下载"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drop to add downloads"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放開以新增下載"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドロップしてダウンロードを追加"
+          }
+        }
+      }
+    },
     "查看进度、来源和完成后的处理信息。": {
       "extractionState": "manual",
       "localizations": {

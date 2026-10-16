@@ -1,9 +1,145 @@
+import AppKit
 import Foundation
 import MuleeCore
 import Testing
 @testable import Mulee
 
 @Suite @MainActor struct NewTaskSmartPasteTests {
+    @Test func droppedMagnetFileAndWeblocUseSharedParserAndAppendDraft() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let magnet = "magnet:?xt=urn:btih:" + String(repeating: "a", count: 40)
+        let magnetFile = root.appendingPathComponent("链接.magnet")
+        try Data(magnet.utf8).write(to: magnetFile)
+        #expect(NewTaskModel.droppedURLText(magnetFile) == magnet)
+        let webloc = root.appendingPathComponent("sample.webloc")
+        try PropertyListSerialization.data(fromPropertyList: ["URL": "https://example.com/drop.zip"], format: .xml, options: 0).write(to: webloc)
+        let app = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        app.showNewTask(prefill: "https://example.com/first.zip")
+        app.newTaskDraft.consumePendingText(from: app)
+        let provider = NSItemProvider(contentsOf: webloc)!
+        #expect(OpenURLDropHandler.accept([provider], model: app))
+        for _ in 0..<100 where app.pendingNewTaskText.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        app.newTaskDraft.consumePendingText(from: app)
+        #expect(app.newTaskDraft.linkCount == 2)
+        #expect(app.newTaskDraft.inputText.contains("https://example.com/drop.zip"))
+        #expect(app.isShowingNewTask)
+        #expect(app.tasks.isEmpty)
+    }
+
+    @Test func localTorrentPrefillUsesReadablePathAndKeepsLiteralFilename() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("拖我 [1-3] #100% 测试.torrent")
+        try Data("d4:infod6:lengthi1e4:name6:sampleee".utf8).write(to: file)
+        let draft = NewTaskModel()
+        #expect(draft.appendTorrentFiles([file]))
+        #expect(draft.inputText == file.path)
+        #expect(draft.parsedLinks == LinkParser.parse(file.absoluteString))
+        #expect(draft.linkCount == 1)
+        #expect(draft.links.first?.metadataError == nil)
+        draft.inputText = file.path
+        #expect(draft.linkCount == 1)
+        #expect(draft.links.first?.metadataError == nil)
+        let app = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        app.showNewTask(prefill: file.absoluteString)
+        let opened = NewTaskModel()
+        opened.consumePendingText(from: app)
+        #expect(opened.inputText == file.path)
+        #expect(opened.links.first?.metadataError == nil)
+    }
+
+    @Test(arguments: [false, true])
+    func duplicateMagnetAppearsBeforeStarting(deleted: Bool) throws {
+        let text = "magnet:?xt=urn:btih:" + String(repeating: "b", count: 40)
+        var task = DownloadTask(link: try #require(LinkParser.parse(text).first), autoExtract: false)
+        if deleted { task.deletedAt = .now }
+        let app = AppModel(tasks: [task], preventsSleepWhileDownloading: false)
+        app.showNewTask(prefill: text)
+        app.newTaskDraft.consumePendingText(from: app)
+        let item = try #require(app.newTaskDraft.links.first)
+        #expect(item.duplicateMessage != nil)
+        if deleted { #expect(item.duplicateMessage?.contains("最近删除") == true) }
+        #expect(!item.duplicateAcknowledged)
+    }
+
+    @Test func localTorrentDuplicateAppearsImmediatelyAfterTyping() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("sample.torrent")
+        try Data("d4:infod6:lengthi1e4:name6:sampleee".utf8).write(to: file)
+        let parsed = NewTaskLinkModel(link: try #require(LinkParser.parse(file.absoluteString).first))
+        let hash = try #require(parsed.infoHash)
+        let existing = try #require(LinkParser.parse("magnet:?xt=urn:btih:" + hash).first)
+        let app = AppModel(tasks: [DownloadTask(link: existing, autoExtract: false)], preventsSleepWhileDownloading: false)
+        app.showNewTask(prefill: "https://example.com/first.zip")
+        app.newTaskDraft.consumePendingText(from: app)
+        app.newTaskDraft.inputText = file.path
+        #expect(app.newTaskDraft.links.first?.duplicateMessage != nil)
+    }
+
+    @Test func pasteboardMixedFilesAndTextPreserveOrderAndOnlyPrefill() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let torrent = root.appendingPathComponent("中文 # 测试.torrent")
+        try Data("d4:infod6:lengthi1e4:name6:sampleee".utf8).write(to: torrent)
+        let magnet = "magnet:?xt=urn:btih:" + String(repeating: "c", count: 40)
+        let file = root.appendingPathComponent("sample.magnet")
+        try Data(magnet.utf8).write(to: file)
+        let webloc = root.appendingPathComponent("sample.webloc")
+        let remote = "https://example.com/drop.zip"
+        try PropertyListSerialization.data(fromPropertyList: ["URL": remote], format: .binary, options: 0).write(to: webloc)
+        let pasteboard = NSPasteboard.withUniqueName()
+        defer { pasteboard.releaseGlobally() }
+        var items: [NSPasteboardItem] = []
+        for (type, value) in [(NSPasteboard.PasteboardType.fileURL, torrent.absoluteString),
+                              (.fileURL, file.absoluteString), (.fileURL, webloc.absoluteString),
+                              (.URL, "https://example.com/url.zip"), (.string, "https://example.com/string.zip")] {
+            let item = NSPasteboardItem()
+            item.setString(value, forType: type)
+            items.append(item)
+        }
+        #expect(pasteboard.writeObjects(items))
+        let expected = [torrent.path, magnet, remote, "https://example.com/url.zip", "https://example.com/string.zip"]
+        #expect(OpenURLDropHandler.text(from: pasteboard)?.components(separatedBy: "\n") == expected)
+        #expect(OpenURLDropHandler.text(from: torrent as Any) == torrent.path)
+        #expect(OpenURLDropHandler.text(from: Data(remote.utf8) as Any) == remote)
+        #expect(OpenURLDropHandler.text(from: "invalid" as Any) == nil)
+        #expect(NewTaskModel.droppedText(torrent.absoluteString + "\n" + remote) == torrent.path + "\n" + remote)
+        #expect(NewTaskModel.droppedURLText(URL(string: "file://example.com/tmp/private.torrent")!) == nil)
+        let app = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        #expect(OpenURLDropHandler.accept(pasteboard, model: app))
+        #expect(app.isShowingNewTask)
+        app.newTaskDraft.consumePendingText(from: app)
+        #expect(app.newTaskDraft.linkCount == 5)
+        #expect(app.tasks.isEmpty)
+    }
+
+    @Test func duplicateWarningFollowsHistoryChangesWithoutStarting() throws {
+        let text = "magnet:?xt=urn:btih:" + String(repeating: "d", count: 40)
+        let task = DownloadTask(link: try #require(LinkParser.parse(text).first), autoExtract: false)
+        let app = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        app.showNewTask(prefill: text)
+        app.newTaskDraft.consumePendingText(from: app)
+        let item = try #require(app.newTaskDraft.links.first)
+        #expect(item.duplicateMessage == nil)
+        app.tasks = [task]
+        #expect(item.duplicateMessage != nil)
+        item.duplicateAcknowledged = true
+        app.tasks[0].deletedAt = .now
+        #expect(item.duplicateMessage?.contains("最近删除") == true)
+        #expect(!item.duplicateAcknowledged)
+        app.tasks.removeAll()
+        #expect(item.duplicateMessage == nil)
+        #expect(!item.canMergeTrackers)
+    }
+
     @Test func pasteCarriesRequestContextAndDoesNotPersistCookies() throws {
         let draft = NewTaskModel(inputText: "curl https://example.com/file.zip -H 'X-Test: sample' -b 'session=sample' -A Example")
         let item = try #require(draft.links.first)
@@ -138,7 +274,7 @@ import Testing
         let url = "https://example.com/sample.zip"
         try PropertyListSerialization.data(fromPropertyList: ["URL": url], format: .xml, options: 0).write(to: file)
         #expect(NewTaskModel.droppedURLText(file) == url)
-        #expect(NewTaskModel.droppedText("file:///tmp/sample.torrent") == "file:///tmp/sample.torrent")
+        #expect(NewTaskModel.droppedText("file:///tmp/sample.torrent") == "/tmp/sample.torrent")
         #expect(NewTaskModel.droppedText("invalid") == nil)
         #expect(NewTaskModel.droppedURLText(root.appendingPathComponent("sample.txt")) == nil)
         let app = AppModel(tasks: [])
@@ -213,9 +349,12 @@ import Testing
             let temporaryDefaults = try TemporaryDefaults(prefix: "newtask.")
             defer { temporaryDefaults.clean() }
             let settings = SettingsModel(defaults: temporaryDefaults.defaults)
-            #expect(await draft.checkBeforeAdding(in: app, settings: settings) == false)
+            draft.refreshDuplicateWarnings(in: app)
+            await draft.resolveDuplicateMetadata(in: app)
             let item = try #require(draft.links.first)
+            #expect(item.duplicateMessage?.contains("公开种子") == true)
             #expect(item.canMergeTrackers)
+            #expect(await draft.checkBeforeAdding(in: app, settings: settings) == false)
             #expect(!item.duplicateAcknowledged)
             await draft.mergeTrackers(for: item, in: app)
             #expect(item.duplicateAcknowledged)

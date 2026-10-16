@@ -14,8 +14,8 @@ struct MainWindowView: View {
             .sheet(isPresented: $model.isShowingNewTask) {
                 NewTaskSheet()
             }
-            .onDrop(of: OpenURLDropHandler.types, isTargeted: nil) { providers in
-                OpenURLDropHandler.accept(providers, model: model)
+            .overlay {
+                if state.isDropTargeted { NewTaskDropHint() }
             }
             .alert("无法打开链接", isPresented: Binding(
                 get: { model.openURLIssue != nil },
@@ -28,6 +28,23 @@ struct MainWindowView: View {
             .onChange(of: state.selection) { state.clearHiddenSelection(in: model) }
             .onChange(of: state.search) { state.clearHiddenSelection(in: model) }
             .onChange(of: model.tasks) { state.clearHiddenSelection(in: model) }
+    }
+}
+
+struct NewTaskDropHint: View {
+    var body: some View {
+        ZStack {
+            Color.accentColor.opacity(0.15)
+            Text("松开以添加下载")
+                .font(.title2.weight(.semibold))
+                .padding(24)
+                .background(.regularMaterial, in: .rect(cornerRadius: 12))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [8, 5]))
+        }
+        .allowsHitTesting(false)
     }
 }
 

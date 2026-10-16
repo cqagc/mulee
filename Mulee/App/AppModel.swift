@@ -8,6 +8,7 @@ import Observation
 final class AppModel {
     var tasks: [DownloadTask] {
         didSet {
+            newTaskDraft.refreshDuplicateWarnings(in: self)
             extractionCoordinator?.tasksDidChange()
             updateSleepPrevention()
             notificationService?.tasksDidChange()
@@ -40,6 +41,7 @@ final class AppModel {
     @ObservationIgnored weak var slowModeController: SlowModeController?
     @ObservationIgnored var downloadSettings: SettingsModel?
     var mainWindowRequest = 0
+    @ObservationIgnored private var presentedMainWindowRequest = 0
     @ObservationIgnored weak var settingsRuntime: SettingsRuntime?
     var bitTorrent: BitTorrentController?
     var publicTrackers: PublicTrackerController?
@@ -125,6 +127,13 @@ final class AppModel {
     /// 是否有任务在传输或后处理；睡眠判定还会结合完成后允许睡眠的偏好。
     var hasActiveTransfers: Bool {
         tasks.contains { $0.deletedAt == nil && [.downloading, .seeding, .extracting, .postProcessing].contains($0.status) }
+    }
+
+    func consumeMainWindowRequest(_ request: Int) -> Bool {
+        guard request > presentedMainWindowRequest else { return false }
+        // 标签和面板会重建；请求归应用持有，不能随着视图生命周期重放。
+        presentedMainWindowRequest = request
+        return true
     }
 
     /// 打开「新建下载」面板，可选预填文本。

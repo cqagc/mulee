@@ -8,6 +8,7 @@ import Observation
 final class MainWindowState {
     var selection: SidebarItem? = .all
     var search = ""
+    var isDropTargeted = false
     var isSidebarCollapsed: Bool {
         didSet { defaults.set(isSidebarCollapsed, forKey: "mainWindow.sidebarCollapsed") }
     }

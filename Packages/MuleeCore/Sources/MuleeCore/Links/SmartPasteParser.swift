@@ -51,7 +51,11 @@ public enum SmartPasteParser {
                 }
                 var expanded: [String] = []
                 for url in urls {
-                    let batch = try BatchURLExpander.expand(url, limit: 1000 - expandedCount)
+                    // 本地路径是字面文件名，不能把文件名中的 [1-3] 当成批量地址。
+                    let localTorrent = url.hasPrefix("/") && url.lowercased().hasSuffix(".torrent")
+                        || (URL(string: url)?.isFileURL == true)
+                    if localTorrent, expandedCount >= 1000 { throw BatchURLExpander.ExpansionError.tooMany }
+                    let batch = localTorrent ? [url] : try BatchURLExpander.expand(url, limit: 1000 - expandedCount)
                     expandedCount += batch.count
                     expanded.append(contentsOf: batch)
                 }

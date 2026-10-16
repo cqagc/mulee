@@ -110,7 +110,11 @@ struct NewTaskSheet: View {
                 item.applyJunkFilter(BitTorrentEngineConfiguration.configuration(from: settings))
             }
         }
-        .dropDestination(for: URL.self, action: dropTorrentFiles)
+        .task(id: draft.parsedLinks) {
+            draft.refreshDuplicateWarnings(in: model)
+            await draft.resolveDuplicateMetadata(in: model)
+        }
+        .modifier(NewTaskDropReceiver(showsHint: true))
         .onAppear(perform: prepareDraft)
         .onChange(of: model.pendingNewTaskText) {
             prepareDraft()
@@ -126,10 +130,6 @@ struct NewTaskSheet: View {
         if panel.runModal() == .OK {
             draft.appendTorrentFiles(panel.urls)
         }
-    }
-
-    private func dropTorrentFiles(_ urls: [URL], _ location: CGPoint) -> Bool {
-        draft.appendTorrentFiles(urls)
     }
 
     private func prepareDraft() {

@@ -11,6 +11,7 @@ final class MainSplitViewController: NSSplitViewController {
         self.state = state
         self.model = model
         super.init(nibName: nil, bundle: nil)
+        splitView = MainWindowDropView(state: state, model: model)
         splitView.isVertical = true
         splitView.dividerStyle = .thin
         splitView.setAccessibilityIdentifier("main-split")
@@ -131,5 +132,56 @@ final class MainSplitViewController: NSSplitViewController {
 
     override func toggleInspector(_ sender: Any?) {
         setCollapsed(!splitViewItems[2].isCollapsed, at: 2)
+    }
+}
+
+/// 在 AppKit 三栏的共同祖先接收拖放，不依赖 SwiftUI 跨 hosting controller 传递事件。
+final class MainWindowDropView: NSSplitView {
+    private let state: MainWindowState
+    private let model: AppModel
+
+    init(state: MainWindowState, model: AppModel) {
+        self.state = state
+        self.model = model
+        super.init(frame: .zero)
+        registerForDraggedTypes(OpenURLDropHandler.pasteboardTypes)
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        let operation = dropOperation(for: sender.draggingPasteboard, allowed: sender.draggingSourceOperationMask)
+        state.isDropTargeted = !operation.isEmpty
+        return operation
+    }
+
+    func dropOperation(for pasteboard: NSPasteboard, allowed: NSDragOperation) -> NSDragOperation {
+        guard OpenURLDropHandler.text(from: pasteboard) != nil else { return [] }
+        // 浏览器可能只提供 link，Finder 通常提供 copy；两者都只预填草稿。
+        if allowed.contains(.copy) { return .copy }
+        if allowed.contains(.link) { return .link }
+        if allowed.contains(.generic) { return .generic }
+        return []
+    }
+
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        draggingEntered(sender)
+    }
+
+    override func draggingExited(_ sender: (any NSDraggingInfo)?) {
+        state.isDropTargeted = false
+    }
+
+    override func draggingEnded(_ sender: any NSDraggingInfo) {
+        state.isDropTargeted = false
+    }
+
+    override func prepareForDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        OpenURLDropHandler.text(from: sender.draggingPasteboard) != nil
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        state.isDropTargeted = false
+        return OpenURLDropHandler.accept(sender.draggingPasteboard, model: model)
     }
 }

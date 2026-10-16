@@ -221,16 +221,24 @@ import Testing
         #expect(FileManager.default.fileExists(atPath: file.path))
     }
 
-    @Test(arguments: [false, true])
-    func controllerArchivesOnlyAfterConfirmedEngineAddition(autoStart: Bool) async throws {
+    @Test(arguments: [false, true], [false, true])
+    func controllerArchivesOnlyAfterConfirmedEngineAddition(autoStart: Bool, localTorrent: Bool) async throws {
         let folder = try temporaryFolder()
         defer { try? FileManager.default.removeItem(at: folder) }
         let watched = folder.appending(path: "watched", directoryHint: .isDirectory)
         let downloads = folder.appending(path: "downloads", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: watched, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: downloads, withIntermediateDirectories: true)
-        let file = watched.appending(path: "existing.magnet")
-        try Data(magnet.utf8).write(to: file)
+        let file = watched.appending(path: localTorrent ? "中文 # 种子.torrent" : "existing.magnet")
+        var expectedHash: String?
+        if localTorrent {
+            let data = Data("d4:infod6:lengthi1e4:name6:sample12:piece lengthi16384e6:pieces20:".utf8)
+                + Data(repeating: 0, count: 20) + Data("ee".utf8)
+            try data.write(to: file)
+            expectedHash = try TorrentFileInfo.parse(data: data).infoHash
+        } else {
+            try Data(magnet.utf8).write(to: file)
+        }
         let storage = try TemporaryDefaults(prefix: "WatchFolderController.")
         defer { storage.clean() }
         let settings = SettingsModel(defaults: storage.defaults)
@@ -266,7 +274,20 @@ import Testing
                 try await Task.sleep(for: .milliseconds(100))
             }
             #expect(!FileManager.default.fileExists(atPath: file.path))
-            #expect(app.tasks.contains { $0.engineTaskID != nil && $0.sourceLink == magnet })
+            let added = try #require(app.tasks.first)
+            #expect(added.engineTaskID != nil)
+            if localTorrent {
+                #expect(added.engineTaskID == expectedHash)
+                let link = try #require(LinkParser.parse(added.sourceLink).first)
+                guard case .torrentFile(let sourceURL, _) = link else {
+                    Issue.record("本地种子应保留文件来源")
+                    await coordinator.stop()
+                    return
+                }
+                #expect(sourceURL.lastPathComponent == file.lastPathComponent)
+            } else {
+                #expect(added.sourceLink == magnet)
+            }
             #expect(app.bitTorrent?.watchFolders.lastError == nil)
             await coordinator.stop()
         } catch {

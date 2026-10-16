@@ -27,6 +27,8 @@ final class NewTaskModel {
     private var hasPrefilledDirectory = false
     private var hasAppliedSettingsDefaults = false
 
+    @ObservationIgnored private weak var appModel: AppModel?
+
     private let parser: ((String) -> [ParsedLink])?
     private let metadataProvider: (any TorrentMetadataProvider)?
 
@@ -96,6 +98,8 @@ final class NewTaskModel {
 
     /// 从全局状态取走预填文本，追加到已有草稿；空预填不改变草稿。
     func consumePendingText(from model: AppModel) {
+        appModel = model
+        refreshDuplicateWarnings(in: model)
         let pendingText = model.pendingNewTaskText
         guard !pendingText.isEmpty else { return }
         if let directory = model.pendingNewTaskDirectory {
@@ -117,7 +121,7 @@ final class NewTaskModel {
     func mergePrefillText(_ text: String) {
         guard !text.isEmpty else { return }
         let separator = inputText.isEmpty || inputText.hasSuffix("\n") ? "" : "\n"
-        inputText += separator + text
+        inputText += separator + Self.readableText(text)
     }
 
     var downloadLinks: [ParsedLink] {
@@ -187,38 +191,8 @@ final class NewTaskModel {
         defer { isChecking = false }
         let originalText = inputText
         let directory = saveDirectory
-        var seenHashes = Set<String>()
-        for item in links {
-            guard let hash = item.infoHash else { continue }
-            let existing = NewTaskLinkModel.existingTorrent(infoHash: hash, tasks: model.tasks)
-            let repeated = !seenHashes.insert(hash).inserted
-            guard existing != nil || repeated else {
-                item.duplicateMessage = nil
-                item.duplicateTaskID = nil
-                item.canMergeTrackers = false
-                item.duplicateAcknowledged = false
-                continue
-            }
-            item.duplicateTaskID = existing?.engineTaskID
-            item.canMergeTrackers = false
-            if existing?.deletedAt != nil {
-                item.duplicateMessage = String(localized: "这个种子已在最近删除里，请恢复任务，或彻底删除后再添加。")
-            } else if repeated, existing == nil {
-                item.duplicateMessage = String(localized: "本次列表中已有相同种子。请保留第一项，跳过本次重复项。")
-            } else if item.torrentInfo?.isPrivate == true {
-                item.duplicateMessage = String(localized: "这个私有种子已存在，不会合并 tracker。请使用已有任务。")
-            } else if let id = existing?.engineTaskID, let engine = model.bitTorrent?.engine,
-                      let info = try? await engine.taskInfo(id), info.hasMetadata {
-                if info.isPrivate {
-                    item.duplicateMessage = String(localized: "这个私有种子已存在，不会合并 tracker。请使用已有任务。")
-                } else {
-                    item.canMergeTrackers = !item.trackers.isEmpty
-                    item.duplicateMessage = String(localized: "这个公开种子已存在。可合并本次 tracker，或保留已有任务。")
-                }
-            } else {
-                item.duplicateMessage = String(localized: "这个种子已存在，尚无法确认公开状态，不会合并 tracker。请使用已有任务。")
-            }
-        }
+        refreshDuplicateWarnings(in: model)
+        await resolveDuplicateMetadata(in: model)
         guard inputText == originalText, saveDirectory == directory, !Task.isCancelled else { return false }
         needsDuplicateChoice = settings.duplicateAction == .ask && links.contains { $0.link.kind == .http }
         showsEngineDuplicateNote = settings.duplicateAction != .rename
@@ -241,6 +215,65 @@ final class NewTaskModel {
             reserved.insert(available)
         }
         return true
+    }
+
+    /// 解析完成即提示重复项，不能等到用户按下开始下载。
+    func refreshDuplicateWarnings(in model: AppModel) {
+        var seenHashes = Set<String>()
+        for item in links {
+            guard let hash = item.infoHash else { continue }
+            let existing = NewTaskLinkModel.existingTorrent(infoHash: hash, tasks: model.tasks)
+            let repeated = !seenHashes.insert(hash).inserted
+            guard existing != nil || repeated else {
+                item.duplicateMessage = nil
+                item.duplicateTaskID = nil
+                item.duplicateRecordID = nil
+                item.duplicateIsPrivate = nil
+                item.canMergeTrackers = false
+                item.duplicateAcknowledged = false
+                continue
+            }
+            let isDeleted = existing?.deletedAt != nil
+            if item.duplicateRecordID != existing?.id || item.duplicateTaskID != existing?.engineTaskID
+                || item.duplicateWasDeleted != isDeleted {
+                item.duplicateIsPrivate = nil
+                item.duplicateAcknowledged = false
+            }
+            item.duplicateWasDeleted = isDeleted
+            item.duplicateRecordID = existing?.id
+            item.duplicateTaskID = existing?.engineTaskID
+            item.canMergeTrackers = false
+            let message: String
+            if existing?.deletedAt != nil {
+                message = String(localized: "这个种子已在最近删除里，请恢复任务，或彻底删除后再添加。")
+            } else if repeated, existing == nil {
+                message = String(localized: "本次列表中已有相同种子。请保留第一项，跳过本次重复项。")
+            } else if item.torrentInfo?.isPrivate == true || item.duplicateIsPrivate == true {
+                message = String(localized: "这个私有种子已存在，不会合并 tracker。请使用已有任务。")
+            } else if item.torrentInfo?.isPrivate == false || item.duplicateIsPrivate == false {
+                item.canMergeTrackers = !item.trackers.isEmpty && item.duplicateTaskID != nil && model.bitTorrent != nil
+                message = String(localized: "这个公开种子已存在。可合并本次 tracker，或保留已有任务。")
+            } else {
+                message = String(localized: "这个种子已存在，尚无法确认公开状态，不会合并 tracker。请使用已有任务。")
+            }
+            // 已确认的同一重复项可保留选择；回收站等状态变化则必须重新确认。
+            if !item.duplicateAcknowledged { item.duplicateMessage = message }
+        }
+    }
+
+    func resolveDuplicateMetadata(in model: AppModel) async {
+        for item in links {
+            guard let hash = item.infoHash,
+                  let existing = NewTaskLinkModel.existingTorrent(infoHash: hash, tasks: model.tasks),
+                  existing.deletedAt == nil, let id = existing.engineTaskID,
+                  let engine = model.bitTorrent?.engine,
+                  let info = try? await engine.taskInfo(id), info.hasMetadata else { continue }
+            guard !Task.isCancelled, links.contains(where: { $0 === item }),
+                  model.tasks.contains(where: { $0.id == existing.id && $0.deletedAt == nil && $0.engineTaskID == id }) else { continue }
+            item.duplicateIsPrivate = info.isPrivate
+        }
+        guard !Task.isCancelled else { return }
+        refreshDuplicateWarnings(in: model)
     }
 
     static func availableFilename(
@@ -285,28 +318,46 @@ final class NewTaskModel {
 
     static func torrentFileText(_ urls: [URL]) -> String {
         urls.filter { $0.isFileURL && $0.pathExtension.lowercased() == "torrent" }
-            .map(\.absoluteString).joined(separator: "\n")
+            .map(\.path).joined(separator: "\n")
     }
 
     nonisolated static func droppedText(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let url = URL(string: trimmed), url.isFileURL { return droppedURLText(url) }
-        return SmartPasteParser.parse(trimmed).contains(where: { !$0.links.isEmpty }) ? trimmed : nil
+        if !trimmed.contains(where: \.isNewline), let url = URL(string: trimmed), url.isFileURL {
+            return droppedURLText(url)
+        }
+        return SmartPasteParser.parse(trimmed).contains(where: { !$0.links.isEmpty }) ? readableText(trimmed) : nil
     }
 
     nonisolated static func droppedURLText(_ url: URL) -> String? {
         guard url.isFileURL else {
             return SmartPasteParser.parse(url.absoluteString).contains(where: { !$0.links.isEmpty }) ? url.absoluteString : nil
         }
-        if url.pathExtension.lowercased() == "torrent" { return url.absoluteString }
-        guard url.pathExtension.lowercased() == "webloc" else { return nil }
+        guard url.host == nil || url.host == "" || url.host?.lowercased() == "localhost" else { return nil }
+        if url.pathExtension.lowercased() == "torrent" { return url.path }
+        guard ["webloc", "magnet"].contains(url.pathExtension.lowercased()) else { return nil }
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size <= 1_048_576,
-              let data = try? Data(contentsOf: url),
-              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+              let data = try? Data(contentsOf: url) else { return nil }
+        if url.pathExtension.lowercased() == "magnet" {
+            guard let text = String(data: data, encoding: .utf8) else { return nil }
+            let links = SmartPasteParser.parse(text).flatMap(\.links)
+            return links.isEmpty ? nil : readableText(links.map(\.original).joined(separator: "\n"))
+        }
+        guard let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
               let text = plist["URL"] as? String, let link = URL(string: text), !link.isFileURL else { return nil }
         return droppedText(text)
+    }
+
+    nonisolated static func readableText(_ text: String) -> String {
+        text.components(separatedBy: "\n").map { line in
+            let value = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let url = URL(string: value), url.isFileURL,
+                  url.host == nil || url.host == "" || url.host?.lowercased() == "localhost",
+                  url.pathExtension.lowercased() == "torrent" else { return line }
+            return url.path
+        }.joined(separator: "\n")
     }
 
     private func parseInput() {
@@ -323,12 +374,20 @@ final class NewTaskModel {
             for link in row.links { parsedContexts[link] = row.context }
         }
         var seen = Set<ParsedLink>()
-        let parsed = (parser?(inputText) ?? inputRows.flatMap(\.links)).filter { seen.insert($0).inserted }
+        // 输入框显示可读路径，内部仍保留系统打开时的 file URL 身份，供监视文件夹确认与上下文匹配。
+        let sourceLinks = parser?(inputText) ?? inputRows.flatMap(\.links).map { link -> ParsedLink in
+            if case .torrentFile(let url, _) = link, url.isFileURL {
+                return .torrentFile(url: url, original: url.absoluteString)
+            }
+            return link
+        }
+        let parsed = sourceLinks.filter { seen.insert($0).inserted }
         links = parsed.map { link in
             let item = previousLinks[link] ?? NewTaskLinkModel(link: link, metadataProvider: metadataProvider)
             item.requestContext = contexts[link]?.requestContext ?? parsedContexts[link] ?? item.requestContext
             if previousLinks[link] == nil { item.checksumText = contexts[link]?.checksum?.aria2Value ?? "" }
             return item
         }
+        if let appModel { refreshDuplicateWarnings(in: appModel) }
     }
 }
