@@ -9,9 +9,11 @@ struct TorrentdConfigureParameters: Codable, Sendable {
     let lsd: Bool
     let portMapping: Bool
     let encryption: TorrentEncryption
+    let diskCacheBytes: Int64
+    let blockedClients: [String]
 
     init(options: EngineOptions, settings: TorrentEngineSettings) {
-        // torrentd has no disk-cache field. libtorrent 2.0 uses mmap and the OS page cache.
+        // 仅控制写入队列，辅助进程将其限制在 1–256 MiB。
         downloadDir = options.downloadDirectory.path
         listenPort = settings.listenPort
         downloadLimit = options.downloadLimit
@@ -22,5 +24,7 @@ struct TorrentdConfigureParameters: Codable, Sendable {
         lsd = settings.lsd
         portMapping = settings.portMapping
         encryption = settings.encryption
+        diskCacheBytes = settings.diskCacheBytes
+        blockedClients = settings.blockedClients
     }
 }

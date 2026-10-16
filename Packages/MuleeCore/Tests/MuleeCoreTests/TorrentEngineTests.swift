@@ -44,6 +44,77 @@ import Testing
         }
     }
 
+    @Test("BT 诊断解析、下载模式及 tracker API")
+    func torrentControls() async throws {
+        let fake = TorrentFakeTransport()
+        try await TorrentFixtures.withEngine(fake: fake) { engine, root in
+            var settings = TorrentEngineSettings()
+            #expect(settings.diskCacheBytes == 16 * 1_024 * 1_024)
+            #expect(settings.blockedClients.isEmpty)
+            #expect(TorrentEngineSettings.defaultBlockedClients == ["-XL"])
+            try await engine.start(options: EngineOptions(downloadDirectory: root))
+            settings.diskCacheBytes = 64 * 1_024 * 1_024
+            settings.blockedClients = TorrentEngineSettings.defaultBlockedClients
+            try await engine.configure(settings)
+            #expect(await fake.sent.last?.parameters["disk_cache_bytes"] == .integer(64 * 1_024 * 1_024))
+            #expect(await fake.sent.last?.parameters["blocked_clients"] == .array([.string("-XL")]))
+            try await engine.setDownloadMode(TorrentFixtures.id, sequentialDownload: true, firstLastPriority: true)
+            #expect(await fake.sent.last?.parameters == [
+                "id": .string(TorrentFixtures.id), "sequential_download": .bool(true), "first_last_priority": .bool(true)
+            ])
+            await fake.setResult("add_trackers", .object(["added": .integer(1), "total": .integer(2)]))
+            let result = try await engine.addTrackers(TorrentFixtures.id, urls: ["https://tracker.invalid/announce"])
+            #expect(result.added == 1 && result.total == 2)
+            #expect(await fake.sent.last?.parameters["urls"] == .array([.string("https://tracker.invalid/announce")]))
+            let diagnostics: TorrentdValue = .object([
+                "connected_peers": .integer(2), "peer_sources": .object([
+                    "tracker": .integer(1), "dht": .integer(1), "pex": .integer(1), "lsd": .integer(0), "incoming": .integer(1)
+                ]),
+                "ipv4": .integer(1), "ipv6": .integer(1), "tcp": .integer(1), "utp": .integer(1),
+                "trackers_available": .integer(1), "trackers_failed": .integer(1), "trackers_pending": .integer(1),
+                "last_tracker_error": .string("fixture error"), "disk_backlogged": .bool(true),
+                "queued_disk_bytes": .integer(1_024), "disk_blocked_peers": .integer(1),
+                "disk_queue_limit": .integer(1_024 * 1_024), "blocked_clients_count": .integer(3)
+            ])
+            await fake.setResult("list", .object(["torrents": .array([TorrentFixtures.task([
+                "diagnostics": diagnostics, "sequential_download": .bool(true), "first_last_priority": .bool(true)
+            ])])]))
+            let info = try await engine.taskInfo(TorrentFixtures.id)
+            #expect(info.isFinished && info.sequentialDownload && info.firstLastPriority)
+            let sample = try #require(info.diagnostics)
+            #expect(sample.connectedPeers == 2 && sample.peerSources.pex == 1 && sample.peerSources.incoming == 1)
+            #expect(sample.ipv4 == 1 && sample.ipv6 == 1 && sample.tcp == 1 && sample.utp == 1)
+            #expect(sample.trackersAvailable == 1 && sample.trackersFailed == 1 && sample.trackersPending == 1)
+            #expect(sample.lastTrackerError == "fixture error")
+            #expect(sample.diskBacklogged == true && sample.diskBlockedPeers == 1 && sample.queuedDiskBytes == 1_024)
+            #expect(sample.diskQueueLimit == 1_024 * 1_024 && sample.blockedClientsCount == 3)
+        }
+    }
+
+    @Test("下载中高分享率不暂停或降速，包括私有种子和恢复任务", arguments: [TorrentSeedingAction.stop, .slowDown])
+    func downloadingRatio(_ policy: TorrentSeedingAction) async throws {
+        let fake = TorrentFakeTransport()
+        let settings = TorrentEngineSettings(seedingAction: policy, exemptPrivateTorrents: false)
+        try await TorrentFixtures.withEngine(fake: fake, settings: settings) { engine, root in
+            try await engine.start(options: EngineOptions(downloadDirectory: root))
+            for state in ["downloading", "checking", "metadata"] {
+                for isPrivate in [false, true] {
+                    await fake.setResult("list", .object(["torrents": .array([TorrentFixtures.task([
+                        "state": .string(state), "is_finished": .bool(false), "ratio": .double(2),
+                        "is_private": .bool(isPrivate), "total_wanted_done": .integer(600)
+                    ])])]))
+                    _ = try await engine.snapshots()
+                    #expect(await fake.sent.last?.method == "list")
+                }
+            }
+            await fake.setResult("list", .object(["torrents": .array([TorrentFixtures.task([
+                "ratio": .double(2), "is_private": .bool(true)
+            ])])]))
+            _ = try await engine.snapshots()
+            #expect(await fake.sent.last?.method == (policy == .stop ? "pause" : "set_upload_limit"))
+        }
+    }
+
     @Test("ready 前不发请求，ready 超时回收进程")
     func readyTimeout() async throws {
         let fake = TorrentFakeTransport(sendsReady: false)
@@ -75,7 +146,8 @@ import Testing
                 "download_dir": .string(root.path), "listen_port": .integer(12345),
                 "download_limit": .integer(1234), "upload_limit": .integer(5678),
                 "max_active_downloads": .integer(3), "max_active_seeds": .integer(7),
-                "dht": .bool(false), "lsd": .bool(false), "port_mapping": .bool(false), "encryption": .string("require")
+                "dht": .bool(false), "lsd": .bool(false), "port_mapping": .bool(false), "encryption": .string("require"),
+                "disk_cache_bytes": .integer(16 * 1_024 * 1_024), "blocked_clients": .array([])
             ])
             options.uploadLimit = 999
             try await engine.apply(options: options)

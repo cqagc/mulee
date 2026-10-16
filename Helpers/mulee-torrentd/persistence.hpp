@@ -3,6 +3,7 @@
 #include "protocol.hpp"
 #include <filesystem>
 #include <libtorrent/add_torrent_params.hpp>
+#include <libtorrent/session_params.hpp>
 #include <string>
 #include <vector>
 
@@ -14,6 +15,8 @@ struct Metadata {
     json::value source = nullptr;
     std::int64_t added_at = 0;
     json::value completed_at = nullptr;
+    bool sequential_download = false;
+    bool first_last_priority = false;
 };
 
 std::string torrent_id(const lt::info_hash_t& hashes);
@@ -32,6 +35,8 @@ public:
     void save_meta(const std::string& id, const Metadata& metadata);
     void save_resume(const std::string& id, const lt::add_torrent_params& params);
     void remove(const std::string& id);
+    lt::session_params load_dht();
+    void save_dht(const lt::session_params& params);
 
 private:
     fs::path directory_;

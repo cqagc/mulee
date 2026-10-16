@@ -44,7 +44,42 @@ import Testing
         _ policy: TorrentSeedingAction, _ exempt: Bool, _ expected: SeedingPolicyAction
     ) {
         let settings = TorrentEngineSettings(seedingAction: policy, exemptPrivateTorrents: exempt)
-        #expect(SeedingPolicy.action(ratio: ratio, isPrivate: isPrivate, paused: paused, uploadLimit: limit, settings: settings) == expected)
+        #expect(SeedingPolicy.action(ratio: ratio, isFinished: true, isPrivate: isPrivate, paused: paused, uploadLimit: limit, settings: settings) == expected)
+    }
+
+    @Test("下载未完成时分享率不触发策略", arguments: [TorrentSeedingAction.stop, .slowDown])
+    func unfinishedPolicy(_ action: TorrentSeedingAction) {
+        for isPrivate in [false, true] {
+            let settings = TorrentEngineSettings(seedingAction: action, exemptPrivateTorrents: false)
+            #expect(SeedingPolicy.action(
+                ratio: 3, isFinished: false, isPrivate: isPrivate,
+                paused: false, uploadLimit: 0, settings: settings
+            ) == .none)
+        }
+    }
+
+    @Test("选择性下载按所选内容完成，恢复校验和历史完成时间不触发", arguments: [
+        ("downloading", false, Int64(600), false),
+        ("checking", true, 1234, false),
+        ("metadata", true, 1234, false),
+        ("seeding", true, 600, false),
+        ("seeding", true, 1234, true),
+        ("finished", true, 1234, true)
+    ])
+    func selectedCompletion(_ state: String, _ finished: Bool, _ done: Int64, _ expected: Bool) throws {
+        let task = try TorrentFixtures.decodeTask(TorrentFixtures.task([
+            "state": .string(state), "is_finished": .bool(finished),
+            "total_wanted_done": .integer(done), "completed_at": .integer(200),
+            "is_private": .bool(true), "ratio": .double(3)
+        ]))
+        #expect(task.selectedFileCount < task.fileCount)
+        #expect(task.canApplySeedingPolicy == expected)
+        let noSelection = try TorrentFixtures.decodeTask(TorrentFixtures.task([
+            "selected_file_count": .integer(0), "total_wanted": .integer(0)
+        ]))
+        #expect(!noSelection.canApplySeedingPolicy)
+        let oldHelper = try TorrentFixtures.decodeTask(TorrentFixtures.task(["is_finished": .null]))
+        #expect(!oldHelper.canApplySeedingPolicy)
     }
 
     @Test("快照详情、路径、完成时间，元数据未知时大小为 nil")

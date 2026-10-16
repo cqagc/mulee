@@ -38,6 +38,17 @@ struct TorrentIntegrationTests {
                     #expect(snapshot.receivedBytes == Int64(payload.count))
                     #expect(snapshot.savePath?.lastPathComponent == "Ubuntu.txt")
                     #expect(try await engine.files(id).count == 1)
+                    try await engine.setDownloadMode(id, sequentialDownload: true, firstLastPriority: true)
+                    let details = try await engine.taskInfo(id)
+                    #expect(details.isFinished && details.sequentialDownload && details.firstLastPriority)
+                    let diagnostics = try #require(details.diagnostics)
+                    #expect(diagnostics.connectedPeers == 0)
+                    #expect(diagnostics.peerSources.incoming == 0)
+                    #expect(diagnostics.blockedClientsCount == 0)
+                    let addition = try await engine.addTrackers(id, urls: ["http://127.0.0.1:9/announce"])
+                    #expect(addition.added == 1 && addition.total == 1)
+                    let duplicate = try await engine.addTrackers(id, urls: ["http://127.0.0.1:9/announce"])
+                    #expect(duplicate.added == 0 && duplicate.total == 1)
                     break
                 }
                 guard ContinuousClock.now < deadline else { throw EngineError.launchFailed("做种自检超时") }

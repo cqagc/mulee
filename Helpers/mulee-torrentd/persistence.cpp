@@ -7,6 +7,8 @@
 #include <iostream>
 #include <iterator>
 #include <libtorrent/read_resume_data.hpp>
+#include <libtorrent/bdecode.hpp>
+#include <libtorrent/session_handle.hpp>
 #include <libtorrent/write_resume_data.hpp>
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -104,6 +106,10 @@ Metadata Persistence::load_meta(const std::string& id) {
         auto source = object.if_contains("source");
         if (source && (source->is_null() || source->is_string())) metadata.source = *source;
         metadata.added_at = required(object, "added_at").as_int64();
+        if (auto value = object.if_contains("sequential_download"); value && value->is_bool())
+            metadata.sequential_download = value->as_bool();
+        if (auto value = object.if_contains("first_last_priority"); value && value->is_bool())
+            metadata.first_last_priority = value->as_bool();
         auto completed = object.if_contains("completed_at");
         if (completed && (completed->is_null() || completed->is_int64())) metadata.completed_at = *completed;
     } catch (const std::exception& error) {
@@ -139,13 +145,56 @@ void Persistence::atomic_write(const fs::path& destination, const char* data, st
 
 void Persistence::save_meta(const std::string& id, const Metadata& metadata) {
     auto text = json::serialize(json::object{{"source", metadata.source}, {"added_at", metadata.added_at},
-        {"completed_at", metadata.completed_at}});
+        {"completed_at", metadata.completed_at}, {"sequential_download", metadata.sequential_download},
+        {"first_last_priority", metadata.first_last_priority}});
     atomic_write(directory_ / "meta" / (id + ".json"), text.data(), text.size());
 }
 
 void Persistence::save_resume(const std::string& id, const lt::add_torrent_params& params) {
     auto buffer = lt::write_resume_data_buf(params);
     atomic_write(directory_ / "resume" / (id + ".resume"), buffer.data(), buffer.size());
+}
+
+lt::session_params Persistence::load_dht() {
+    auto path = directory_ / "dht.state";
+    try {
+        if (!fs::exists(path)) return {};
+        if (fs::file_size(path) > 4 * 1024 * 1024) throw std::runtime_error("DHT state is too large");
+        std::ifstream input(path, std::ios::binary);
+        if (!input) throw std::runtime_error("Cannot read DHT state");
+        std::vector<char> buffer((std::istreambuf_iterator<char>(input)), {});
+        auto node = lt::bdecode(lt::span<char const>(buffer));
+        if (node.data_section().size() != static_cast<std::ptrdiff_t>(buffer.size())
+            || node.type() != lt::bdecode_node::dict_t || !node.dict_find_dict("dht state"))
+            throw std::runtime_error("Missing DHT state dictionary");
+        auto state = node.dict_find_dict("dht state");
+        for (const auto& key : {"node-id", "nodes", "nodes6"}) {
+            auto value = state.dict_find(key);
+            if (!value) continue;
+            if (std::string(key) == "node-id" && value.type() == lt::bdecode_node::string_t
+                && value.string_length() == 20) continue; // Legacy single node ID.
+            if (value.type() != lt::bdecode_node::list_t) throw std::runtime_error("Invalid DHT list");
+            for (int i = 0; i < value.list_size(); ++i) {
+                auto item = value.list_at(i);
+                int size = item.type() == lt::bdecode_node::string_t ? item.string_length() : 0;
+                bool valid = std::string(key) == "node-id" ? size == 24 || size == 36
+                    : std::string(key) == "nodes" ? size == 6 : size == 18;
+                if (!valid) throw std::runtime_error("Invalid DHT node encoding");
+            }
+        }
+        auto params = lt::read_session_params(node, lt::session_handle::save_dht_state);
+        log("Loaded DHT state: " + std::to_string(params.dht_state.nids.size()) + " node IDs, "
+            + std::to_string(params.dht_state.nodes.size() + params.dht_state.nodes6.size()) + " bootstrap nodes");
+        return params;
+    } catch (const std::exception& error) {
+        log(std::string("Ignoring damaged DHT state: ") + error.what());
+        return {};
+    }
+}
+
+void Persistence::save_dht(const lt::session_params& params) {
+    auto buffer = lt::write_session_params_buf(params, lt::session_handle::save_dht_state);
+    atomic_write(directory_ / "dht.state", buffer.data(), buffer.size());
 }
 
 void Persistence::remove(const std::string& id) {

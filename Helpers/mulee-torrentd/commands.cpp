@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <libtorrent/magnet_uri.hpp>
+#include <libtorrent/parse_url.hpp>
 #include <libtorrent/settings_pack.hpp>
 #include <libtorrent/torrent_info.hpp>
 #include <libtorrent/torrent_status.hpp>
@@ -112,6 +113,25 @@ json::object Session::configure(const json::object& params) {
     auto encryption = string_param(params, "encryption");
     if (encryption != "prefer" && encryption != "require" && encryption != "disable")
         throw RequestError("invalid_params", "Unknown encryption policy");
+    int disk_cache = 16 * 1024 * 1024;
+    if (auto value = params.if_contains("disk_cache_bytes")) {
+        if (!value->is_int64() || value->as_int64() < 0)
+            throw RequestError("invalid_params", "disk_cache_bytes must be a nonnegative integer");
+        disk_cache = static_cast<int>(std::clamp<std::int64_t>(value->as_int64(), 1024 * 1024, 256 * 1024 * 1024));
+    }
+    std::vector<std::string> blocked;
+    if (auto values = params.if_contains("blocked_clients")) {
+        if (!values->is_array() || values->as_array().size() > 50)
+            throw RequestError("invalid_params", "blocked_clients must contain at most 50 rules");
+        for (const auto& value : values->as_array()) {
+            if (!value.is_string() || value.as_string().empty() || value.as_string().size() > 64)
+                throw RequestError("invalid_params", "Client rules must be nonempty strings of at most 64 bytes");
+            std::string rule(value.as_string());
+            if (std::any_of(rule.begin(), rule.end(), [](unsigned char c) { return c < 32 || c > 126; }))
+                throw RequestError("invalid_params", "Client rules must be printable ASCII");
+            if (std::find(blocked.begin(), blocked.end(), rule) == blocked.end()) blocked.push_back(rule);
+        }
+    }
     fs::create_directories(directory);
     if (port == 0 || port != listen_port()) port = available_port(port);
     lt::settings_pack settings;
@@ -123,7 +143,14 @@ json::object Session::configure(const json::object& params) {
     settings.set_int(lt::settings_pack::upload_rate_limit, upload);
     settings.set_int(lt::settings_pack::active_downloads, downloads);
     settings.set_int(lt::settings_pack::active_seeds, seeds);
-    settings.set_int(lt::settings_pack::active_limit, downloads > 2147483647 - seeds ? 2147483647 : downloads + seeds);
+    // Slow torrents remain excluded by dont_count_slow_torrents. Leave enough
+    // headroom for metadata/stalled swarms even with small UI queue limits.
+    settings.set_int(lt::settings_pack::active_limit,
+        std::max(32, downloads > 2147483647 - seeds ? 2147483647 : downloads + seeds));
+    settings.set_bool(lt::settings_pack::dont_count_slow_torrents, true);
+    // libtorrent 2.0 read caching belongs to the OS. This bounds pending writes,
+    // not a read cache allocation; clamp to avoid tiny queues or excessive memory.
+    settings.set_int(lt::settings_pack::max_queued_disk_bytes, disk_cache);
     settings.set_bool(lt::settings_pack::enable_dht, dht);
     settings.set_bool(lt::settings_pack::enable_lsd, lsd);
     settings.set_bool(lt::settings_pack::enable_upnp, mapping);
@@ -139,6 +166,17 @@ json::object Session::configure(const json::object& params) {
         bt_mappings_.clear();
     }
     port_mapping_enabled_ = mapping;
+    {
+        std::lock_guard<std::mutex> lock(client_rules_->mutex);
+        client_rules_->values = std::move(blocked);
+    }
+    disk_cache_bytes_ = disk_cache;
+    if (!dht && session_.get_settings().get_bool(lt::settings_pack::enable_dht)) {
+        // A disabled DHT has no live routing table in session_state(). Keep the
+        // last live snapshot for shutdown and a subsequent enable in this session.
+        dht_state_ = session_.session_state(lt::session_handle::save_dht_state);
+        session_.set_dht_state(dht_state_.dht_state);
+    }
     session_.apply_settings(settings);
     // get_settings() is synchronous and is ordered after apply_settings(). It prevents
     // returning the previous listener's port while the network thread rebinds.
@@ -152,7 +190,15 @@ json::object Session::configure(const json::object& params) {
     update_extra_port_mappings();
     download_dir_ = directory;
     if (!dht) dht_nodes_.clear();
-    return {{"listen_port", listen_port()}};
+    auto applied = session_.get_settings();
+    return {{"listen_port", listen_port()}, {"disk_cache_bytes", disk_cache_bytes_},
+        {"connections_limit", applied.get_int(lt::settings_pack::connections_limit)},
+        {"active_limit", applied.get_int(lt::settings_pack::active_limit)},
+        {"dont_count_slow_torrents", applied.get_bool(lt::settings_pack::dont_count_slow_torrents)},
+        {"announce_to_all_tiers", applied.get_bool(lt::settings_pack::announce_to_all_tiers)},
+        {"announce_to_all_trackers", applied.get_bool(lt::settings_pack::announce_to_all_trackers)},
+        {"unchoke_slots_limit", applied.get_int(lt::settings_pack::unchoke_slots_limit)},
+        {"file_pool_size", applied.get_int(lt::settings_pack::file_pool_size)}};
 }
 
 json::object Session::set_extra_port_mappings(const json::object& params) {
@@ -230,15 +276,11 @@ json::object Session::add(const json::object& params) {
     auto duplicate = torrents_.find(id);
     if (duplicate != torrents_.end()) {
         auto& handle = duplicate->second.handle;
-        auto trackers = handle.trackers();
-        for (std::size_t i = 0; i < add.trackers.size(); ++i) {
-            if (std::none_of(trackers.begin(), trackers.end(), [&](const lt::announce_entry& tracker) {
-                return tracker.url == add.trackers[i];
-            })) {
-                lt::announce_entry tracker(add.trackers[i]);
-                if (i < add.tracker_tiers.size()) tracker.tier = add.tracker_tiers[i];
-                handle.add_tracker(tracker);
-            }
+        // Duplicate-add must not bypass private/metadata guards on tracker injection.
+        if (!add.trackers.empty()) {
+            json::array urls;
+            for (const auto& url : add.trackers) urls.push_back(json::value(url));
+            add_trackers(duplicate->second, {{"urls", urls}});
         }
         save(duplicate->second);
         auto name = handle.status().name;
@@ -254,9 +296,12 @@ json::object Session::add(const json::object& params) {
         add.flags &= ~lt::torrent_flags::paused;
         add.flags |= lt::torrent_flags::auto_managed;
     }
+    auto count = std::make_shared<std::atomic<std::int64_t>>(0);
+    prepare(add, count);
     auto handle = session_.add_torrent(add, error);
     if (error) throw RequestError("invalid_torrent", error.message());
-    auto inserted = torrents_.emplace(id, Torrent{handle, metadata, add.peers});
+    handle.set_max_connections(100);
+    auto inserted = torrents_.emplace(id, Torrent{handle, metadata, add.peers, count});
     try {
         persistence_.save_meta(id, metadata);
         // Save immediately, including info metadata, so the original .torrent can be removed.
@@ -268,6 +313,47 @@ json::object Session::add(const json::object& params) {
     }
     auto name = handle.status().name;
     return {{"id", id}, {"name", name.empty() ? id : name}, {"duplicate", false}};
+}
+
+json::object Session::add_trackers(Torrent& torrent, const json::object& params) {
+    auto info = torrent.handle.torrent_file();
+    if (!info) throw RequestError("metadata_pending", "Retry after torrent metadata is available");
+    if (info->priv()) throw RequestError("private_torrent", "Cannot append trackers to a private torrent");
+    const auto& urls = required(params, "urls");
+    if (!urls.is_array() || urls.as_array().size() > 50)
+        throw RequestError("invalid_params", "urls must contain at most 50 tracker URLs");
+    auto trackers = torrent.handle.trackers();
+    std::vector<std::string> additions;
+    for (const auto& value : urls.as_array()) {
+        if (!value.is_string()) throw RequestError("invalid_params", "Tracker URL must be a string");
+        std::string url(value.as_string());
+        lt::error_code error;
+        auto parsed = lt::parse_url_components(url, error);
+        const auto& scheme = std::get<0>(parsed);
+        if (url.size() > 2048 || error || std::get<2>(parsed).empty()
+            || (scheme != "http" && scheme != "https" && scheme != "udp")
+            || std::any_of(url.begin(), url.end(), [](unsigned char c) { return c <= 32 || c == 127; }))
+            throw RequestError("invalid_params", "Expected an HTTP, HTTPS or UDP tracker URL");
+        if (std::none_of(trackers.begin(), trackers.end(), [&](const auto& entry) { return entry.url == url; })
+            && std::find(additions.begin(), additions.end(), url) == additions.end()) additions.push_back(url);
+    }
+    if (!additions.empty() && trackers.size() + additions.size() > 50)
+        throw RequestError("tracker_limit", "Torrent tracker limit is 50");
+    // A separate, unused tier avoids changing the original tracker's failover group.
+    int tier = 0;
+    while (tier < 256 && std::any_of(trackers.begin(), trackers.end(),
+        [&](const auto& entry) { return entry.tier == tier; })) ++tier;
+    if (!additions.empty() && tier == 256) throw RequestError("tracker_limit", "No independent tracker tier available");
+    for (const auto& url : additions) {
+        lt::announce_entry tracker(url);
+        tracker.tier = static_cast<std::uint8_t>(tier);
+        torrent.handle.add_tracker(tracker);
+    }
+    if (!additions.empty()) {
+        torrent.last_diagnostics = {};
+        save(torrent);
+    }
+    return {{"added", additions.size()}, {"total", trackers.size() + additions.size()}};
 }
 
 json::object Session::execute(const std::string& method, const json::object& params) {
@@ -285,6 +371,7 @@ json::object Session::execute(const std::string& method, const json::object& par
                 entry.second.metadata.completed_at = nullptr;
                 persistence_.save_meta(entry.first, entry.second.metadata);
             }
+            sample_diagnostics(entry.second);
             result.push_back(serialize_torrent(entry.first, entry.second));
         }
         return {{"torrents", result}};
@@ -317,6 +404,18 @@ json::object Session::execute(const std::string& method, const json::object& par
         torrents_.erase(id);
         return {};
     }
+    if (method == "set_download_mode") {
+        auto& torrent = find(params);
+        bool sequential = bool_param(params, "sequential_download");
+        bool edges = bool_param(params, "first_last_priority");
+        torrent.metadata.sequential_download = sequential;
+        torrent.metadata.first_last_priority = edges;
+        apply_download_mode(torrent);
+        persistence_.save_meta(string_param(params, "id"), torrent.metadata);
+        save(torrent);
+        return {{"sequential_download", sequential}, {"first_last_priority", edges}};
+    }
+    if (method == "add_trackers") return add_trackers(find(params), params);
     if (method == "files") return {{"files", serialize_files(find(params))}};
     if (method == "set_file_priorities") {
         auto& torrent = find(params);

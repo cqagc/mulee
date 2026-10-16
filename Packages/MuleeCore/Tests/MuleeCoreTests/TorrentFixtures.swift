@@ -10,6 +10,7 @@ enum TorrentFixtures {
         var values: [String: TorrentdValue] = [
             "id": .string(id), "name": .string("Ubuntu"), "save_path": .string("/tmp/downloads"),
             "content_path": .string("/tmp/downloads/Ubuntu"), "has_metadata": .bool(true),
+            "is_finished": .bool(true), "sequential_download": .bool(false), "first_last_priority": .bool(false),
             "state": .string("seeding"), "paused": .bool(false), "queued": .bool(false),
             "total_wanted": .integer(1234), "total_wanted_done": .integer(1234), "progress": .double(1),
             "download_rate": .integer(0), "upload_rate": .integer(321),

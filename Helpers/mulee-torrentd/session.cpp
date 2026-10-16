@@ -2,6 +2,9 @@
 #include "fake_dns.hpp"
 
 #include <algorithm>
+#include <cctype>
+#include <libtorrent/peer_connection_handle.hpp>
+#include <libtorrent/bdecode.hpp>
 #include <libtorrent/alert_types.hpp>
 #include <libtorrent/ip_filter.hpp>
 #include <libtorrent/settings_pack.hpp>
@@ -18,6 +21,15 @@ lt::settings_pack defaults() {
     // Only bound the best-effort tracker stopped announce. Resume data and disk
     // cache are still flushed and acknowledged before session destruction.
     settings.set_int(lt::settings_pack::stop_tracker_timeout, 1);
+    // Bound socket/file pressure while allowing several active swarms.
+    settings.set_int(lt::settings_pack::connections_limit, 500);
+    settings.set_int(lt::settings_pack::file_pool_size, 100);
+    // Spread discovery across tiers without simultaneously flooding every URL.
+    settings.set_bool(lt::settings_pack::announce_to_all_tiers, true);
+    settings.set_bool(lt::settings_pack::announce_to_all_trackers, false);
+    // Keep upload useful per peer instead of dividing bandwidth into tiny slots.
+    settings.set_int(lt::settings_pack::unchoke_slots_limit, 16);
+    settings.set_int(lt::settings_pack::max_queued_disk_bytes, 16 * 1024 * 1024);
     settings.set_str(lt::settings_pack::listen_interfaces, "0.0.0.0:0,[::]:0");
     settings.set_bool(lt::settings_pack::listen_system_port_fallback, true);
     settings.set_bool(lt::settings_pack::enable_incoming_utp, true);
@@ -34,10 +46,92 @@ lt::settings_pack defaults() {
         | lt::alert_category::port_mapping));
     return settings;
 }
+
+lt::session_params startup(lt::session_params params) {
+    params.settings = defaults();
+    return params;
+}
+
+std::string lowercase(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return value;
+}
+
+class ClientPeer final : public lt::peer_plugin {
+public:
+    ClientPeer(lt::peer_connection_handle peer, std::shared_ptr<ClientRules> rules,
+        std::shared_ptr<std::atomic<std::int64_t>> count)
+        : peer_(std::move(peer)), rules_(std::move(rules)), count_(std::move(count)) {}
+
+    bool on_handshake(lt::span<char const>) override {
+        handshaken_ = true;
+        check("");
+        return true;
+    }
+
+    bool on_extension_handshake(const lt::bdecode_node& node) override {
+        auto name = node.dict_find_string_value("v");
+        client_ = std::string(name.data(), name.size());
+        check(client_);
+        return true;
+    }
+
+    void tick() override {
+        // Reconfiguration also applies to connections that already handshook.
+        if (handshaken_) check(client_);
+    }
+
+private:
+    lt::peer_connection_handle peer_;
+    std::shared_ptr<ClientRules> rules_;
+    std::shared_ptr<std::atomic<std::int64_t>> count_;
+    bool handshaken_ = false;
+    bool blocked_ = false;
+    std::string client_;
+
+    void check(std::string name) {
+        if (blocked_ || peer_.is_disconnecting()) return;
+        std::lock_guard<std::mutex> lock(rules_->mutex);
+        if (rules_->values.empty()) return;
+        if (name.empty()) {
+            lt::peer_info info;
+            peer_.get_peer_info(info);
+            name = info.client;
+        }
+        name = lowercase(std::move(name));
+        const auto& id = peer_.pid();
+        const std::string prefix(id.data(), id.size());
+        for (const auto& rule : rules_->values) {
+            bool match = rule.front() == '-' ? prefix.compare(0, rule.size(), rule) == 0
+                : name.compare(0, rule.size(), lowercase(rule)) == 0;
+            if (!match) continue;
+            blocked_ = true;
+            count_->fetch_add(1, std::memory_order_relaxed);
+            peer_.disconnect(lt::errors::peer_banned, lt::operation_t::bittorrent);
+            return;
+        }
+    }
+};
+
+class ClientTorrent final : public lt::torrent_plugin {
+public:
+    ClientTorrent(std::shared_ptr<ClientRules> rules, std::shared_ptr<std::atomic<std::int64_t>> count)
+        : rules_(std::move(rules)), count_(std::move(count)) {}
+
+    std::shared_ptr<lt::peer_plugin> new_connection(const lt::peer_connection_handle& peer) override {
+        return std::make_shared<ClientPeer>(peer, rules_, count_);
+    }
+
+private:
+    std::shared_ptr<ClientRules> rules_;
+    std::shared_ptr<std::atomic<std::int64_t>> count_;
+};
+
 }
 
 Session::Session(Protocol& protocol, Persistence& persistence)
-    : protocol_(protocol), persistence_(persistence), session_(defaults()) {
+    : protocol_(protocol), persistence_(persistence), dht_state_(persistence.load_dht()), session_(startup(dht_state_)) {
     // Global limits also apply to LAN and loopback peers. libtorrent's default
     // local peer class bypasses them, which would violate configure's limits.
     lt::ip_filter filter;
@@ -47,16 +141,52 @@ Session::Session(Protocol& protocol, Persistence& persistence)
     session_.set_peer_class_filter(filter);
 }
 
+void Session::prepare(lt::add_torrent_params& params,
+    const std::shared_ptr<std::atomic<std::int64_t>>& count) {
+    params.max_connections = 100;
+    params.extensions.push_back([rules = client_rules_, count](const lt::torrent_handle&, lt::client_data_t) {
+        return std::make_shared<ClientTorrent>(rules, count);
+    });
+}
+
+void Session::apply_download_mode(Torrent& torrent) {
+    auto& handle = torrent.handle;
+    handle.set_flags(torrent.metadata.sequential_download ? lt::torrent_flags::sequential_download
+        : lt::torrent_flags_t{}, lt::torrent_flags::sequential_download);
+    for (auto piece : torrent.priority_pieces) handle.reset_piece_deadline(piece);
+    torrent.priority_pieces.clear();
+    auto info = handle.torrent_file();
+    if (!info || !torrent.metadata.first_last_priority) return;
+    auto priorities = handle.get_file_priorities();
+    const auto& files = info->files();
+    for (auto index : files.file_range()) {
+        if (files.pad_file_at(index) || files.file_size(index) == 0
+            || priorities.at(static_cast<int>(index)) == lt::dont_download) continue;
+        for (auto offset : {std::int64_t{0}, files.file_size(index) - 1}) {
+            auto piece = info->map_file(index, offset, 1).piece;
+            if (std::find(torrent.priority_pieces.begin(), torrent.priority_pieces.end(), piece)
+                != torrent.priority_pieces.end()) continue;
+            torrent.priority_pieces.push_back(piece);
+            // Only edge pieces of selected files get deadlines; skipped files stay skipped.
+            handle.set_piece_deadline(piece, 0);
+        }
+    }
+}
+
 void Session::restore() {
     for (auto& params : persistence_.restore()) {
         auto id = torrent_id(params.info_hashes);
         lt::error_code error;
+        auto count = std::make_shared<std::atomic<std::int64_t>>(0);
+        prepare(params, count);
         auto handle = session_.add_torrent(params, error);
         if (error) {
             persistence_.log("Cannot restore " + id + ": " + error.message());
             continue;
         }
-        torrents_.emplace(id, Torrent{handle, persistence_.load_meta(id), params.peers});
+        handle.set_max_connections(100);
+        auto inserted = torrents_.emplace(id, Torrent{handle, persistence_.load_meta(id), params.peers, count});
+        apply_download_mode(inserted.first->second);
     }
     // Ensure the listener exists before announcing readiness.
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
@@ -132,8 +262,11 @@ void Session::alerts() {
                 if (auto* torrent = find(metadata->handle)) {
                     protocol_.send({{"event", "metadata_received"}, {"id", torrent_id(metadata->handle.info_hashes())},
                         {"name", metadata->handle.status().name}});
+                    apply_download_mode(*torrent);
                     save(*torrent);
                 }
+            } else if (auto* priority = lt::alert_cast<lt::file_prio_alert>(alert)) {
+                if (auto* torrent = find(priority->handle)) apply_download_mode(*torrent);
             } else if (auto* finished = lt::alert_cast<lt::torrent_finished_alert>(alert)) {
                 if (auto* torrent = find(finished->handle)) {
                     mark_completed(*torrent);
@@ -147,6 +280,10 @@ void Session::alerts() {
             } else if (auto* error = lt::alert_cast<lt::torrent_delete_failed_alert>(alert)) {
                 protocol_.send({{"event", "torrent_error"}, {"id", torrent_id(error->info_hashes)},
                     {"message", error->error.message()}});
+                persistence_.log(error->message());
+            } else if (auto* error = lt::alert_cast<lt::tracker_error_alert>(alert)) {
+                if (auto* torrent = find(error->handle))
+                    torrent->last_tracker_error = error->error.message() + ": " + error->failure_reason();
                 persistence_.log(error->message());
             } else if (auto* mapped = lt::alert_cast<lt::portmap_alert>(alert)) {
                 port_mapping_alert(mapped->mapping, mapped->map_transport, mapped->external_port,
@@ -162,7 +299,14 @@ void Session::alerts() {
                 static const int incoming_index = lt::find_metric_idx("peer.incoming_connections");
                 static const int download_index = lt::find_metric_idx("net.recv_bytes");
                 static const int upload_index = lt::find_metric_idx("net.sent_bytes");
+                static const int disk_bytes_index = lt::find_metric_idx("disk.queued_write_bytes");
+                static const int disk_peers_index = lt::find_metric_idx("peer.num_peers_down_disk");
                 const auto counters = stats->counters();
+                if (disk_bytes_index >= 0 && disk_peers_index >= 0) {
+                    queued_disk_bytes_ = counters[disk_bytes_index];
+                    disk_blocked_peers_ = counters[disk_peers_index];
+                    disk_stats_available_ = true;
+                }
                 incoming_ = incoming_ || counters[incoming_index] > 0;
                 auto now = std::chrono::steady_clock::now();
                 double elapsed = std::chrono::duration<double>(now - last_stats_).count();
@@ -265,6 +409,14 @@ void Session::shutdown() {
     stopping_ = true;
     clear_extra_port_mapping_handles();
     extra_mappings_.clear();
+    // Snapshot local DHT routing state before pausing; this performs no network wait.
+    try {
+        if (session_.get_settings().get_bool(lt::settings_pack::enable_dht))
+            dht_state_ = session_.session_state(lt::session_handle::save_dht_state);
+        persistence_.save_dht(dht_state_);
+    } catch (const std::exception& error) {
+        persistence_.log(std::string("Cannot save DHT state: ") + error.what());
+    }
     session_.pause();
     save_all(true);
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);

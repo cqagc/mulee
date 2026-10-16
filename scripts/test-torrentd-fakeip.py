@@ -28,7 +28,9 @@ def main():
     spec.loader.exec_module(tests)
     result = {"peers": 0, "download_bytes": 0, "dns_fallbacks": 0,
               "dht_nodes": 0, "tracker_rejected": False}
-    with tempfile.TemporaryDirectory(prefix="mulee-fakeip-test-") as temporary:
+    temporary_root = Path(__file__).resolve().parents[1] / "build"
+    temporary_root.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="mulee-fakeip-test-", dir=temporary_root) as temporary:
         root = Path(temporary)
         torrent = root / "official.torrent"
         subprocess.run(["curl", "--fail", "--location", "--silent", "--show-error",
@@ -47,9 +49,11 @@ def main():
                 assert item and item["state"] != "error", item
                 result["peers"] = max(result["peers"], item["num_peers"])
                 result["download_bytes"] = max(result["download_bytes"], item["all_time_download"])
+                result["diagnostics"] = item["diagnostics"]
                 status = daemon.request("session_status")
                 result["dht_nodes"] = max(result["dht_nodes"], status["dht_nodes"])
-                if result["peers"] > 0 and result["download_bytes"] > 0:
+                if (result["peers"] > 0 and result["download_bytes"] > 0
+                        and item["diagnostics"]["connected_peers"] > 0):
                     break
                 time.sleep(0.5)
         finally:
@@ -59,7 +63,20 @@ def main():
             finally:
                 try:
                     if daemon is not None:
+                        started = time.monotonic()
                         daemon.close("shutdown")
+                        result["shutdown_seconds"] = round(time.monotonic() - started, 3)
+                        result["shutdown_ack_seconds"] = round(daemon.shutdown_ack_seconds, 3)
+                        saved = tests.bdecode((daemon.state / "dht.state").read_bytes())
+                        assert set(saved) == {b"dht state"}
+                        dht = saved[b"dht state"]
+                        result["dht_saved_node_ids"] = len(dht.get(b"node-id", []))
+                        result["dht_saved_nodes"] = len(dht.get(b"nodes", [])) + len(dht.get(b"nodes6", []))
+                        restarted = tests.Daemon(args.binary.resolve(), daemon.state)
+                        restarted.close("shutdown")
+                        reloaded = tests.bdecode((daemon.state / "dht.state").read_bytes())
+                        assert reloaded == saved
+                        result["dht_reload_verified"] = True
                 finally:
                     for process in tests.PROCESSES:
                         if process.poll() is None:

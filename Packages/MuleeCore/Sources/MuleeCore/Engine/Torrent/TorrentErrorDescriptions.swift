@@ -11,6 +11,9 @@ struct TorrentErrorDescriptions: Sendable {
         case "not_found": (number, message) = (4, String(localized: "BT 任务不存在", bundle: .module))
         case "invalid_torrent": (number, message) = (5, String(localized: "种子文件或磁力链接无效", bundle: .module))
         case "io_error": (number, message) = (6, String(localized: "无法读写下载文件，请检查磁盘空间和访问权限", bundle: .module))
+        case "metadata_pending": (number, message) = (8, "种子元数据尚未就绪，请稍后重试")
+        case "private_torrent": (number, message) = (9, "私有种子不允许追加 tracker")
+        case "tracker_limit": (number, message) = (10, "tracker 数量超过上限")
         default: (number, message) = (7, String(localized: "BT 引擎出错", bundle: .module))
         }
         return .rpc(code: number, message: String(localized: "\(message)（torrentd 错误码 \(code)）", bundle: .module))

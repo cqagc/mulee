@@ -3,6 +3,7 @@
 // Boost.JSON is compiled exactly once; no Boost binary library is linked.
 #include <boost/json/src.hpp>
 #include <algorithm>
+#include <libtorrent/peer_info.hpp>
 #include <libtorrent/torrent_info.hpp>
 #include <libtorrent/torrent_status.hpp>
 
@@ -36,6 +37,54 @@ json::array serialize_files(const Torrent& torrent) {
     return result;
 }
 
+void Session::sample_diagnostics(Torrent& torrent) {
+    auto now = std::chrono::steady_clock::now();
+    if (now - torrent.last_diagnostics < std::chrono::seconds(1)) return;
+    torrent.last_diagnostics = now;
+    std::vector<lt::peer_info> peers;
+    torrent.handle.get_peer_info(peers);
+    int tracker = 0, dht = 0, pex = 0, lsd = 0, incoming = 0;
+    int ipv4 = 0, ipv6 = 0, tcp = 0, utp = 0, connected = 0;
+    for (const auto& peer : peers) {
+        if (peer.flags & (lt::peer_info::connecting | lt::peer_info::handshake)) continue;
+        ++connected;
+        tracker += bool(peer.source & lt::peer_info::tracker);
+        dht += bool(peer.source & lt::peer_info::dht);
+        pex += bool(peer.source & lt::peer_info::pex);
+        lsd += bool(peer.source & lt::peer_info::lsd);
+        incoming += bool(peer.source & lt::peer_info::incoming);
+        if (peer.ip.address().is_v4()) ++ipv4;
+        else if (peer.ip.address().is_v6()) ++ipv6;
+        if (peer.flags & lt::peer_info::utp_socket) ++utp;
+        else ++tcp;
+    }
+    int available = 0, failed = 0, pending = 0;
+    for (const auto& entry : torrent.handle.trackers()) {
+        bool working = false, failure = false;
+        for (const auto& endpoint : entry.endpoints) {
+            for (const auto& hash : endpoint.info_hashes) {
+                working = working || (hash.start_sent && !hash.last_error && hash.fails == 0);
+                failure = failure || bool(hash.last_error) || hash.fails > 0;
+            }
+        }
+        if (working) ++available;
+        else if (failure) ++failed;
+        else ++pending;
+    }
+    // Session-wide pressure, sampled by the existing one-second stats request.
+    // A merely nonempty queue is normal: backlog requires blocked peers or the
+    // configured write high-water mark. Null means no stats sample yet.
+    json::value backlog = disk_stats_available_
+        ? json::value(disk_blocked_peers_ > 0 || queued_disk_bytes_ >= disk_cache_bytes_) : json::value(nullptr);
+    torrent.diagnostics = {{"connected_peers", connected},
+        {"peer_sources", json::object{{"tracker", tracker}, {"dht", dht}, {"pex", pex}, {"lsd", lsd}, {"incoming", incoming}}},
+        {"ipv4", ipv4}, {"ipv6", ipv6}, {"tcp", tcp}, {"utp", utp},
+        {"trackers_available", available}, {"trackers_failed", failed}, {"trackers_pending", pending},
+        {"last_tracker_error", torrent.last_tracker_error.empty() ? json::value(nullptr) : json::value(torrent.last_tracker_error)},
+        {"disk_backlogged", backlog}, {"queued_disk_bytes", queued_disk_bytes_},
+        {"disk_blocked_peers", disk_blocked_peers_}, {"disk_queue_limit", disk_cache_bytes_}};
+}
+
 json::object serialize_torrent(const std::string& id, const Torrent& torrent) {
     auto status = torrent.handle.status();
     auto info = torrent.handle.torrent_file();
@@ -63,9 +112,17 @@ json::object serialize_torrent(const std::string& id, const Torrent& torrent) {
         eta = (status.total_wanted - status.total_wanted_done) / status.download_payload_rate;
     int selected = static_cast<int>(std::count_if(priorities.begin(), priorities.end(),
         [](lt::download_priority_t priority) { return priority != lt::dont_download; }));
+    auto diagnostics = torrent.diagnostics;
+    diagnostics["blocked_clients_count"] = torrent.blocked_count->load(std::memory_order_relaxed);
     json::value error = status.errc ? json::value(status.errc.message()) : json::value(nullptr);
     return {{"id", id}, {"name", status.name.empty() ? id : status.name},
         {"save_path", status.save_path}, {"content_path", content_path},
+        {"is_finished", status.has_metadata && status.is_finished
+            && status.state != lt::torrent_status::checking_files
+            && status.state != lt::torrent_status::checking_resume_data && !status.errc},
+        {"sequential_download", torrent.metadata.sequential_download},
+        {"first_last_priority", torrent.metadata.first_last_priority},
+        {"max_connections", torrent.handle.max_connections()}, {"diagnostics", diagnostics},
         {"has_metadata", status.has_metadata}, {"state", state}, {"paused", user_paused}, {"queued", queued},
         {"total_wanted", status.has_metadata ? status.total_wanted : 0},
         {"total_wanted_done", status.total_wanted_done},

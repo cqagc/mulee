@@ -28,4 +28,14 @@ struct TorrentdTask: Codable, Sendable {
     let completedAt: Int64?
     let eta: Int64?
     let queued: Bool
+    let isFinished: Bool?
+    let sequentialDownload: Bool?
+    let firstLastPriority: Bool?
+    let diagnostics: TorrentDiagnostics?
+
+    /// 恢复校验、缺少元数据或扩大文件选择后，不应用做种策略。
+    var canApplySeedingPolicy: Bool {
+        hasMetadata && isFinished == true && (state == "seeding" || state == "finished")
+            && totalWanted > 0 && totalWantedDone >= totalWanted && selectedFileCount > 0
+    }
 }

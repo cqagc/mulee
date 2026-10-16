@@ -2,15 +2,28 @@
 
 #include "persistence.hpp"
 #include <chrono>
+#include <atomic>
+#include <mutex>
+#include <libtorrent/extensions.hpp>
 #include <libtorrent/session.hpp>
 #include <libtorrent/torrent_handle.hpp>
 #include <map>
 
 namespace mulee {
+struct ClientRules {
+    std::mutex mutex;
+    std::vector<std::string> values;
+};
+
 struct Torrent {
     lt::torrent_handle handle;
     Metadata metadata;
     std::vector<lt::tcp::endpoint> bootstrap_peers;
+    std::shared_ptr<std::atomic<std::int64_t>> blocked_count;
+    std::vector<lt::piece_index_t> priority_pieces;
+    json::object diagnostics;
+    std::string last_tracker_error;
+    std::chrono::steady_clock::time_point last_diagnostics{};
 };
 
 class Session {
@@ -26,7 +39,9 @@ public:
 private:
     Protocol& protocol_;
     Persistence& persistence_;
+    lt::session_params dht_state_;
     lt::session session_;
+    std::shared_ptr<ClientRules> client_rules_ = std::make_shared<ClientRules>();
     std::map<std::string, Torrent> torrents_;
     std::map<lt::torrent_handle, int> pending_resume_;
     std::string download_dir_;
@@ -52,6 +67,10 @@ private:
     std::int64_t download_rate_ = 0;
     std::int64_t upload_rate_ = 0;
     std::uint64_t stats_generation_ = 0;
+    std::int64_t queued_disk_bytes_ = 0;
+    std::int64_t disk_blocked_peers_ = 0;
+    bool disk_stats_available_ = false;
+    int disk_cache_bytes_ = 16 * 1024 * 1024;
     std::chrono::steady_clock::time_point last_stats_ = std::chrono::steady_clock::now();
     std::chrono::steady_clock::time_point last_stats_request_ = last_stats_;
     std::map<std::string, int> dht_nodes_;
@@ -66,6 +85,10 @@ private:
     void save_all(bool final);
     void save(Torrent& torrent, bool final = false);
     void mark_completed(Torrent& torrent);
+    void prepare(lt::add_torrent_params& params, const std::shared_ptr<std::atomic<std::int64_t>>& count);
+    void apply_download_mode(Torrent& torrent);
+    json::object add_trackers(Torrent& torrent, const json::object& params);
+    void sample_diagnostics(Torrent& torrent);
 };
 
 json::object serialize_torrent(const std::string& id, const Torrent& torrent);

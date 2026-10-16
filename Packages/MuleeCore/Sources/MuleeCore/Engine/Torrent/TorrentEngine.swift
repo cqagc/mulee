@@ -207,7 +207,10 @@ public actor TorrentEngine: DownloadEngine {
             numPeers: task.numPeers, numSeeds: task.numSeeds,
             listPeers: task.listPeers, listSeeds: task.listSeeds,
             ratio: task.ratio, isPrivate: task.isPrivate,
-            uploadLimit: task.uploadLimit, hasMetadata: task.hasMetadata
+            uploadLimit: task.uploadLimit, hasMetadata: task.hasMetadata,
+            isFinished: task.canApplySeedingPolicy,
+            sequentialDownload: task.sequentialDownload ?? false,
+            firstLastPriority: task.firstLastPriority ?? false, diagnostics: task.diagnostics
         )
     }
 
@@ -224,6 +227,22 @@ public actor TorrentEngine: DownloadEngine {
         )
     }
 
+    /// 开关顺序下载和所选文件首尾 piece 优先；两个开关均持久化，默认关闭。
+    public func setDownloadMode(_ id: String, sequentialDownload: Bool, firstLastPriority: Bool) async throws {
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call(
+            "set_download_mode", TorrentdDownloadModeParameters(
+                id: id, sequentialDownload: sequentialDownload, firstLastPriority: firstLastPriority
+            )
+        )
+    }
+
+    /// 去重追加 tracker；元数据未就绪、私有种子或超过数量上限时抛出明确错误。
+    public func addTrackers(_ id: String, urls: [String]) async throws -> TorrentTrackerAdditionResult {
+        let client = try await runningClient()
+        return try await client.call("add_trackers", TorrentdTrackersParameters(id: id, urls: urls))
+    }
+
     public func sessionStatus() async throws -> TorrentSessionStatus {
         let client = try await runningClient()
         return try await client.call("session_status", TorrentdEmpty())
@@ -234,7 +253,7 @@ public actor TorrentEngine: DownloadEngine {
         let result: TorrentdListResult = try await client.call("list", TorrentdEmpty())
         for torrent in result.torrents {
             let action = SeedingPolicy.action(
-                ratio: torrent.ratio, isPrivate: torrent.isPrivate,
+                ratio: torrent.ratio, isFinished: torrent.canApplySeedingPolicy, isPrivate: torrent.isPrivate,
                 paused: torrent.paused, uploadLimit: torrent.uploadLimit, settings: settings
             )
             switch action {

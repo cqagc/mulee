@@ -205,9 +205,77 @@ python3 -I scripts/test-torrentd-fakeip.py build/thirdparty/bin/mulee-torrentd-b
 python3 -I scripts/test-torrentd-fakeip.py
 ```
 
-测试用 curl 获取 Ubuntu 官方种子，使用全新的临时状态和下载目录，启用 DHT，
+测试用 curl 获取 Debian 官方种子，使用 `build/` 下全新的临时状态和下载目录，启用 DHT，
 最多等待 90 秒；观察到 peer 和下载字节后立即删除任务、停止测试进程并清理临时目录。
-下载限速为 1 MiB/s，不读取应用状态或实际下载目录。
+下载限速为 1 MiB/s，不读取应用状态或实际下载目录。输出包含 peer 来源、IP / 传输类型、tracker 和磁盘诊断，并核对 DHT 保存与重启回读。
+
+### BT 内核参数、命令和诊断
+
+分享率策略仅对有元数据、所选文件已完成且处于 `seeding` / `finished` 状态的任务执行。
+辅助进程用 `torrent_status.is_finished` 上报 `is_finished`，校验中或错误状态不算完成；
+Swift 再核对所选大小、已下载量和非空选择。选择性下载不要求未选文件完成，恢复任务不依据
+历史 `completed_at` 执行策略；私有种子的豁免设置仍保留。
+
+会话设置为 `connections_limit=500`、`file_pool_size=100`、`unchoke_slots_limit=16`，
+新建及恢复任务均设置 `set_max_connections(100)`。`active_limit=max(32, downloads+seeds)`
+保留 `dont_count_slow_torrents=true`；`announce_to_all_tiers=true`、
+`announce_to_all_trackers=false` 扩展各 tier 的发现范围，并保留同 tier 内的故障切换。
+不调整 mixed mode、请求队列、发送缓冲和磁盘线程数。
+
+`configure` 新增两个可选字段，旧调用方不传时采用默认值：
+
+- `disk_cache_bytes`：默认 16 MiB，非负整数限制到 1–256 MiB，映射至
+  `max_queued_disk_bytes`。这是待写入队列上限，libtorrent 2.0 的读缓存仍由操作系统管理。
+- `blocked_clients`：默认 `[]` 关闭；最多 50 条、每条 1–64 字节可打印 ASCII。
+  以 `-` 开头的规则匹配 peer ID 前缀（区分大小写，版本不限），其他规则匹配客户端名称
+  前缀（ASCII 不区分大小写，含扩展握手的 `v` 字段）。libtorrent 的
+  `torrent_plugin` / `peer_plugin` 在握手后断开命中的连接，运行时变更也作用于现有连接。
+
+Swift 设置为 `TorrentEngineSettings.diskCacheBytes: Int64` 和 `blockedClients: [String]`。
+公开常量 `TorrentEngineSettings.defaultBlockedClients` 仅含 `-XL`，依据
+[BEP 20 的客户端标识表](https://www.bittorrent.org/beps/bep_0020.html)中 XL 对应 Xunlei。
+这份表只确认客户端身份，不证明个别 peer 的上传行为；未确认的 `-SD` / `-QD` 不加入内置规则。
+
+新增任务命令：
+
+- `set_download_mode {id, sequential_download, first_last_priority}`：完整替换两个开关，默认均关闭。
+  前者设置 `torrent_flags::sequential_download`；后者为每个所选、非空、非 padding 文件的
+  首尾 piece 设置 deadline，不提升未选文件优先级。关闭时撤销自己设置的 deadline；
+  元数据到达、文件选择变化及恢复后重新应用。开关保存在任务 metadata，list 可读回。
+  Swift API：`setDownloadMode(_:sequentialDownload:firstLastPriority:)`。
+- `add_trackers {id, urls:[...]}`：仅接受 HTTP / HTTPS / UDP URL，先完整校验再去重追加；
+  每批放入独立且未占用的 tier，任务 tracker 总数上限 50，返回 `{added,total}`，resume 保存后恢复。
+  `metadata_pending` 表示元数据尚未到达、可稍后重试；`private_torrent` 拒绝私有种子；
+  `tracker_limit` 表示超过数量限制。重复 `add` 也遵守同样的 tracker 注入限制。
+  Swift API：`addTrackers(_:urls:) -> TorrentTrackerAdditionResult`。
+
+`list.torrents[].diagnostics` 以每任务一秒为最短间隔采样，包含：
+
+- `connected_peers`、`peer_sources.{tracker,dht,pex,lsd,incoming}`（只计已完成握手的连接，
+  来源位可重叠；resume 或显式 peer 可能没有这些来源位）、`ipv4` / `ipv6`、`tcp` / `utp`。
+- `trackers_available` / `trackers_failed` / `trackers_pending` 按 URL 分类：任一 endpoint / hash
+  已成功 announce 且无当前错误即为可用，否则有失败记录即为失败，其余为待确认。
+  `last_tracker_error` 保留最近一次 tracker 错误，即使后续已恢复成功。
+- `disk_backlogged` 根据会话级 session stats 判断：`peer.num_peers_down_disk > 0` 或
+  `disk.queued_write_bytes >= max_queued_disk_bytes`。同时上报 `queued_disk_bytes`、
+  `disk_blocked_peers`、`disk_queue_limit`；尚无采样时积压为 null。非空写入队列本身不算积压。
+- `blocked_clients_count` 为当前辅助进程会话内该任务被规则断开的连接数，每连接最多计一次。
+
+Swift 的 `TorrentdTask` 解析这些数据，公开 BT 详情 `TorrentTaskInfo` 包含
+`diagnostics: TorrentDiagnostics?`、完成状态及两个下载模式开关，由 `taskInfo(_:)` 读取。
+
+DHT 使用 `session_params` 和仅 `save_dht_state` 标志保存到状态目录的 `dht.state`，不保存会话
+设置或其他插件状态。启动先加载，再构造 session；损坏、过大或格式错误的文件记录日志并忽略。
+关闭 DHT 时缓存最后的路由快照，避免退出时写入空表。退出只复制本地路由表并原子保存，不等待
+网络应答；原有 resume 刷盘确认和 Swift 收到 `saved` 后约 1.2 秒的网络回收期限保持不变。
+
+```sh
+scripts/build-torrentd.sh --standalone
+python3 -I scripts/test-torrentd.py
+MULEE_TORRENTD="$PWD/build/thirdparty/bin/mulee-torrentd" \
+  swift test --package-path Packages/MuleeCore --scratch-path build/torrentd-core-tests
+python3 -I scripts/test-torrentd-fakeip.py --timeout 90
+```
 
 Xcode 构建在 aria2 阶段之后运行 “Bundle mulee-torrentd”，将二进制放入
 `Contents/Helpers/mulee-torrentd`，用 Xcode 的签名身份和 hardened runtime 签名，
