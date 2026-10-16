@@ -127,8 +127,9 @@ public actor YtDlpEngine: DownloadEngine {
         try FileManager.default.createDirectory(at: options.downloadDirectory, withIntermediateDirectories: true)
         let restart = self.options?.downloadLimit != options.downloadLimit
             || self.options?.maxConcurrentDownloads != options.maxConcurrentDownloads
+            || self.options.map(Self.downloadBufferBytes) != Self.downloadBufferBytes(options)
         self.options = options
-        // --limit-rate is startup-only: restart resumable workers only when their envelope changes.
+        // Rate and buffer options are startup-only; requeue workers with their existing .part files.
         // The coordinator reserves that envelope while video workers are running.
         if restart { await requeueActive() }
         try persist()
@@ -412,6 +413,20 @@ public actor YtDlpEngine: DownloadEngine {
         }
     }
 
+    /// Share the requested budget among workers, with a 16 MiB per-worker ceiling.
+    /// yt-dlp requires a positive buffer; 0 uses its minimum 1 KiB read block.
+    /// This bounds HTTP read blocks, not ffmpeg or fragment-assembly memory.
+    static func downloadBufferBytes(_ options: EngineOptions) -> Int {
+        let bytes = min(512, max(0, options.diskCacheMegabytes)) * 1_048_576
+        let workers = max(1, options.maxConcurrentDownloads)
+        let buffer = max(1024, min(16 * 1_048_576, bytes / workers))
+        // Keep progress/pause responsive under throttling: at most one second of download data.
+        if options.downloadLimit > 0 {
+            return Int(min(Int64(buffer), max(1024, options.downloadLimit / Int64(workers))))
+        }
+        return buffer
+    }
+
     private func arguments(
         for job: YtDlpJob, deno: URL?, quality: YtDlpQuality, subtitles: YtDlpSubtitles, taskCookiesURL: URL?
     ) -> [String] {
@@ -429,6 +444,10 @@ public actor YtDlpEngine: DownloadEngine {
         if let deno { result += ["--js-runtimes", "deno:" + deno.path] }
         if let url = taskCookiesURL ?? cookiesURL { result += ["--cookies", url.path] }
         if job.site == .bilibili { result += subtitles.arguments }
+        if let options {
+            // HttpFD reads this many bytes then writes; disable automatic growth to keep it bounded.
+            result += ["--buffer-size", String(Self.downloadBufferBytes(options)), "--no-resize-buffer"]
+        }
         if let options, options.downloadLimit > 0 {
             result += ["--limit-rate", String(max(1, options.downloadLimit / Int64(max(1, workers.count))))]
         }

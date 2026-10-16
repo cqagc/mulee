@@ -24,4 +24,19 @@ import Testing
             #expect(consumers.range(of: pattern, options: .regularExpression) != nil, "设置缺少运行时读取方：\(name)")
         }
     }
+
+    @Test func diskCacheHasAConsumerInEveryEngine() throws {
+        let root = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+        let bt = try String(contentsOf: root.appending(path: "Mulee/Engine/BitTorrentEngineConfiguration.swift"), encoding: .utf8)
+        #expect(bt.contains("configuration.diskCacheBytes ="))
+        #expect(bt.contains("settings.diskCacheMB"))
+        let core = root.appending(path: "Packages/MuleeCore/Sources/MuleeCore/Engine")
+        for path in ["Aria2/Aria2Configuration.swift", "Ed2k/Ed2kConfiguration.swift", "YtDlp/YtDlpEngine.swift"] {
+            let source = try String(contentsOf: core.appending(path: path), encoding: .utf8)
+            let code = source.components(separatedBy: .newlines).map {
+                String($0.components(separatedBy: "//").first ?? "")
+            }.joined(separator: "\n")
+            #expect(code.contains("options.diskCacheMegabytes"), "磁盘缓存缺少引擎读取方：\(path)")
+        }
+    }
 }

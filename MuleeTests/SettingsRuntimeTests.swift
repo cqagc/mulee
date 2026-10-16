@@ -87,6 +87,12 @@ import Testing
         runtime.refresh()
         #expect(applied.last?.downloadLimit == 20_000_000)
         #expect(!model.isScheduledLimitActive)
+        let previousCount = applied.count
+        settings.diskCacheMB = 256
+        runtime.refresh()
+        runtime.refresh()
+        #expect(applied.count == previousCount + 1)
+        #expect(applied.last?.diskCacheMegabytes == 256)
         settings.saveDirectory = "/tmp/settings-chosen"
         #expect(EngineOptionsMapper.options(from: settings).downloadDirectory.path == settings.saveDirectory)
         #expect(SettingsModel.defaultSaveDirectory.hasSuffix("/Downloads/Mulee"))

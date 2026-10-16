@@ -62,9 +62,16 @@ public actor Ed2kEngine: DownloadEngine {
         defer { busy = false }
         let rpc = try runningClient()
         guard var updated = configuration else { throw EngineError.notRunning }
+        let cacheChanged = Ed2kConfiguration.fileBufferUnits(updated.options) != Ed2kConfiguration.fileBufferUnits(options)
         updated.options = options
         updated.settings.uploadLimit = options.uploadLimit
         _ = try updated.managedValues()
+        // FileBufferSizePref has no EC tag; graceful shutdown flushes part files before relaunch.
+        if cacheChanged {
+            await shutdown()
+            try await launch(options: options, settings: updated.settings)
+            return
+        }
         try await sendPreferences(updated, using: rpc)
         try updated.write()
         configuration = updated

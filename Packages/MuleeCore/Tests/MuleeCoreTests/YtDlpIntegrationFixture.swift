@@ -20,7 +20,7 @@ struct YtDlpIntegrationFixture: Sendable {
     var state: URL { root.appendingPathComponent("state") }
     var downloads: URL { root.appendingPathComponent("downloads") }
     var options: EngineOptions {
-        EngineOptions(downloadDirectory: downloads, maxConcurrentDownloads: 1)
+        EngineOptions(downloadDirectory: downloads, maxConcurrentDownloads: 1, diskCacheMegabytes: 1)
     }
 
     func makeEngine() -> YtDlpEngine {

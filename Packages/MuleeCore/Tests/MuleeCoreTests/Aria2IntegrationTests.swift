@@ -113,11 +113,11 @@ struct Aria2IntegrationTests {
         }
     }
 
-    @Test("changeGlobalOption 真实写入回读，启动专用缓存写配置并在重启生效")
+    @Test("设置下发自动重启并回读磁盘缓存，保留暂停任务")
     func runtimeOptions() async throws {
         try await Aria2IntegrationFixture.withFixture { fixture in
             try await fixture.engine.start(options: fixture.options)
-            let rpc = try fixture.rpc()
+            let paused = try await fixture.engine.addQueued(link: fixture.link("cache-paused.bin"), directory: nil)
             var options = fixture.options
             options.downloadDirectory = fixture.root.appendingPathComponent("changed")
             options.maxConcurrentDownloads = 3
@@ -126,6 +126,8 @@ struct Aria2IntegrationTests {
             options.uploadLimit = 23_456
             options.diskCacheMegabytes = 12
             try await fixture.engine.apply(options: options)
+            let rpc = try fixture.rpc()
+            #expect(try await fixture.engine.snapshots().first { $0.engineTaskID == paused }?.status == .paused)
             let globals: [String: String] = try await rpc.call("aria2.getGlobalOption")
             let expected = [
                 "dir": options.downloadDirectory.path,
@@ -135,14 +137,14 @@ struct Aria2IntegrationTests {
                 "max-overall-download-limit": "1234567"
             ]
             for (key, value) in expected { #expect(globals[key] == value, "\(key) 应即时生效") }
-            #expect(globals["max-overall-upload-limit"] == nil)
-            #expect(globals["disk-cache"] == "4194304")
+            #expect(globals["max-overall-upload-limit"] == nil || globals["max-overall-upload-limit"] == "0")
+            #expect(globals["disk-cache"] == "12582912")
             // Unsupported global keys can return OK while being ignored: verify by readback.
             let _: String = try await rpc.call("aria2.changeGlobalOption", [
-                .object(["disk-cache": .string("12M")])
+                .object(["disk-cache": .string("16M")])
             ])
             let afterCacheChange: [String: String] = try await rpc.call("aria2.getGlobalOption")
-            #expect(afterCacheChange["disk-cache"] == "4194304")
+            #expect(afterCacheChange["disk-cache"] == "12582912")
             let configuration = try fixture.configurationValues()
             for (key, value) in expected { #expect(configuration[key] == value) }
             #expect(configuration["disk-cache"] == "12M")

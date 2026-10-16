@@ -14589,6 +14589,35 @@
           }
         }
       }
+    },
+    "所有下载先在内存里攒成块再写盘，减少硬盘写入；突然断电最多需重新下载缓存中的部分": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有下载先在内存里攒成块再写盘，减少硬盘写入；突然断电最多需重新下载缓存中的部分"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All downloads collect data in memory and write it to disk in larger blocks, which reduces disk writes. After a sudden power loss, at most the cached part needs to be downloaded again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有下載先在記憶體裡累積成塊再寫入磁碟，減少硬碟寫入；突然斷電最多需重新下載快取中的部分"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのダウンロードは、データをメモリーにまとめてからブロック単位でディスクに書き込み、ディスクへの書き込みを減らします。突然電源が切れた場合も、再ダウンロードが必要なのはキャッシュ内の部分だけです"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

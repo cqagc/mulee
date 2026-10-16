@@ -25,6 +25,11 @@ struct Ed2kConfiguration: Sendable {
         return value
     }
 
+    /// Preferences.h: uint8 units of 15000 bytes, capped per part file, not globally.
+    static func fileBufferUnits(_ options: EngineOptions) -> Int {
+        min(255, min(4, max(0, options.diskCacheMegabytes)) * 1_000_000 / 15_000)
+    }
+
     func managedValues() throws -> [String: [String: String]] {
         try settings.validate()
         for path in [stateDirectory, options.downloadDirectory] {
@@ -48,7 +53,7 @@ struct Ed2kConfiguration: Sendable {
                 "TempDir": Self.universalPath(temporaryDirectory),
                 // aMule 3.1.0 Preferences.cpp: uint8 units, GetFileBufferSize() = units * 15000.
                 // No EC tag exists for this preference; it takes effect at the next daemon launch.
-                "FileBufferSizePref": String(min(255, min(4, max(0, options.diskCacheMegabytes)) * 1_000_000 / 15_000)),
+                "FileBufferSizePref": String(Self.fileBufferUnits(options)),
                 "MaxDownload": String(try Self.limitInKiB(options.downloadLimit)),
                 "MaxUpload": String(try Self.limitInKiB(settings.uploadLimit)),
                 "ShareHiddenFiles": "0", "AutoRescanSharedDirs": "0",

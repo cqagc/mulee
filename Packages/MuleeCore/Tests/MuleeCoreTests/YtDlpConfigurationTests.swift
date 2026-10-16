@@ -33,10 +33,15 @@ struct YtDlpConfigurationTests {
                 subtitles: YtDlpSubtitles(danmaku: true, closedCaptions: true),
                 channel: .nightly, updatesEnabled: false
             )
+            try await engine.apply(options: EngineOptions(
+                downloadDirectory: root.appendingPathComponent("downloads"), maxConcurrentDownloads: 2, diskCacheMegabytes: 1
+            ))
             let second = try await engine.add(link: link)
             _ = try await YtDlpIntegrationFixture.waitFor(engine, id: second) { $0.status == .completed }
             let arguments = try String(contentsOf: root.appendingPathComponent("downloads/arguments"), encoding: .utf8)
 
+            #expect(arguments.contains("--buffer-size 524288 --no-resize-buffer"))
+            #expect(arguments.contains("--continue"))
             #expect(arguments.contains("nightly"))
             #expect(arguments.contains("mkv"))
             #expect(arguments.contains("--write-subs"))

@@ -24,6 +24,11 @@ import Testing
         #expect(mapped.downloadLimit == 5_000_000)
         #expect(mapped.uploadLimit == 500_000)
         #expect(mapped.diskCacheMegabytes == 256)
+        #expect(BitTorrentEngineConfiguration.configuration(from: settings).diskCacheBytes == 268_435_456)
+        let previousTorrent = BitTorrentEngineConfiguration.configuration(from: settings)
+        settings.diskCacheMB = 32
+        #expect(BitTorrentEngineConfiguration.configuration(from: settings).diskCacheBytes == 33_554_432)
+        #expect(BitTorrentEngineConfiguration.configuration(from: settings) != previousTorrent)
 
         settings.downloadLimit = 0
         settings.uploadLimit = 0

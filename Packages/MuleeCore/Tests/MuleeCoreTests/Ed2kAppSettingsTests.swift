@@ -49,7 +49,12 @@ struct Ed2kAppSettingsTests {
             #expect(after.detail == before.detail)
             let directory = root.url.appendingPathComponent("新目录")
             try await engine.apply(options: EngineOptions(downloadDirectory: directory, downloadLimit: 500_000, uploadLimit: 250_000))
+            try await engine.apply(options: EngineOptions(
+                downloadDirectory: directory, downloadLimit: 500_000, uploadLimit: 250_000, diskCacheMegabytes: 1
+            ))
+            #expect(try await engine.snapshots().first?.engineTaskID == id)
             let configuration = try String(contentsOf: state.appendingPathComponent("amule.conf"), encoding: .utf8)
+            #expect(configuration.contains("FileBufferSizePref=66\n"))
             #expect(configuration.contains("ExcludeSharePatterns=*\n"))
             #expect(configuration.contains("IsClientCryptLayerSupported=0\n"))
             #expect(configuration.contains("IsCryptLayerRequested=0\n"))

@@ -7,7 +7,10 @@ struct YtDlpIntegrationTests {
     @Test func genericDownloadPauseResumeTrashAndRecovery() async throws {
         try await YtDlpIntegrationFixture.withFixture { fixture in
             let engine = fixture.engine
-            try await engine.start(options: fixture.options)
+            // Start with the minimum block so the cache change happens during a partial download.
+            var options = fixture.options
+            options.diskCacheMegabytes = 0
+            try await engine.start(options: options)
             let id = try await engine.add(link: fixture.link(), directory: nil)
             let first = try await YtDlpIntegrationFixture.waitFor(engine, id: id) {
                 $0.receivedBytes > 32_768 && $0.status == .downloading
@@ -18,6 +21,12 @@ struct YtDlpIntegrationTests {
             let before = try state.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
             try await Task.sleep(for: .milliseconds(200))
             #expect(try state.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate == before)
+            options.diskCacheMegabytes = 1
+            try await engine.apply(options: options)
+            _ = try await YtDlpIntegrationFixture.waitFor(engine, id: id) {
+                $0.receivedBytes > first.receivedBytes && $0.status == .downloading
+            }
+            #expect(await fixture.server.rangeRequests > 0)
             try await engine.pause(id)
             #expect(try await engine.snapshots().first?.status == .paused)
             let parts = try FileManager.default.contentsOfDirectory(at: fixture.downloads, includingPropertiesForKeys: nil)

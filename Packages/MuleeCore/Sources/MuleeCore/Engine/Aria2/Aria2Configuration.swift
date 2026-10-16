@@ -40,7 +40,9 @@ struct Aria2Configuration: Sendable {
             "disable-ipv6": "true",
             "min-split-size": "1M",
             "continue": "true",
+            // Avoid preallocating/zero-filling on APFS; sparse extents are allocated as data arrives.
             "file-allocation": "none",
+            // aria2 M suffix means 1024 * 1024 bytes; this is its global write-cache budget.
             "disk-cache": "\(max(0, options.diskCacheMegabytes))M",
             "save-session": sessionURL.path,
             "save-session-interval": "30",

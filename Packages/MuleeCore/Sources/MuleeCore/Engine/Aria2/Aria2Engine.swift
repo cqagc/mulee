@@ -48,9 +48,16 @@ public actor Aria2Engine: DownloadEngine {
     public func apply(options: EngineOptions) async throws {
         let client = try runningClient()
         guard var updated = configuration else { throw EngineError.notRunning }
+        let cacheChanged = max(0, updated.options.diskCacheMegabytes) != max(0, options.diskCacheMegabytes)
         updated.options = options
         // Validate before changing the running process; disk-cache is startup-only.
         _ = try updated.contents()
+        if cacheChanged {
+            // SIGINT flushes the cache and session; launch restores active and paused tasks.
+            await stop()
+            try await start(options: options)
+            return
+        }
         let values = updated.runtimeOptions.mapValues { Aria2RPCValue.string($0) }
         let _: String = try await client.call("aria2.changeGlobalOption", [.object(values)])
         try updated.write()

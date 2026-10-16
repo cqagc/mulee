@@ -62,7 +62,7 @@ struct SpeedLimitSection: View {
                 }
             } label: {
                 Text("磁盘缓存")
-                Text("先在内存里攒成大块再写盘，减少 SSD 写入")
+                Text("所有下载先在内存里攒成块再写盘，减少硬盘写入；突然断电最多需重新下载缓存中的部分")
             }
         }
     }
