@@ -56,6 +56,7 @@ struct MuleeApp: App {
             AppUpdateCommands(updates: appDelegate.updates)
             TaskHistoryCommands(model: model)
             AboutCommands()
+            MainWindowCommands(model: model)
         }
 
         MenuBarExtra {

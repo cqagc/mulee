@@ -47,6 +47,7 @@ enum MuleeSymbol: String, CaseIterable {
     case delete = "trash"
     case retry = "arrow.clockwise"
     case inspector = "sidebar.right"
+    case sidebar = "sidebar.left"
 
     // 网络
     case statusDot = "circle.fill"

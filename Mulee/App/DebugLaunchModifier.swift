@@ -20,8 +20,16 @@ struct DebugLaunchModifier: ViewModifier {
 
     #if DEBUG
     private static var didAddLaunchLinks = false
+    private static var didApplyLaunchOptions = false
 
     private func applyLaunchOptions() async {
+        guard !Self.didApplyLaunchOptions else { return }
+        Self.didApplyLaunchOptions = true
+        // 原生三栏的创建早于窗口注册；先等窗口就绪，避免预填请求再次创建主窗口。
+        while !NSApp.windows.contains(where: { $0.identifier?.rawValue == "mulee-main" }) {
+            do { try await Task.sleep(for: .milliseconds(10)) } catch { return }
+        }
+
         if DebugLaunchOptions.stressTaskCount > 0 {
             await runStressTasks(count: DebugLaunchOptions.stressTaskCount)
             return
