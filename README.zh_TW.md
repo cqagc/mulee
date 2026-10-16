@@ -87,7 +87,7 @@ Mulee 支援 HTTP / HTTPS / FTP、BT / 磁力連結、電驢與影片下載。�
 | 影片 | 使用 yt-dlp，主要支援 Bilibili / YouTube；Bilibili 彈幕可轉成 ASS 字幕。yt-dlp、Deno、ffmpeg 由 Mulee 自行下載並驗證。 |
 | 迅雷連結 | 解析 `thunder://` 中的原始連結，交給對應引擎。 |
 | 自動解壓縮 | 7-Zip 解壓縮已完成的下載，密碼規則中的密碼存入鑰匙圈，修復 GBK / Big5 / Shift-JIS 檔名亂碼。 |
-| 網路診斷 | 檢查 P2P 流量是否經過代理、監聽連接埠能否從外部連入。附有可複製的 Stash / Clash 規則與連接埠轉送說明。 |
+| 網路診斷 | 檢查 P2P 流量是否經過代理、監聽連接埠能否從外部連入。附有可複製的電驢直接連線規則與連接埠轉送說明。 |
 | macOS 整合 | 可設為 magnet / ed2k / thunder / .torrent 預設開啟程式，提供 Chrome / Safari 擴充功能、選單列即時速度和下載時防止睡眠。 |
 
 App 隨附四個輔助程式：`aria2c`、`mulee-torrentd`、`amuled`、`7zz`。它們以固定版本的原始碼編譯，僅動態連結系統函式庫。發行的 App 使用 Developer ID 簽署，並通過 Apple 公證。
@@ -106,11 +106,10 @@ App 隨附四個輔助程式：`aria2c`、`mulee-torrentd`、`amuled`、`7zz`。
 
 - 在「**設定 → 一般**」中，將 Mulee 設為 magnet / ed2k / thunder 連結和 `.torrent` 檔案的預設開啟程式。
 - 在 Mulee 設定中開啟 Safari 擴充功能設定，或查看 Chrome 擴充功能的安裝說明，詳見[瀏覽器擴充功能說明](docs/BROWSER-EXTENSION.md)。擴充功能傳送的連結會先開啟確認面板。
-- 使用代理軟體時，查看「**設定 → 網路**」中的 P2P 路由和外部連入狀態，視需要複製 Stash / Clash 規則：
+- 代理軟體開啟了虛擬位址（fake-ip）DNS 時，BT 會自行查詢 tracker 和 DHT 的真實位址，不需要加規則。如果電驢無法連線，在 Stash / Clash 中加入這條直接連線規則：
 
 ```text
 PROCESS-NAME,amuled,DIRECT
-PROCESS-NAME,mulee-torrentd,DIRECT
 ```
 
 直接連線不代表連接埠可從外部連入。請依照「設定 → 網路」中的說明設定連接埠轉送，並查看連入狀態。

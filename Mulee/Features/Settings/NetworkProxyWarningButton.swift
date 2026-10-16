@@ -6,11 +6,11 @@ struct NetworkProxyWarningButton: View {
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        Button(NetworkPresentation.proxyWarning, systemImage: MuleeSymbol.proxyWarning.name,
+        Button(NetworkPresentation.proxyWarning, systemImage: MuleeSymbol.network.name,
                action: showNetworkSettings)
             .buttonStyle(.plain)
             .font(.caption)
-            .foregroundStyle(Theme.wait)
+            .foregroundStyle(.secondary)
     }
 
     private func showNetworkSettings() {

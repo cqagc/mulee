@@ -14,10 +14,9 @@ struct ProxyStatusCard: View {
         let kind = appModel.networkStatus.p2pRoutedThroughProxy ? .tunnel : diagnostics.snapshot.proxyKind
         Section(NetworkPresentation.proxyCardTitle) {
             VStack(alignment: .leading, spacing: 8) {
-                Label(NetworkPresentation.proxyTitle(kind), systemImage: kind == .tunnel
-                      ? MuleeSymbol.proxyWarning.name : MuleeSymbol.network.name)
+                Label(NetworkPresentation.proxyTitle(kind), systemImage: MuleeSymbol.network.name)
                     .font(.headline)
-                    .foregroundStyle(kind == .tunnel ? Theme.wait : .primary)
+                    .foregroundStyle(.primary)
                 Text(NetworkPresentation.proxyDescription(kind))
                     .font(.callout)
                     .foregroundStyle(.secondary)
@@ -27,6 +26,9 @@ struct ProxyStatusCard: View {
                         .foregroundStyle(.secondary)
                 }
                 if kind == .tunnel {
+                    Text(NetworkPresentation.processRecognition)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                     Text(Self.rules)
                         .font(.callout.monospaced())
                         .textSelection(.enabled)
@@ -46,9 +48,6 @@ struct ProxyStatusCard: View {
                            systemImage: MuleeSymbol.retry.name, action: recheck)
                         .disabled(diagnostics.isRefreshing)
                 }
-                Text(NetworkPresentation.processRecognition)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
             }
             .fixedSize(horizontal: false, vertical: true)
             .padding(.vertical, 4)

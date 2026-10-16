@@ -173,7 +173,10 @@ python3 -I scripts/test-torrentd.py
 脚本在源码副本中编译 OpenSSL 3.5.9，再编译 libtorrent-rasterbar 2.0.15，最后用 C++17
 编译 `Helpers/mulee-torrentd/`。不会修改 `ThirdParty/`。首次全量编译约 8 分钟；
 静态依赖缓存在 `${MULEE_THIRDPARTY_CACHE:-$SRCROOT/build/thirdparty}/<缓存键>/`，
-缓存键包含两个子模块提交号、编译参数、Boost 版本和工具链信息，命中后跳过依赖编译。
+缓存键包含两个子模块提交号、编译参数、Boost 版本、工具链信息及
+`Helpers/mulee-torrentd/patches/*.patch` 的文件名和完整内容，命中后跳过依赖编译。
+libtorrent 先用 `git archive` 导出固定提交，再在缓存源码副本中依次应用补丁；
+补丁不修改子模块，导出源码与辅助进程均继续使用 `-ffile-prefix-map` 清理本机路径。
 `--standalone` 只产出 `<cache>/bin/mulee-torrentd`，可供命令行及 MuleeCore 集成测试使用：
 
 ```sh
@@ -184,6 +187,27 @@ build/thirdparty/bin/mulee-torrentd --state-dir "$PWD/build/torrent-state"
 关闭 stdin 或发送 `shutdown` 会保存 resume data 并退出。构建及辅助进程的子进程环境使用
 `LANG=en_US.UTF-8`、`LC_ALL=en_US.UTF-8`。自动测试只使用临时生成的数据和本机回环互传，
 不依赖公网或第三方 tracker。
+
+主机名解析结果全部位于 IPv4 `198.18.0.0/15`（含 IPv4 映射地址）时，torrentd 才启动真实地址查询。
+普通或混合解析结果不触发公共 DNS；未将任意 IPv6 私有地址段视作假地址。
+查询使用有网关、已启用的非隧道物理接口，通过 `IP_BOUND_IF` 和源地址绑定 IPv4 socket，
+并行查询 A / AAAA。依次尝试 `223.5.5.5`、`119.29.29.29`、`1.1.1.1`、`8.8.8.8` 的 UDP 53，
+截断时用同一服务器的 TCP 53 重试。每次最多 2 秒，每类记录总计最多 8 秒，
+网络收发均为异步；全部失败保留系统结果。成功结果按地址及 CNAME 链的最短 TTL 缓存，
+日志只记录发生替换的域名。
+关闭任务时可复用尚未过期的替换缓存；仅查缓存的请求不会发起公共 DNS 查询。
+
+离线协议测试首先通过 `--test-dns` 验证报文、TTL、普通网络不重查及回环 UDP / TCP。
+真实 fake-ip 环境可运行以下隔离测试（需要公网）：
+
+```sh
+python3 -I scripts/test-torrentd-fakeip.py build/thirdparty/bin/mulee-torrentd-before-fakeip --expect blocked
+python3 -I scripts/test-torrentd-fakeip.py
+```
+
+测试用 curl 获取 Ubuntu 官方种子，使用全新的临时状态和下载目录，启用 DHT，
+最多等待 90 秒；观察到 peer 和下载字节后立即删除任务、停止测试进程并清理临时目录。
+下载限速为 1 MiB/s，不读取应用状态或实际下载目录。
 
 Xcode 构建在 aria2 阶段之后运行 “Bundle mulee-torrentd”，将二进制放入
 `Contents/Helpers/mulee-torrentd`，用 Xcode 的签名身份和 hardened runtime 签名，

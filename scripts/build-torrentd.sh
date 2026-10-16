@@ -19,7 +19,7 @@ if [ "${1:-}" = "--standalone" ] && [ "$#" = 1 ]; then
 elif [ "$#" != 0 ]; then
   error "用法：$0 [--standalone]"
 fi
-for tool in cmake clang++; do
+for tool in cmake clang++ patch; do
   command -v "$tool" >/dev/null || error "缺少 $tool；请安装 Xcode 命令行工具并运行 brew install cmake boost"
 done
 BOOST=/opt/homebrew/opt/boost
@@ -53,6 +53,11 @@ LT_FLAGS=("-DCMAKE_C_FLAGS=$PREFIX_FLAGS" "-DCMAKE_CXX_FLAGS=$PREFIX_FLAGS"
 KEY="$( {
   printf '%s\n' "$OPENSSL_REV" "$(shasum -a 256 < "$0")"
   printf '%s\n' "$LT_REV"
+  for patch_file in "$SRCROOT"/Helpers/mulee-torrentd/patches/*.patch; do
+    [ -f "$patch_file" ] || continue
+    printf '%s\n' "$(basename "$patch_file")"
+    cat "$patch_file"
+  done
   printf '%s\n' "${OPENSSL_FLAGS[@]}" "${LT_FLAGS[@]}"
   clang++ --version
   # 显式选择 SDK，避免 Xcode 的 SDKROOT 与 standalone 返回不同的 SDK 路径别名。
@@ -70,8 +75,8 @@ if [ ! -f "$DEPS/complete" ] || [ ! -f "$SSL/lib/libcrypto.a" ] || [ ! -f "$LT/l
       || error "子模块 $sub 未初始化；请运行 git submodule update --init --recursive"
   done
   echo "mulee-torrentd: 首次构建静态依赖（约 8 分钟），日志：$DEPS"
-  rm -rf "$DEPS/openssl-src" "$DEPS/libtorrent-build" "$SSL_DESTDIR" "$LT"
-  mkdir -p "$DEPS/openssl-src"
+  rm -rf "$DEPS/openssl-src" "$DEPS/libtorrent-src" "$DEPS/libtorrent-build" "$SSL_DESTDIR" "$LT"
+  mkdir -p "$DEPS/openssl-src" "$DEPS/libtorrent-src"
   # 在源码副本中构建，绝不写子模块。
   rsync -a --exclude .git "$SRCROOT/ThirdParty/openssl/" "$DEPS/openssl-src/"
   (
@@ -83,7 +88,20 @@ if [ ! -f "$DEPS/complete" ] || [ ! -f "$SSL/lib/libcrypto.a" ] || [ ! -f "$LT/l
     make -j"$JOBS"
     make install_sw "DESTDIR=$SSL_DESTDIR"
   ) > "$DEPS/openssl.log" 2>&1 || error "OpenSSL 构建失败，见 $DEPS/openssl.log"
-  cmake -S "$SRCROOT/ThirdParty/libtorrent" -B "$DEPS/libtorrent-build" -G 'Unix Makefiles' \
+  git -C "$SRCROOT/ThirdParty/libtorrent" archive "$LT_REV" | tar -x -C "$DEPS/libtorrent-src"
+  # git archive does not expand nested submodules. Export the dependency at
+  # the gitlink recorded by LT_REV, rather than using its possibly newer HEAD.
+  TRY_SIGNAL_REV="$(git -C "$SRCROOT/ThirdParty/libtorrent" ls-tree "$LT_REV" -- deps/try_signal | awk '{print $3}')"
+  [ -n "$TRY_SIGNAL_REV" ] || error "找不到 libtorrent 的 try_signal gitlink"
+  mkdir -p "$DEPS/libtorrent-src/deps/try_signal"
+  git -C "$SRCROOT/ThirdParty/libtorrent/deps/try_signal" archive "$TRY_SIGNAL_REV" \
+    | tar -x -C "$DEPS/libtorrent-src/deps/try_signal"
+  for patch_file in "$SRCROOT"/Helpers/mulee-torrentd/patches/*.patch; do
+    [ -f "$patch_file" ] || continue
+    patch --batch -p1 -d "$DEPS/libtorrent-src" < "$patch_file" \
+      || error "libtorrent 补丁应用失败：$(basename "$patch_file")"
+  done
+  cmake -S "$DEPS/libtorrent-src" -B "$DEPS/libtorrent-build" -G 'Unix Makefiles' \
     "${LT_FLAGS[@]}" "-DOPENSSL_ROOT_DIR=$SSL" "-DCMAKE_INSTALL_PREFIX=$LT" \
     > "$DEPS/libtorrent.log" 2>&1 \
     && cmake --build "$DEPS/libtorrent-build" -j"$JOBS" >> "$DEPS/libtorrent.log" 2>&1 \

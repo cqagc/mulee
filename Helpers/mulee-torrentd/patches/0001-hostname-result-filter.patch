@@ -1,0 +1,46 @@
+--- a/include/libtorrent/aux_/resolver.hpp
++++ b/include/libtorrent/aux_/resolver.hpp
+@@ -50,6 +50,13 @@
+ 
+ namespace libtorrent {
+ namespace aux {
++
++// Optional result filter, installed before starting any sessions. The filter
++// completes on ios and must keep it alive until delivery. System cache entries
++// remain unchanged, so a filter can apply its own DNS TTL on every delivery.
++using hostname_result_filter_t = std::function<void(io_context&, std::string const&
++	, bool, std::vector<address> const&, resolver_interface::callback_t)>;
++extern TORRENT_EXTRA_EXPORT hostname_result_filter_t hostname_result_filter;
+ 
+ struct TORRENT_EXTRA_EXPORT resolver final : resolver_interface
+ {
+--- a/src/resolver.cpp
++++ b/src/resolver.cpp
+@@ -39,6 +39,8 @@
+ namespace aux {
+ 
+ 
++	hostname_result_filter_t hostname_result_filter;
++
+ 	constexpr resolver_flags resolver_interface::cache_only;
+ 	constexpr resolver_flags resolver_interface::abort_on_shutdown;
+ 
+@@ -141,6 +143,18 @@
+ 		}
+ 		ec.clear();
+ 
++		// Filter cached results too; the filter owns the replacement TTL.
++		// Pass cache_only through so shutdown can reuse replacements without I/O.
++		if (hostname_result_filter)
++		{
++			h = [ios = &m_ios, host, cache_only = bool(flags & resolver_interface::cache_only)
++				, h = std::move(h)](error_code const& ec, std::vector<address> const& ips) mutable
++			{
++				if (ec) h(ec, ips);
++				else hostname_result_filter(*ios, host, cache_only, ips, std::move(h));
++			};
++		}
++
+ 		auto const i = m_cache.find(host);
+ 		if (i != m_cache.end())
+ 		{

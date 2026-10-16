@@ -1319,35 +1319,6 @@
         }
       }
     },
-    "BT 和电驴的流量现在很可能被代理软件接管了。代理节点通常不支持这类连接，所以可能找不到来源、速度很慢。在代理规则里加上下面两行，让它们直连后再检测。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BT 和电驴的流量现在很可能被代理软件接管了。代理节点通常不支持这类连接，所以可能找不到来源、速度很慢。在代理规则里加上下面两行，让它们直连后再检测。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Proxy software is likely routing BT and eD2k traffic. Proxy servers often do not support these connections, so sources may be unavailable or slow. Add these two rules to use direct connections, then check again."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BT 和電驢的流量現在很可能被代理軟體接管。代理節點通常不支援這類連線，因此可能找不到來源、速度很慢。在代理規則中加上下列兩行，讓它們直接連線後再偵測。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "BTとeD2kの通信がプロキシソフトを経由している可能性があります。プロキシの接続先はこの通信に対応していないことが多く、ソースが見つからなかったり、速度が低下したりします。プロキシのルールに次の2行を追加し、直接接続にしてから再確認してください。"
-          }
-        }
-      }
-    },
     "BT 引擎": {
       "extractionState": "manual",
       "localizations": {
@@ -1614,35 +1585,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "CC字幕"
-          }
-        }
-      }
-    },
-    "Clash Verge / mihomo 需要开启进程识别（find-process-mode），让按进程名匹配的规则生效。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clash Verge / mihomo 需要开启进程识别（find-process-mode），让按进程名匹配的规则生效。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enable process recognition (find-process-mode) in Clash Verge / mihomo so rules matching process names can take effect."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clash Verge / mihomo 需要開啟行程辨識（find-process-mode），讓依行程名稱比對的規則生效。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Clash Verge / mihomoでは、プロセス名のルールが適用されるようにプロセス認識（find-process-mode）を有効にしてください。"
           }
         }
       }
@@ -2947,35 +2889,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロキシの状態は未確認です"
-          }
-        }
-      }
-    },
-    "代理软件可能接管了下载连接": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "代理软件可能接管了下载连接"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Proxy software may be routing download connections"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "代理軟體可能接管了下載連線"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ダウンロードの通信がプロキシソフトを経由している可能性があります"
           }
         }
       }
@@ -4951,35 +4864,6 @@
         }
       }
     },
-    "域名解析使用了代理软件的虚拟地址。某些配置下，仅加直连规则仍不能连接来源；可在代理软件里为下载来源域名关闭虚拟地址解析，再重新检测。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "域名解析使用了代理软件的虚拟地址。某些配置下，仅加直连规则仍不能连接来源；可在代理软件里为下载来源域名关闭虚拟地址解析，再重新检测。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "DNS returned virtual addresses from proxy software. Direct rules alone may not reach sources in some configurations. Disable virtual address resolution for download source domains in your proxy software, then check again."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "網域解析使用了代理軟體的虛擬位址。某些組態下，僅加直接連線規則仍無法連線至來源；可在代理軟體中為下載來源網域關閉虛擬位址解析，再重新偵測。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ドメイン名の解決にプロキシソフトの仮想アドレスが使われています。設定によっては、直接接続のルールだけではソースに接続できません。プロキシソフトでダウンロード元のドメインに対する仮想アドレスの使用をオフにして、再確認してください。"
-          }
-        }
-      }
-    },
     "处理中": {
       "extractionState": "manual",
       "localizations": {
@@ -5005,35 +4889,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "処理中"
-          }
-        }
-      }
-    },
-    "复制 Stash / Clash 规则": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "复制 Stash / Clash 规则"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy Stash / Clash rules"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "複製 Stash / Clash 規則"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Stash / Clashルールをコピー"
           }
         }
       }
@@ -11512,35 +11367,6 @@
         }
       }
     },
-    "虚拟网卡可能接管了下载连接": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "虚拟网卡可能接管了下载连接"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A virtual network interface may be routing download connections"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "虛擬網路介面可能接管了下載連線"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ダウンロードの通信が仮想ネットワークインターフェイスを経由している可能性があります"
-          }
-        }
-      }
-    },
     "表格": {
       "extractionState": "manual",
       "localizations": {
@@ -14093,6 +13919,180 @@
           "stringUnit": {
             "state": "translated",
             "value": "詳細"
+          }
+        }
+      }
+    },
+    "检测到代理网络，查看连接说明": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检测到代理网络，查看连接说明"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proxy network detected. See connection notes"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "偵測到代理網路，查看連線說明"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロキシネットワークを検出しました。接続の説明を見る"
+          }
+        }
+      }
+    },
+    "复制电驴直连规则": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制电驴直连规则"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy eD2k direct rule"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "複製電驢直接連線規則"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kの直接接続ルールをコピー"
+          }
+        }
+      }
+    },
+    "检测到代理虚拟网卡或虚拟地址": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检测到代理虚拟网卡或虚拟地址"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proxy virtual network or addresses detected"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "偵測到代理虛擬網卡或虛擬位址"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロキシの仮想ネットワークまたは仮想アドレスを検出しました"
+          }
+        }
+      }
+    },
+    "仅在电驴连接受影响时，可在 Stash 中添加下面的直连规则，并确认已开启进程识别，再重新检测。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅在电驴连接受影响时，可在 Stash 中添加下面的直连规则，并确认已开启进程识别，再重新检测。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only if eD2k connections are affected: add the direct rule below in Stash, make sure process matching is on, then check again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅在電驢連線受影響時，可在 Stash 中加入下面的直接連線規則，並確認已開啟程序識別，再重新檢測。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kの接続に影響がある場合のみ、Stashに次の直接接続ルールを追加し、プロセス識別がオンになっていることを確認してから、もう一度確認してください。"
+          }
+        }
+      }
+    },
+    "检测到代理虚拟地址。BT 会自动尝试获取真实地址，无需额外设置。电驴通常直接使用来源地址；若使用域名的服务器无法连接，可为该域名关闭虚拟地址解析，或改用服务器的真实地址。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检测到代理虚拟地址。BT 会自动尝试获取真实地址，无需额外设置。电驴通常直接使用来源地址；若使用域名的服务器无法连接，可为该域名关闭虚拟地址解析，或改用服务器的真实地址。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proxy virtual addresses detected. BitTorrent looks up real addresses automatically, so no setup is needed. eD2k usually connects to sources by address; if a server given by domain name can't be reached, turn off virtual address resolution for that domain or use the server's real address."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "偵測到代理虛擬位址。BT 會自動嘗試取得真實位址，無需額外設定。電驢通常直接使用來源位址；若以網域指定的伺服器無法連線，可為該網域關閉虛擬位址解析，或改用伺服器的真實位址。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロキシの仮想アドレスを検出しました。BTは実際のアドレスを自動で取得するため、追加の設定は不要です。eD2kは通常、ソースのアドレスに直接接続します。ドメイン名で指定したサーバーに接続できない場合は、そのドメインの仮想アドレス解決をオフにするか、サーバーの実際のアドレスを使用してください。"
+          }
+        }
+      }
+    },
+    "BT 会自动尝试处理代理虚拟地址。电驴主要通过地址连接服务器和来源，检测到代理并不代表下载受影响。若电驴持续无法连接，可设置电驴直连；端口能否从外部连入请查看下方状态。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT 会自动尝试处理代理虚拟地址。电驴主要通过地址连接服务器和来源，检测到代理并不代表下载受影响。若电驴持续无法连接，可设置电驴直连；端口能否从外部连入请查看下方状态。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BitTorrent handles proxy virtual addresses automatically. eD2k mostly connects to servers and sources by address, so a detected proxy doesn't mean downloads are affected. If eD2k keeps failing to connect, set it to connect directly. Whether the port is reachable from outside is shown below."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BT 會自動嘗試處理代理虛擬位址。電驢主要透過位址連線伺服器和來源，偵測到代理並不代表下載受影響。若電驢持續無法連線，可設定電驢直接連線；連接埠能否從外部連入請查看下方狀態。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "BTはプロキシの仮想アドレスを自動で処理します。eD2kは主にアドレスでサーバーやソースに接続するため、プロキシを検出してもダウンロードに影響があるとは限りません。eD2kが接続できない状態が続く場合は、直接接続に設定してください。ポートに外部から接続できるかは下の状態で確認できます。"
           }
         }
       }

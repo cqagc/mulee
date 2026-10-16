@@ -4,17 +4,26 @@ import Testing
 
 @Suite struct NetworkDiagnosticsPresentationTests {
     @Test func copiedRulesAreExact() {
-        #expect(NetworkPresentation.rules == "PROCESS-NAME,amuled,DIRECT\nPROCESS-NAME,mulee-torrentd,DIRECT")
-        #expect(NetworkPresentation.processRecognition.contains("find-process-mode"))
+        #expect(NetworkPresentation.rules == "PROCESS-NAME,amuled,DIRECT")
+        #expect(NetworkPresentation.processRecognition.contains("仅在电驴连接受影响时"))
+    }
+
+    @Test func proxyDetectionExplainsAutomaticBTRecoveryWithoutClaimingFailure() {
+        let text = NetworkPresentation.proxyDescription(.tunnel)
+        #expect(text.contains("BT 会自动尝试处理代理虚拟地址"))
+        #expect(text.contains("检测到代理并不代表下载受影响"))
+        #expect(NetworkPresentation.fakeIPAdvice.contains("无需额外设置"))
+        #expect(NetworkPresentation.fakeIPAdvice.contains("使用域名的服务器无法连接"))
+        #expect(!NetworkPresentation.proxyWarning.contains("接管了下载连接"))
     }
 
     @Test func forwardingUsesConfiguredPortsAndInterfaceAddress() {
-        let network = NetworkDiagnosticsSnapshot(localIP: "10.2.3.4", subnetMask: "255.255.255.0", gateway: "10.2.4.1")
+        let network = NetworkDiagnosticsSnapshot(localIP: "198.51.100.4", subnetMask: "255.255.255.0", gateway: "203.0.113.1")
         let text = instructions(network)
         #expect(text.contains("TCP / UDP 52001"))
         #expect(text.contains("TCP 42002、UDP 42003"))
-        #expect(text.contains("10.2.3.4"))
-        #expect(text.contains("10.2.4.1"))
+        #expect(text.contains("198.51.100.4"))
+        #expect(text.contains("203.0.113.1"))
         #expect(text.contains(NetworkPresentation.differentSubnet))
         let unknown = instructions(.unknown)
         #expect(unknown.contains("暂时未读到本机局域网地址"))
@@ -67,8 +76,8 @@ import Testing
             if let mapping = NetworkPresentation.portMapping(succeeded: reachable) { copy.append(mapping.text) }
         }
         for network in [NetworkDiagnosticsSnapshot.unknown,
-                        NetworkDiagnosticsSnapshot(localIP: "10.0.0.2", subnetMask: "255.255.255.0", gateway: "10.0.0.1"),
-                        NetworkDiagnosticsSnapshot(localIP: "10.0.1.2", subnetMask: "255.255.255.0", gateway: "10.0.0.1")] {
+                        NetworkDiagnosticsSnapshot(localIP: "192.0.2.2", subnetMask: "255.255.255.0", gateway: "192.0.2.1"),
+                        NetworkDiagnosticsSnapshot(localIP: "203.0.113.2", subnetMask: "255.255.255.0", gateway: "192.0.2.1")] {
             copy.append(instructions(network))
         }
         for text in copy {

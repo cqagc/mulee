@@ -87,7 +87,7 @@ All tasks shown are sample data. Click an image to view it at full size.
 | Video | Uses yt-dlp, with Bilibili and YouTube as the main supported sites. Bilibili danmaku can be converted to ASS subtitles. Mulee downloads and verifies yt-dlp, Deno, and ffmpeg itself. |
 | Thunder links | Decodes `thunder://` links and passes the original URL to the appropriate engine. |
 | Automatic extraction | 7-Zip extracts completed downloads, stores password-rule secrets in Keychain, and repairs garbled GBK / Big5 / Shift-JIS filenames. |
-| Network diagnostics | Checks whether P2P traffic goes through a proxy and whether listening ports accept incoming connections. Includes Stash / Clash rules to copy and instructions for port forwarding. |
+| Network diagnostics | Checks whether P2P traffic goes through a proxy and whether listening ports accept incoming connections. Includes an eD2k direct rule to copy and instructions for port forwarding. |
 | macOS integration | Default handler for magnet / ed2k / thunder / .torrent, Chrome and Safari extensions, live menu bar speeds, and sleep prevention while downloading. |
 
 The app bundles four helpers built from pinned source versions: `aria2c`, `mulee-torrentd`, `amuled`, and `7zz`. Their dynamic dependencies are limited to system libraries. The distributed app is Developer ID signed and notarized by Apple.
@@ -106,11 +106,10 @@ Optional setup:
 
 - In **Settings → General**, choose Mulee as the default app for magnet / ed2k / thunder links and `.torrent` files.
 - Settings links to Safari's extension preferences and explains how to install the Chrome extension. See the [browser extension guide](docs/BROWSER-EXTENSION.md). Links sent by an extension open the confirmation panel before downloading.
-- If you use proxy software, open **Settings → Network** to check P2P routing and incoming connectivity. Copy the Stash / Clash rules as needed:
+- If your proxy software uses virtual (fake-IP) DNS, BitTorrent looks up real tracker and DHT addresses on its own, so no rule is needed. If eD2k cannot connect, add this direct rule in Stash / Clash:
 
 ```text
 PROCESS-NAME,amuled,DIRECT
-PROCESS-NAME,mulee-torrentd,DIRECT
 ```
 
 Direct routing alone does not make a port reachable. Follow the port-forwarding instructions in Settings → Network and check the reported incoming connection status.

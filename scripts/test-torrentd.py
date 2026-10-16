@@ -386,6 +386,7 @@ def main():
     args = parser.parse_args()
     binary = args.binary.resolve()
     assert binary.is_file(), f"Build first: scripts/build-torrentd.sh --standalone ({binary})"
+    subprocess.run([str(binary), "--test-dns"], check=True, timeout=15)
     with tempfile.TemporaryDirectory(prefix="mulee-torrentd-test-") as temporary:
         try:
             run_tests(binary, Path(temporary))

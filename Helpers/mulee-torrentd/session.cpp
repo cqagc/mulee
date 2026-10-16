@@ -1,4 +1,5 @@
 #include "session.hpp"
+#include "fake_dns.hpp"
 
 #include <algorithm>
 #include <libtorrent/alert_types.hpp>
@@ -174,6 +175,7 @@ void Session::alerts() {
 }
 
 void Session::poll() {
+    for (const auto& message : take_dns_logs()) persistence_.log(message);
     alerts();
     auto now = std::chrono::steady_clock::now();
     if (now - last_stats_request_ >= std::chrono::seconds(1)) {

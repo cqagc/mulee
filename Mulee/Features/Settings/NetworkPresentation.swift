@@ -3,18 +3,18 @@ import MuleeCore
 
 /// 设置·网络页的文案与异常判断。纯函数，方便测试。
 enum NetworkPresentation {
-    static let rules = "PROCESS-NAME,amuled,DIRECT\nPROCESS-NAME,mulee-torrentd,DIRECT"
+    static let rules = "PROCESS-NAME,amuled,DIRECT"
     static let proxyCardTitle = String(localized: "是否走代理")
     static let portCardTitle = String(localized: "端口能否从外部连入")
-    static let proxyWarning = String(localized: "代理软件可能接管了下载连接")
-    static let copyRules = String(localized: "复制 Stash / Clash 规则")
+    static let proxyWarning = String(localized: "检测到代理网络，查看连接说明")
+    static let copyRules = String(localized: "复制电驴直连规则")
     static let recheck = String(localized: "重新检测")
     static let checking = String(localized: "正在检测…")
     static let rulesCopied = String(localized: "规则已复制")
     static let instructionsCopied = String(localized: "说明已复制")
     static let copyInstructions = String(localized: "复制端口转发说明")
-    static let processRecognition = String(localized: "Clash Verge / mihomo 需要开启进程识别（find-process-mode），让按进程名匹配的规则生效。")
-    static let fakeIPAdvice = String(localized: "域名解析使用了代理软件的虚拟地址。某些配置下，仅加直连规则仍不能连接来源；可在代理软件里为下载来源域名关闭虚拟地址解析，再重新检测。")
+    static let processRecognition = String(localized: "仅在电驴连接受影响时，可在 Stash 中添加下面的直连规则，并确认已开启进程识别，再重新检测。")
+    static let fakeIPAdvice = String(localized: "检测到代理虚拟地址。BT 会自动尝试获取真实地址，无需额外设置。电驴通常直接使用来源地址；若使用域名的服务器无法连接，可为该域名关闭虚拟地址解析，或改用服务器的真实地址。")
     static let differentSubnet = String(localized: "你的电脑和路由器不在同一网段，自动映射不起作用。需要由网络管理员手工转发端口。")
     static let unknownSubnet = String(localized: "暂时无法确认电脑和路由器是否在同一网段。")
     static let mappingTitle = String(localized: "BT 自动端口映射")
@@ -31,7 +31,7 @@ enum NetworkPresentation {
         case .unknown: String(localized: "代理状态尚未确认")
         case .none: String(localized: "未发现代理接管")
         case .system: String(localized: "开启了系统网页代理")
-        case .tunnel: String(localized: "虚拟网卡可能接管了下载连接")
+        case .tunnel: String(localized: "检测到代理虚拟网卡或虚拟地址")
         }
     }
 
@@ -40,7 +40,7 @@ enum NetworkPresentation {
         case .unknown: String(localized: "部分网络信息暂时无法读取。点击重新检测，确认 BT 和电驴的连接是否受到代理影响。")
         case .none: String(localized: "当前未发现代理接管的迹象。BT 和电驴仍需要有可用来源，端口是否可连入可在下方查看。")
         case .system: String(localized: "系统代理只影响网页类连接，BT 和电驴不受这项设置影响。端口是否可连入可在下方查看。")
-        case .tunnel: String(localized: "BT 和电驴的流量现在很可能被代理软件接管了。代理节点通常不支持这类连接，所以可能找不到来源、速度很慢。在代理规则里加上下面两行，让它们直连后再检测。")
+        case .tunnel: String(localized: "BT 会自动尝试处理代理虚拟地址。电驴主要通过地址连接服务器和来源，检测到代理并不代表下载受影响。若电驴持续无法连接，可设置电驴直连；端口能否从外部连入请查看下方状态。")
         }
     }
 
