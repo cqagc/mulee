@@ -13,6 +13,8 @@ actor TorrentFakeTransport: TorrentdTransport {
     private(set) var sent: [TorrentTestRequest] = []
     private(set) var startCount = 0
     private(set) var finishCount = 0
+    private(set) var finishGrace: Duration?
+    private(set) var finishTerminationGrace: Duration?
     private(set) var addedTorrent: Data?
     private var results: [String: TorrentdValue] = [:]
 
@@ -83,6 +85,8 @@ actor TorrentFakeTransport: TorrentdTransport {
 
     func finish(grace: Duration, terminationGrace: Duration) {
         finishCount += 1
+        finishGrace = grace
+        finishTerminationGrace = terminationGrace
         crash()
     }
 }

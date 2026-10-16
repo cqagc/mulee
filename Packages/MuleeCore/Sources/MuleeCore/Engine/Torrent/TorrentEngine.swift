@@ -312,14 +312,22 @@ public actor TorrentEngine: DownloadEngine {
         guard let rpc = client else { return }
         client = nil
         let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+        var saved = false
         if await rpc.isRunning() {
             do {
-                let _: TorrentdEmpty = try await rpc.call("shutdown", TorrentdEmpty())
+                let reply: [String: Bool] = try await rpc.call("shutdown", TorrentdEmpty())
+                saved = reply["saved"] == true
             } catch {
                 Self.logger.warning("BT 引擎未确认退出请求，将关闭输入管道并等待退出")
             }
         }
-        await rpc.finish(grace: max(.zero, ContinuousClock.now.duration(to: deadline)))
+        // Only the new post-flush acknowledgement permits a short network grace.
+        // Older helpers and save failures retain the full persistence deadline.
+        if saved {
+            await rpc.finish(grace: .milliseconds(1200), terminationGrace: .zero)
+        } else {
+            await rpc.finish(grace: max(.zero, ContinuousClock.now.duration(to: deadline)))
+        }
     }
 
     private func didExit(_ id: UUID, client exited: TorrentdClient) {

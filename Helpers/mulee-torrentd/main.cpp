@@ -40,7 +40,7 @@ int main(int argc, char** argv) {
             if (protocol.ended()) break;
             session.poll();
         }
-        session.shutdown();
+        if (!session.stopping()) session.shutdown();
         return 0;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

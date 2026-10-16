@@ -8,6 +8,7 @@ import Sparkle
 final class AppUpdateController: NSObject, SPUUpdaterDelegate {
     static let shared = AppUpdateController()
     let installation = AppUpdateInstallation()
+    var installationDidAbort: () -> Void = {}
     private(set) var issue: String?
     private(set) var isStarted = false
     private var revision = 0
@@ -132,5 +133,6 @@ final class AppUpdateController: NSObject, SPUUpdaterDelegate {
     func updater(_ updater: SPUUpdater, didAbortWithError error: any Error) {
         installation.reset()
         installationPending = false
+        installationDidAbort()
     }
 }

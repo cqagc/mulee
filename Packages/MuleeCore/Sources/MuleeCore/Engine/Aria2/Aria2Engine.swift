@@ -216,12 +216,10 @@ public actor Aria2Engine: DownloadEngine {
             } catch {
                 Aria2Process.logger.error("保存 aria2 会话失败：\(error.localizedDescription, privacy: .public)")
             }
-            do {
-                let _: String = try await rpc.call("aria2.shutdown")
-            } catch {
-                Aria2Process.logger.error("请求 aria2 退出失败：\(error.localizedDescription, privacy: .public)")
-            }
         }
+        // shutdown RPC 固定延迟三秒；SIGINT 直接进入同一正常关闭流程，
+        // 仍由 aria2 刷新控制文件、磁盘缓存和最终 session，不强制结束下载。
+        child.interrupt()
         await child.finish(grace: .seconds(3))
         didExit(child.id)
     }

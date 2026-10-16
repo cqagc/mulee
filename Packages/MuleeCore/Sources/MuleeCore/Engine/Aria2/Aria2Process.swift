@@ -27,19 +27,26 @@ struct Aria2Process: Sendable {
 
     var isRunning: Bool { process.isRunning }
 
+    func interrupt() {
+        if process.isRunning { kill(process.processIdentifier, SIGINT) }
+    }
+
     func finish(grace: Duration) async {
-        let clock = ContinuousClock()
-        let deadline = clock.now.advanced(by: grace)
-        while process.isRunning && clock.now < deadline {
-            // Cleanup must finish even when the caller was cancelled.
-            do { try await Task.sleep(for: .milliseconds(50)) } catch { break }
-        }
-        if process.isRunning { process.terminate() }
-        let terminationDeadline = clock.now.advanced(by: .seconds(1))
-        while process.isRunning && clock.now < terminationDeadline {
-            do { try await Task.sleep(for: .milliseconds(20)) } catch { break }
-        }
-        if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+        // 独立清理任务避免调用方取消时跳过保存等待或遗留子进程。
+        await Task.detached { [process] in
+            let clock = ContinuousClock()
+            let deadline = clock.now.advanced(by: grace)
+            while process.isRunning && clock.now < deadline {
+                try? await Task.sleep(for: .milliseconds(25))
+            }
+            if process.isRunning { process.terminate() }
+            let terminationDeadline = clock.now.advanced(by: .seconds(1))
+            while process.isRunning && clock.now < terminationDeadline {
+                try? await Task.sleep(for: .milliseconds(20))
+            }
+            if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+            while process.isRunning { try? await Task.sleep(for: .milliseconds(10)) }
+        }.value
     }
 
     static func availablePort() throws -> UInt16 {

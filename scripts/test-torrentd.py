@@ -178,7 +178,7 @@ class Daemon:
         if self.process.poll() is not None:
             return
         if method == "shutdown":
-            self.request("shutdown")
+            assert self.request("shutdown") == {"saved": True}
         elif method == "signal":
             self.process.send_signal(signal.SIGTERM)
         else:
@@ -321,11 +321,13 @@ def run_tests(binary, root):
     b.request("resume", {"id": single_id})
     b.request("resume", {"id": single_id})
     assert not b.torrent(single_id)["paused"]
-    b.close()
+    assert b.request("shutdown") == {"saved": True}
+    # The acknowledgement is a persistence barrier, before process teardown.
     resume = b.state / "resume" / (single_id + ".resume")
     assert resume.stat().st_size > 0
+    b.close()
     assert (b.state / "meta" / (single_id + ".json")).is_file()
-    print("PASS 本机磁力元数据、部分下载、pause/resume、EOF 保存", flush=True)
+    print("PASS 本机磁力元数据、部分下载、pause/resume、shutdown 刷盘保存", flush=True)
 
     b = Daemon(binary, b.state)
     restored = wait_for(lambda: (item if item["state"] != "checking" else None)
@@ -395,6 +397,18 @@ def run_tests(binary, root):
     assert (seed_path / "Mulee-open-test.bin").is_file()
     a.close()
     print("PASS 损坏 resume 隔离、其他任务恢复、暂停和优先级持久化", flush=True)
+
+    # A failed atomic resume write must never grant the parent fast-exit permission.
+    failure = Daemon(binary, root / "state-save-failure")
+    failure.configure(root / "failure-downloads")
+    failure.request("add", {"torrent_file": str(single)})
+    resume_directory = failure.state / "resume"
+    resume_directory.rename(failure.state / "resume-backup")
+    resume_directory.write_bytes(b"not-a-directory")
+    reply = failure.request("shutdown", error="io_error")
+    assert "result" not in reply
+    assert failure.process.wait(timeout=15) == 0
+    print("PASS resume 写盘失败不发送 saved 确认", flush=True)
 
 
 def main():

@@ -3,6 +3,24 @@ import Testing
 @testable import MuleeCore
 
 @Suite struct TorrentEngineTests {
+    @Test("仅在辅助进程确认 resume 刷盘后缩短网络关闭等待", arguments: [true, false])
+    func shutdownRequiresSavedAcknowledgement(saved: Bool) async throws {
+        let fake = TorrentFakeTransport()
+        await fake.setResult("shutdown", .object(saved ? ["saved": .bool(true)] : [:]))
+        try await TorrentFixtures.withEngine(fake: fake) { engine, root in
+            try await engine.start(options: EngineOptions(downloadDirectory: root))
+            await engine.stop()
+            let grace = try #require(await fake.finishGrace)
+            if saved {
+                #expect(grace == .milliseconds(1200))
+                #expect(await fake.finishTerminationGrace == .zero)
+            } else {
+                #expect(grace > .seconds(5))
+                #expect(await fake.finishTerminationGrace == .seconds(5))
+            }
+        }
+    }
+
     @Test("按任务读取做种者与私有标记，缺失任务返回 not_found")
     func taskInfo() async throws {
         let fake = TorrentFakeTransport()

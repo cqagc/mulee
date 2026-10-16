@@ -291,8 +291,10 @@ json::object Session::execute(const std::string& method, const json::object& par
     }
     if (method == "session_status") return session_status();
     if (method == "shutdown") {
-        stopping_ = true;
-        return {};
+        // Acknowledge only after every torrent's disk cache and resume metadata
+        // have been saved. The parent may then bound best-effort network cleanup.
+        shutdown();
+        return {{"saved", true}};
     }
     if (method == "pause" || method == "resume") {
         auto& torrent = find(params);

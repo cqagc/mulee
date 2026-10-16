@@ -15,6 +15,9 @@ lt::settings_pack defaults() {
     lt::settings_pack settings;
     settings.set_str(lt::settings_pack::user_agent, "Mulee/0.1.0 libtorrent/2.0.15");
     settings.set_str(lt::settings_pack::peer_fingerprint, "-MU0100-");
+    // Only bound the best-effort tracker stopped announce. Resume data and disk
+    // cache are still flushed and acknowledged before session destruction.
+    settings.set_int(lt::settings_pack::stop_tracker_timeout, 1);
     settings.set_str(lt::settings_pack::listen_interfaces, "0.0.0.0:0,[::]:0");
     settings.set_bool(lt::settings_pack::listen_system_port_fallback, true);
     settings.set_bool(lt::settings_pack::enable_incoming_utp, true);
@@ -124,6 +127,7 @@ void Session::alerts() {
                 if (pending_save != pending_resume_.end() && --pending_save->second == 0)
                     pending_resume_.erase(pending_save);
                 persistence_.log(failed->message());
+                if (stopping_) throw std::runtime_error("Cannot save resume data at shutdown");
             } else if (auto* metadata = lt::alert_cast<lt::metadata_received_alert>(alert)) {
                 if (auto* torrent = find(metadata->handle)) {
                     protocol_.send({{"event", "metadata_received"}, {"id", torrent_id(metadata->handle.info_hashes())},
@@ -179,6 +183,7 @@ void Session::alerts() {
             }
         } catch (const std::exception& error) {
             persistence_.log(std::string("Alert handling: ") + error.what());
+            if (stopping_) throw;
         }
     }
 }
@@ -267,7 +272,7 @@ void Session::shutdown() {
         session_.wait_for_alert(std::chrono::milliseconds(50));
         alerts();
     }
-    if (!pending_resume_.empty()) persistence_.log("Timed out waiting for resume data at shutdown");
+    if (!pending_resume_.empty()) throw std::runtime_error("Timed out waiting for resume data at shutdown");
 }
 
 json::object Session::session_status() {

@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var model: AppModel?
     private var isTerminating = false
     private var hasReplied = false
+    private let shutdownProgress = ShutdownProgressController()
 
     func configure(model: AppModel, settings: SettingsModel, usesSampleData: Bool) {
         openURLRouter = OpenURLRouter(model: model, settings: settings)
@@ -28,6 +29,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             return model.hasActiveTransfers || model.tasks.contains { [.queued, .waitingForSources].contains($0.status) }
         }
         updates.installation.confirm = Self.confirmUpdateInstallation
+        updates.installationDidAbort = { [weak self] in
+            guard let self, !isTerminating else { return }
+            shutdownProgress.finish(restoreWindows: true)
+        }
         updates.installation.prepare = { [weak self] in
             await self?.prepareForUpdate() ?? false
         }
@@ -97,6 +102,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        guard !isTerminating, !shutdownProgress.isActive else { return false }
         model?.mainWindowRequest += 1
         return false
     }
@@ -133,8 +139,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             alert.addButton(withTitle: String(localized: "退出"))
             guard alert.runModal() == .alertSecondButtonReturn else { return .terminateCancel }
         }
-        settingsRuntime?.stop()
         isTerminating = true
+        shutdownProgress.begin()
+        settingsRuntime?.stop()
         NetworkDiagnosticsService.shared.stop()
         startupTask?.cancel()
         extractionCoordinator?.cancel()
@@ -161,11 +168,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         hasReplied = true
         model?.flushTaskHistory()
         timeoutTask?.cancel()
+        shutdownProgress.finish()
         application.reply(toApplicationShouldTerminate: true)
     }
 
     /// 更新不走普通退出的五秒兜底，必须等引擎保存会话并停止后才允许安装。
     private func prepareForUpdate() async -> Bool {
+        shutdownProgress.begin()
         NetworkDiagnosticsService.shared.stop()
         startupTask?.cancel()
         await startupTask?.value
@@ -173,7 +182,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         await extractionCoordinator?.stop()
         await coordinator?.stop()
         model?.flushTaskHistory()
-        return model?.taskHistoryIssue == nil
+        let saved = model?.taskHistoryIssue == nil
+        if !saved { shutdownProgress.finish(restoreWindows: true) }
+        return saved
     }
 
     private static func confirmUpdateInstallation() -> Bool {
