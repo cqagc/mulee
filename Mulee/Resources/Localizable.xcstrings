@@ -24265,6 +24265,93 @@
           }
         }
       }
+    },
+    "保存位置与源文件相同或位于源文件夹内。制作已停止，以免覆盖原文件或把种子算入内容。请选择源文件夹外的 .torrent 保存位置。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存位置与源文件相同或位于源文件夹内。制作已停止，以免覆盖原文件或把种子算入内容。请选择源文件夹外的 .torrent 保存位置。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The save location is the source file or is inside the source folder. Creation has stopped to avoid overwriting the original or including the torrent in its contents. Choose a .torrent location outside the source folder."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存位置與來源檔案相同或位於來源資料夾內。製作已停止，以免覆寫原始檔案或將種子算入內容。請選擇來源資料夾外的 .torrent 儲存位置。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存先が元のファイルと同じか、元のフォルダ内にあります。元のファイルの上書きや、Torrentが内容に含まれることを防ぐため、作成を停止しました。元のフォルダの外に.torrentの保存先を選んでください。"
+          }
+        }
+      }
+    },
+    "输入节点服务器地址，每行一个；留空则不添加。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "输入节点服务器地址，每行一个；留空则不添加。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter one tracker address per line, or leave blank to add none."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "輸入節點伺服器位址，每行一個；留空則不新增。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トラッカーのアドレスを1行に1つ入力してください。空欄の場合は追加しません。"
+          }
+        }
+      }
+    },
+    "v1+v2 混合": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "v1+v2 混合"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hybrid v1+v2"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "v1+v2 混合"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "v1+v2 ハイブリッド"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

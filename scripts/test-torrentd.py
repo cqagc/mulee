@@ -598,6 +598,44 @@ def incomplete_file_tests(binary, root):
     print("PASS C2/E4：逐文件校验改名、未完成/完成重启一致、连续开头、首尾 2% 优先、取消顺序下载", flush=True)
 
 
+def creation_destination_safety_tests(binary, root):
+    root.mkdir()
+    source = root / "source"
+    source.mkdir()
+    original = b"original content" * 4096
+    source_file = source / "original.torrent"
+    source_file.write_bytes(original)
+    nested = source / "nested"
+    nested.mkdir()
+    alias = root / "alias"
+    alias.symlink_to(source, target_is_directory=True)
+    file_alias = root / "file-alias.torrent"
+    file_alias.symlink_to(source_file)
+    daemon = Daemon(binary, root / "state")
+    daemon.configure(root / "downloads")
+    before = sorted(path.relative_to(source) for path in source.rglob("*"))
+    for input_path, output in [
+        (source, source / "created.torrent"),
+        (source_file, source_file), (source_file, file_alias),
+        (source, source),
+        (source, nested / "created.torrent"), (source, alias / "created.torrent"),
+        (source, alias / "nested/../created.torrent"),
+        (alias / "nested", source / "nested/created.torrent"),
+    ]:
+        daemon.request("create_torrent", {"path": str(input_path), "output": str(output),
+                                          "private": False, "trackers": []}, error="invalid_params")
+        assert source_file.read_bytes() == original
+        assert sorted(path.relative_to(source) for path in source.rglob("*")) == before
+    sibling = root / "source-other"
+    sibling.mkdir()
+    output = sibling / "created.torrent"
+    daemon.request("create_torrent", {"path": str(source), "output": str(output),
+                                      "private": False, "trackers": []})
+    assert bdecode(output.read_bytes())[b"info"][b"meta version"] == 2
+    daemon.close("shutdown")
+    print("PASS 制作种子路径保护：源文件/目录、子目录、符号链接、路径分量边界", flush=True)
+
+
 def creation_progress_and_cancellation(binary, root):
     source = root / "hash-source.bin"
     with source.open("wb") as stream:
@@ -660,6 +698,7 @@ def creation_progress_and_cancellation(binary, root):
 
 
 def run_tests(binary, root):
+    creation_destination_safety_tests(binary, root / "creation-safety")
     creation_progress_and_cancellation(binary, root)
     rename_storage_conflict_tests(binary, root / "rename-conflicts")
     isolated_snapshot_conflict_tests(binary, root / "snapshot-conflicts")

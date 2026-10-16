@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import MuleeCore
 import Testing
@@ -5,6 +6,112 @@ import Testing
 
 @MainActor
 @Suite struct CreateTorrentTests {
+    @Test(arguments: ["big.bin", "source-folder", "existing.torrent"])
+    func savePanelKeepsSourceNameAndRequiresTorrentType(name: String) throws {
+        let folder = try temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let source = folder.appending(path: name)
+
+        let panel = CreateTorrentView.makeSavePanel(for: source)
+
+        #expect(panel.nameFieldStringValue == name + ".torrent")
+        #expect(panel.allowedContentTypes.count == 1)
+        #expect(panel.allowedContentTypes.first?.identifier == "org.bittorrent.torrent")
+        #expect(panel.allowedContentTypes.first?.preferredFilenameExtension == "torrent")
+        #expect(!panel.allowsOtherFileTypes)
+        #expect(!panel.canSelectHiddenExtension)
+        #expect(!panel.isExtensionHidden)
+        #expect(panel.directoryURL?.resolvingSymlinksInPath().path == folder.resolvingSymlinksInPath().path)
+    }
+
+    @Test func creationWindowParticipatesInWindowMenu() {
+        let window = CreateTorrentPanel.makeWindow()
+
+        // 不显示测试窗口；AppKit 只有在窗口可见时才会让 canBecomeMain 返回 true。
+        #expect(!window.isExcludedFromWindowsMenu)
+        #expect(!(window is NSPanel))
+        #expect(window.styleMask.contains(.titled))
+        #expect(window.canBecomeKey)
+        #expect(!window.isVisible)
+    }
+
+    @Test(arguments: ["same-file", "file-symlink", "same-folder", "inside-folder", "folder-symlink", "nested-folder"])
+    func rejectsDestinationsThatContainOrReplaceSource(scenario: String) async throws {
+        let folder = try temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let directory = folder.appending(path: "source", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let file = directory.appending(path: "original.torrent")
+        let original = Data("original content".utf8)
+        try original.write(to: file)
+        let alias = folder.appending(path: "alias")
+        let source: URL
+        let destination: URL
+        switch scenario {
+        case "same-file":
+            source = file
+            destination = file
+        case "file-symlink":
+            source = file
+            try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: file)
+            destination = alias
+        case "same-folder":
+            source = directory
+            destination = directory
+        case "folder-symlink":
+            source = directory
+            try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: directory)
+            destination = alias.appending(path: "created.torrent")
+        case "nested-folder":
+            source = directory
+            let nested = directory.appending(path: "nested")
+            try FileManager.default.createDirectory(at: nested, withIntermediateDirectories: true)
+            destination = nested.appending(path: "created.torrent")
+        default:
+            source = directory
+            destination = directory.appending(path: "created.torrent")
+        }
+        let before = try FileManager.default.subpathsOfDirectory(atPath: folder.path).sorted()
+        let model = CreateTorrentModel()
+        model.source = source
+        var creatorCalled = false
+
+        model.start(to: destination) { _, temporary, _, _, _ in
+            creatorCalled = true
+            try Data("torrent".utf8).write(to: temporary)
+        } seed: { _, _ in Issue.record("Unexpected seeding") }
+        #expect(!model.isWorking)
+        #expect(model.job == nil)
+        await model.job?.value
+
+        #expect(!creatorCalled)
+        #expect(model.issue != nil)
+        #expect(model.output == nil)
+        #expect(try Data(contentsOf: file) == original)
+        #expect(try FileManager.default.subpathsOfDirectory(atPath: folder.path).sorted() == before)
+    }
+
+    @Test func allowsSiblingFolderWithSharedNamePrefix() async throws {
+        let folder = try temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let source = folder.appending(path: "source")
+        let sibling = folder.appending(path: "source-other")
+        for directory in [source, sibling] {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        }
+        let model = CreateTorrentModel()
+        model.source = source
+        let output = sibling.appending(path: "created.torrent")
+
+        model.start(to: output) { _, temporary, _, _, _ in
+            try Data("torrent".utf8).write(to: temporary)
+        } seed: { _, _ in Issue.record("Unexpected seeding") }
+        await model.job?.value
+
+        #expect(model.output == output)
+        #expect(model.issue == nil)
+    }
+
     @Test func publishesCompletedTorrentAndSeedsFromOriginalDirectory() async throws {
         let folder = try temporaryFolder()
         defer { try? FileManager.default.removeItem(at: folder) }

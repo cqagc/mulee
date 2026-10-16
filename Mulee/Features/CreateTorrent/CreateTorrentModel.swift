@@ -26,6 +26,16 @@ final class CreateTorrentModel {
 
     func start(to destination: URL, creator: @escaping Creator, seed: @escaping (URL, URL) async throws -> Void) {
         guard let source, !isWorking, validation == nil else { return }
+        let resolvedSource = resolvingExistingAncestors(of: source)
+        let resolvedDestination = resolvingExistingAncestors(of: destination)
+        var isDirectory: ObjCBool = false
+        _ = FileManager.default.fileExists(atPath: resolvedSource.path, isDirectory: &isDirectory)
+        let sourceComponents = resolvedSource.pathComponents
+        if resolvedDestination.path == resolvedSource.path
+            || (isDirectory.boolValue && resolvedDestination.pathComponents.starts(with: sourceComponents)) {
+            issue = String(localized: "保存位置与源文件相同或位于源文件夹内。制作已停止，以免覆盖原文件或把种子算入内容。请选择源文件夹外的 .torrent 保存位置。")
+            return
+        }
         let token = UUID()
         activeJob = token
         isWorking = true
@@ -75,6 +85,21 @@ final class CreateTorrentModel {
         activeJob = nil
         isWorking = false
         job?.cancel()
+    }
+
+    private func resolvingExistingAncestors(of url: URL) -> URL {
+        var existing = url
+        var missingComponents: [String] = []
+        // 新输出还不存在时，直接 resolvingSymlinksInPath 不会解析父目录里的符号链接。
+        while !FileManager.default.fileExists(atPath: existing.path) {
+            let parent = existing.deletingLastPathComponent()
+            guard parent.path != existing.path else { break }
+            missingComponents.append(existing.lastPathComponent)
+            existing = parent
+        }
+        return missingComponents.reversed().reduce(existing.resolvingSymlinksInPath()) {
+            $0.appendingPathComponent($1)
+        }.standardizedFileURL
     }
 
     private func updateProgress(_ progress: TorrentCreationProgress, token: UUID) {

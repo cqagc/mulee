@@ -181,6 +181,13 @@ json::object Session::create_torrent(const json::object& params, CreateJob& job)
     }
     if (!fs::exists(source) || fs::is_symlink(source) || (!fs::is_directory(source) && !fs::is_regular_file(source)))
         throw RequestError("io_error", "Expected a file or directory");
+    auto resolved_source = fs::canonical(source);
+    auto resolved_destination = fs::weakly_canonical(fs::path(destination));
+    // 按路径分量比较并解析父目录的符号链接，不能把源目录里的输出算进待哈希内容。
+    auto matching = std::mismatch(resolved_source.begin(), resolved_source.end(),
+        resolved_destination.begin(), resolved_destination.end());
+    if (matching.first == resolved_source.end())
+        throw RequestError("invalid_params", "Destination must be outside the source path");
     if (fs::exists(destination)) throw RequestError("conflict", "Destination already exists");
     if (fs::is_directory(source)) {
         for (const auto& entry : fs::recursive_directory_iterator(source)) {

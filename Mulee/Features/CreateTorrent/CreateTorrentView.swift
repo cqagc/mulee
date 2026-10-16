@@ -1,12 +1,14 @@
 import AppKit
 import MuleeCore
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct CreateTorrentView: View {
     let app: AppModel
     let engine: TorrentEngine
     let close: () -> Void
     let model: CreateTorrentModel
+    let parentWindow: () -> NSWindow?
 
     var body: some View {
         @Bindable var model = model
@@ -14,21 +16,41 @@ struct CreateTorrentView: View {
             Text("制作种子").font(.headline)
             Form {
                 LabeledContent("文件或文件夹") {
-                    VStack(alignment: .trailing, spacing: 6) {
+                    VStack(alignment: .trailing, spacing: 8) {
                         if let source = model.source { Text(source.path).textSelection(.enabled) }
                         Button("选择文件或文件夹…", action: chooseSource)
                     }
                 }
-                Text("节点服务器地址，每行一个")
-                TextEditor(text: $model.trackerText)
-                    .font(.body.monospaced())
-                    .frame(minHeight: 100)
-                    .accessibilityLabel("节点服务器地址，每行一个")
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("节点服务器地址，每行一个")
+                    ZStack(alignment: .topLeading) {
+                        TextEditor(text: $model.trackerText)
+                            .font(.body.monospaced())
+                            .scrollContentBackground(.hidden)
+                            .padding(4)
+                            .accessibilityLabel("节点服务器地址，每行一个")
+                            .accessibilityHint("输入节点服务器地址，每行一个；留空则不添加。")
+                        if model.trackerText.isEmpty {
+                            Text("输入节点服务器地址，每行一个；留空则不添加。")
+                                .foregroundStyle(.secondary)
+                                .padding(8)
+                                .allowsHitTesting(false)
+                                .accessibilityHidden(true)
+                        }
+                    }
+                    .frame(minHeight: 112)
+                    .background(Color(nsColor: .textBackgroundColor), in: .rect(cornerRadius: 6))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color(nsColor: .separatorColor))
+                    }
+                }
                 Toggle("私有种子", isOn: $model.isPrivate)
-                LabeledContent("种子格式", value: "v1+v2 混合")
-                LabeledContent("分块大小", value: String(localized: "自动"))
+                LabeledContent("种子格式") { Text("v1+v2 混合") }
+                LabeledContent("分块大小") { Text("自动") }
                 Toggle("制作完成后立即开始做种", isOn: $model.startsSeeding)
             }
+            .formStyle(.grouped)
             .disabled(model.isWorking)
             if let validation = model.validation { Text(validation).foregroundStyle(.secondary) }
             if model.isWorking {
@@ -66,18 +88,42 @@ struct CreateTorrentView: View {
     }
 
     private func chooseSource() {
+        guard let window = parentWindow() else { return }
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        if panel.runModal() == .OK { model.source = panel.url }
+        panel.beginSheetModal(for: window) { response in
+            DispatchQueue.main.async { [weak window] in window?.makeKeyAndOrderFront(nil) }
+            if response == .OK { model.source = panel.url }
+        }
     }
 
     private func create() {
-        guard let source = model.source else { return }
+        guard let source = model.source, let window = parentWindow() else { return }
+        let panel = Self.makeSavePanel(for: source)
+        panel.beginSheetModal(for: window) { response in
+            DispatchQueue.main.async { [weak window] in window?.makeKeyAndOrderFront(nil) }
+            guard response == .OK, let output = panel.url else { return }
+            let destination = output.pathExtension.lowercased() == "torrent"
+                ? output : output.appendingPathExtension("torrent")
+            start(to: destination)
+        }
+    }
+
+    static func makeSavePanel(for source: URL) -> NSSavePanel {
         let panel = NSSavePanel()
+        // 先限定类型再填文件名，避免保存面板按源文件扩展名重写默认名。
+        panel.allowedContentTypes = [UTType(importedAs: "org.bittorrent.torrent", conformingTo: .data)]
+        panel.allowsOtherFileTypes = false
+        panel.canSelectHiddenExtension = false
+        panel.isExtensionHidden = false
+        panel.directoryURL = source.deletingLastPathComponent()
         panel.nameFieldStringValue = source.lastPathComponent + ".torrent"
-        guard panel.runModal() == .OK, let output = panel.url else { return }
+        return panel
+    }
+
+    private func start(to output: URL) {
         model.start(to: output) { source, temporaryOutput, isPrivate, trackers, progress in
             _ = try await engine.createTorrent(
                 from: source, to: temporaryOutput, isPrivate: isPrivate, trackers: trackers, progress: progress
