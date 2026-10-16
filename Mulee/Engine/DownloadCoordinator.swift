@@ -8,7 +8,7 @@ final class DownloadCoordinator {
     private var engines: [any DownloadEngine]
     private let videoBootstrap: VideoEngineBootstrap?
     private let videoEngineFactory: (@MainActor (VideoEngineConfiguration) async throws -> any DownloadEngine)?
-    private var waitingVideoLinks: [DownloadTask.ID: (link: ParsedLink, directory: URL?, entry: YtDlpPlaylistEntry?)] = [:]
+    private var waitingVideoLinks: [DownloadTask.ID: (link: ParsedLink, directory: URL?, entry: YtDlpPlaylistEntry?, formatID: String?, videoOnly: Bool)] = [:]
     private var submittingVideoIDs: Set<DownloadTask.ID> = []
     private var videoFFmpegURL: URL?
     private var videoStartupTask: Task<Void, Never>?
@@ -49,6 +49,7 @@ final class DownloadCoordinator {
         generation = token
         latestOptions = options
         scheduling.reset()
+        for task in model.tasks where task.deletedAt != nil { excludeFromSnapshots(task) }
         let startupKinds = Set(engines.map(\.kind)).union(
             videoBootstrap != nil || videoEngineFactory != nil ? [.video] : []
         )
@@ -57,7 +58,7 @@ final class DownloadCoordinator {
         }
         self.videoConfiguration = videoConfiguration
         // 尚未交给引擎的任务没有会话及可靠的目录记录，重启后明确提示重新下载。
-        for index in model.tasks.indices where model.tasks[index].kind == .video
+        for index in model.tasks.indices where model.tasks[index].deletedAt == nil && model.tasks[index].kind == .video
             && model.tasks[index].engineTaskID == nil
             && [.queued, .paused].contains(model.tasks[index].status) {
             model.tasks[index].status = .failed
@@ -224,6 +225,7 @@ final class DownloadCoordinator {
         model.tasks = EngineSnapshotMerger.merge(
             tasks: model.tasks, snapshots: snapshots, now: .now, videoConfiguration: videoConfiguration
         )
+        captureCompletedBookmarks()
         checkCompletedFiles()
         if let selected = model.selectedTaskID, !model.tasks.contains(where: { $0.id == selected }) {
             model.selectedTaskID = nil
@@ -240,7 +242,9 @@ final class DownloadCoordinator {
         torrentDownloadModes: [ParsedLink: (sequentialDownload: Bool, firstLastPriority: Bool)] = [:],
         videoEntries: [ParsedLink: YtDlpPlaylistEntry] = [:],
         requestContexts: [ParsedLink: DownloadRequestContext] = [:],
-        checksums: [ParsedLink: DownloadChecksum] = [:]
+        checksums: [ParsedLink: DownloadChecksum] = [:],
+        videoFormatIDs: [ParsedLink: String] = [:],
+        videoOnlyFormats: [ParsedLink: Bool] = [:]
     ) async {
         var insertionIndex = 0
         for link in links {
@@ -252,6 +256,9 @@ final class DownloadCoordinator {
                 task.fileExtension = URL(fileURLWithPath: name).pathExtension
             }
             if let entry = videoEntries[link] { task.name = entry.taskTitle }
+            let ruleResult = applyDownloadRule(to: &task, link: link, context: requestContexts[link] ?? .init(), directory: directory)
+            let directory = ruleResult.directory
+            let requestContext = ruleResult.context
             if let detail = videoConfiguration.detail(for: link) {
                 task.detail = detail
             }
@@ -260,7 +267,7 @@ final class DownloadCoordinator {
                 model.tasks.insert(task, at: min(insertionIndex, model.tasks.count))
                 if insertionIndex == 0 { model.selectedTaskID = task.id }
                 insertionIndex += 1
-                waitingVideoLinks[task.id] = (link, directory, videoEntries[link])
+                waitingVideoLinks[task.id] = (link, directory, videoEntries[link], videoFormatIDs[link], videoOnlyFormats[link] ?? false)
                 if engine(for: .video) != nil {
                     await submitWaitingVideos()
                 } else if case .failed(let reason) = model.engineStates[.video] {
@@ -274,7 +281,7 @@ final class DownloadCoordinator {
                 do {
                     let queued = shouldQueueNewTask()
                     if let http = engine as? Aria2Engine {
-                        let context = requestContexts[link] ?? DownloadRequestContext()
+                        let context = requestContext
                         try context.validate()
                         if case .http(let url, _, _) = link {
                             let name = context.suggestedFilename ?? url.lastPathComponent
@@ -300,7 +307,8 @@ final class DownloadCoordinator {
                             }
                         }
                         task.engineTaskID = try await http.add(
-                            link: link, directory: directory, context: context, checksum: task.checksum, paused: queued
+                            link: link, directory: directory, context: context, checksum: task.checksum, paused: queued,
+                            httpThreads: ruleResult.rule?.httpThreads, speedLimitBytes: ruleResult.rule?.speedLimitBytes
                         )
                     } else if let torrent = engine as? TorrentEngine {
                         let mode = torrentDownloadModes[link]
@@ -388,7 +396,9 @@ final class DownloadCoordinator {
         await refreshScheduling(sample: false)
     }
 
-    func replaceHTTPLink(_ id: UUID, newURL: URL, restartFromScratch: Bool = false) async throws {
+    func replaceHTTPLink(
+        _ id: UUID, newURL: URL, restartFromScratch: Bool = false, requestContext: DownloadRequestContext? = nil
+    ) async throws {
         guard let task = model.tasks.first(where: { $0.id == id }), task.kind == .http,
               let http = engine(for: .http) as? Aria2Engine else { throw EngineError.notRunning }
         guard replacingHTTPTasks.insert(id).inserted else { return }
@@ -403,6 +413,12 @@ final class DownloadCoordinator {
             // 用户换到别的网站时，不把原网站的登录凭据发过去。
             context = context.withoutCookie
             context.headers = context.headers.filter { !["authorization", "proxy-authorization"].contains($0.key.lowercased()) }
+        }
+        if let requestContext {
+            try requestContext.validate()
+            context.referer = requestContext.referer
+            context.userAgent = requestContext.userAgent
+            if let cookie = requestContext.requestCookie { context.cookie = cookie }
         }
         let identity = try await HTTPResourceProbe.inspect(
             newURL, context: context, expectsHTML: task.httpIdentity?.contentType == "text/html"
@@ -455,7 +471,10 @@ final class DownloadCoordinator {
         checksumJobs[id] = nil
         checkedCompletions.remove(id)
         scheduling.queue(model.tasks[index])
-        if !sameOrigin, task.hasRequestCookie == true {
+        if let cookie = requestContext?.requestCookie {
+            try await DownloadRequestCookieStore.shared.save(cookie, taskID: id)
+            model.tasks[index].hasRequestCookie = true
+        } else if !sameOrigin, task.hasRequestCookie == true {
             model.tasks[index].hasRequestCookie = false
             try await DownloadRequestCookieStore.shared.delete(taskID: id)
         }
@@ -489,9 +508,52 @@ final class DownloadCoordinator {
         return result
     }
 
+    private func applyDownloadRule(
+        to task: inout DownloadTask, link: ParsedLink, context: DownloadRequestContext, directory: URL?
+    ) -> (directory: URL?, context: DownloadRequestContext, rule: DownloadRule?) {
+        let settings = model.downloadSettings
+        let root = directory ?? latestOptions?.downloadDirectory
+        let rule = DownloadRule.firstMatch(
+            in: settings?.downloadRules ?? [], context: context, downloadURL: URL(string: link.original),
+            filename: task.name, kind: task.kind
+        )
+        var context = context
+        if task.kind == .http, let userAgent = rule?.userAgent, !userAgent.isEmpty { context.userAgent = userAgent }
+        task.requestContext = context.withoutCookie
+        let fileExtension = task.fileExtension ?? URL(filePath: task.name).pathExtension
+        var destination = root
+        if let root, let ruleDirectory = rule?.saveDirectory(under: root) {
+            destination = ruleDirectory
+        } else if settings?.sortIntoFolders == true, let root,
+                  let category = DownloadCategory.classify(extension: fileExtension) {
+            destination = root.appendingPathComponent(category.folderName, isDirectory: true)
+        }
+        if let destination, destination != root {
+            do {
+                try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+            } catch {
+                task.errorMessage = error.localizedDescription
+            }
+        }
+        task.writeDirectories = destination.map { [$0] }
+        return (destination, context, rule)
+    }
+
+    private func captureCompletedBookmarks() {
+        var tasks = model.tasks
+        var changed = false
+        for index in tasks.indices where tasks[index].deletedAt == nil && tasks[index].fileBookmark == nil
+            && [.completed, .seeding].contains(tasks[index].status) {
+            let original = tasks[index]
+            FileTracker.capture(&tasks[index])
+            changed = changed || tasks[index] != original
+        }
+        if changed { model.tasks = tasks }
+    }
+
     /// 所有引擎共用完成后的流式校验，不阻塞轮询或主线程。
     private func checkCompletedFiles() {
-        let currentIDs = Set(model.tasks.map(\.id))
+        let currentIDs = Set(model.activeTasks.map(\.id))
         for id in checksumJobs.keys where !currentIDs.contains(id) {
             checksumJobs[id]?.cancel()
             checksumJobs[id] = nil
@@ -503,10 +565,10 @@ final class DownloadCoordinator {
                 model.tasks[index].errorMessage = issue
             }
         }
-        for task in model.tasks where [.completed, .seeding].contains(task.status)
+        for task in model.tasks where task.deletedAt == nil && ([.completed, .seeding].contains(task.status)
             || (task.kind == .http && task.status == .failed && task.checksum != nil
                 && (task.errorMessage?.contains("校验值不一致") == true
-                    || task.totalBytes.map { $0 > 0 && task.receivedBytes >= $0 } == true)) {
+                    || task.totalBytes.map { $0 > 0 && task.receivedBytes >= $0 } == true))) {
             guard let file = task.savePath, !checkedCompletions.contains(task.id), checksumJobs[task.id] == nil else { continue }
             if let result = task.checksumVerification, result.actual != nil, result.expected == task.checksum {
                 checkedCompletions.insert(task.id)
@@ -570,14 +632,14 @@ final class DownloadCoordinator {
         guard let index = model.tasks.firstIndex(where: { $0.id == id }) else { return }
         let task = model.tasks[index]
         waitingVideoLinks[id] = nil
-        if task.kind == .video, task.status == .completed {
+        if task.kind == .video, task.status == .completed, !deleteFiles {
             await removeCompletedVideo(task).value
             return
         }
         if (task.status == .completed && ![.bittorrent, .ed2k].contains(task.kind)) || task.engineTaskID == nil {
             excludeFromSnapshots(task)
             scheduling.removed(task)
-            model.removeRecord(id)
+            if deleteFiles { model.removeRecord(id) } else { model.trashRecord(id) }
             return
         }
         guard let engine = engine(for: task.kind), let engineTaskID = task.engineTaskID else {
@@ -586,7 +648,7 @@ final class DownloadCoordinator {
         }
         let wasSelected = model.selectedTaskID == id
         excludeFromSnapshots(task)
-        model.removeRecord(id)
+        if deleteFiles { model.removeRecord(id) } else { model.trashRecord(id) }
         revisions[task.kind, default: 0] += 1
         defer { revisions[task.kind, default: 0] += 1 }
         do {
@@ -596,7 +658,11 @@ final class DownloadCoordinator {
             excludedTaskIDs[task.kind]?.remove(engineTaskID)
             var restored = task
             restored.errorMessage = EngineStatusPresentation.errorMessage(error)
-            model.tasks.insert(restored, at: min(index, model.tasks.count))
+            if let current = model.tasks.firstIndex(where: { $0.id == id }) {
+                model.tasks[current] = restored
+            } else {
+                model.tasks.insert(restored, at: min(index, model.tasks.count))
+            }
             if wasSelected {
                 model.selectedTaskID = id
             }
@@ -609,7 +675,8 @@ final class DownloadCoordinator {
         model.excludeVideoFromHistory(task)
         excludeFromSnapshots(task)
         scheduling.removed(task)
-        model.removeRecord(task.id)
+        model.trashRecord(task.id)
+        model.flushTaskHistory()
         return Task {
             guard let id = task.engineTaskID, let engine = engine(for: .video) else { return }
             try? await engine.remove(id, deleteFiles: false)
@@ -668,7 +735,7 @@ final class DownloadCoordinator {
     }
 
     private func perform(_ id: DownloadTask.ID, action: Action) async {
-        guard let task = model.tasks.first(where: { $0.id == id }) else { return }
+        guard let task = model.tasks.first(where: { $0.id == id && $0.deletedAt == nil }) else { return }
         if let engineTaskID = task.engineTaskID {
             guard let engine = engine(for: task.kind) else {
                 setError(String(localized: "下载引擎未运行"), for: id)
@@ -764,7 +831,8 @@ final class DownloadCoordinator {
                 let engineID: String
                 if let video = engine as? YtDlpEngine {
                     engineID = try await video.add(
-                        link: pending.link, directory: pending.directory, entry: pending.entry, paused: queued
+                        link: pending.link, directory: pending.directory, entry: pending.entry, paused: queued,
+                        formatID: pending.formatID, formatVideoOnly: pending.videoOnly
                     )
                 } else {
                     engineID = try await queued
@@ -792,7 +860,7 @@ final class DownloadCoordinator {
     }
 
     private func shouldQueueNewTask() -> Bool {
-        let occupied = model.tasks.filter {
+        let occupied = model.activeTasks.filter {
             GlobalConcurrencyPolicy.occupiesSlot($0) && !scheduling.isQueuePaused($0)
         }.count
         return occupied >= max(1, latestOptions?.maxConcurrentDownloads ?? 1)

@@ -68,8 +68,8 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         self.settings = settings
         self.center = center
         self.now = now
-        previous = Dictionary(uniqueKeysWithValues: model.tasks.map { ($0.id, $0.status) })
-        completed = Set(model.tasks.filter { [.completed, .seeding, .extracting].contains($0.status) }.map(\.id))
+        previous = Dictionary(uniqueKeysWithValues: model.activeTasks.map { ($0.id, $0.status) })
+        completed = Set(model.activeTasks.filter { [.completed, .seeding, .extracting].contains($0.status) }.map(\.id))
         super.init()
         model.notificationService = self
         let open = UNNotificationAction(identifier: Self.openAction, title: String(localized: "打开"), options: .foreground)
@@ -87,7 +87,7 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
 
     func tasksDidChange() {
         flushCompletionsIfDue()
-        for task in model.tasks {
+        for task in model.activeTasks {
             if task.status == .failed {
                 completed.remove(task.id)
                 pending.removeAll { $0.id == task.id }
@@ -102,13 +102,13 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
                 sendSystem(title: String(localized: "下载未完成"), body: task.errorMessage ?? task.name)
             }
         }
-        previous = Dictionary(uniqueKeysWithValues: model.tasks.map { ($0.id, $0.status) })
+        previous = Dictionary(uniqueKeysWithValues: model.activeTasks.map { ($0.id, $0.status) })
     }
 
     func flushCompletionsIfDue() {
         guard let since = pendingSince, now().timeIntervalSince(since) >= 10 else { return }
         let tasks = pending.compactMap { pendingTask in
-            model.tasks.first { $0.id == pendingTask.id && $0.status != .failed }
+            model.tasks.first { $0.id == pendingTask.id && $0.deletedAt == nil && $0.status != .failed }
         }
         pending.removeAll()
         pendingSince = nil
@@ -194,7 +194,7 @@ final class NotificationService: NSObject, UNUserNotificationCenterDelegate {
         }
         model.whenAllDoneController?.userDidInteract()
         let ids = Set(taskIDs.compactMap(UUID.init(uuidString:)))
-        let tasks = model.tasks.filter { ids.contains($0.id) }
+        let tasks = model.activeTasks.filter { ids.contains($0.id) }
         for task in tasks {
             switch action {
             case Self.openAction:

@@ -15,12 +15,12 @@ import Testing
         #expect(SidebarItem.subtitle(for: tasks) == "8 个任务 · 4 个进行中")
     }
 
-    @Test(arguments: [SidebarItem.http, .bittorrent, .ed2k, .video])
-    func kindsAreIndependentOfStatus(_ item: SidebarItem) {
+    @Test(arguments: zip([SidebarItem.http, .bittorrent, .ed2k, .video], TaskKind.allCases))
+    func kindsAreIndependentOfStatus(_ item: SidebarItem, kind: TaskKind) {
         let tasks = item.filter(MockData.tasks)
 
         #expect(tasks.count == 2)
-        #expect(tasks.allSatisfy { $0.kind.rawValue == item.rawValue })
+        #expect(tasks.allSatisfy { $0.kind == kind })
     }
 
     @Test func downloadingIncludesPostProcessingButExcludesSeeding() {

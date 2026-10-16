@@ -62,7 +62,7 @@ final class DiskReserveMonitor {
         lastCheck = date
         checking = true
         defer { checking = false }
-        let tasks = model.tasks.filter { Self.needsProtection($0) || $0.pauseReason == .diskSpace }
+        let tasks = model.tasks.filter { $0.deletedAt == nil && (Self.needsProtection($0) || $0.pauseReason == .diskSpace) }
         var byVolume: [URL: [DownloadTask]] = [:]
         var taskVolumes: [DownloadTask.ID: Set<URL>] = [:]
         var unknownVolumes: Set<DownloadTask.ID> = []

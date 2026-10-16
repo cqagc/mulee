@@ -161,3 +161,76 @@ test("unrelated downloads do not require cookie APIs and cookie read errors stay
     await login.transfer(state.api, ["https://example.org/a.zip"]);
     assert.deepEqual(state.messages, []);
 });
+
+test("download cookies require both an explicit exact-site grant and browser permission", async () => {
+    const download = login.downloadCookies;
+    for (const [sites, granted] of [[[], true], [["https://example.org"], false],
+        [["https://other.example.org"], true], [["http://example.org"], true], [["https://example.org:8443"], true]]) {
+        const state = fixture(false, granted);
+        state.api.storage.local.get = async () => ({ downloadCookieSites: sites });
+        assert.equal(await download.transfer(state.api, "https://example.org/archive.zip"), null);
+        assert.deepEqual(state.reads, []);
+        assert.deepEqual(state.messages, []);
+    }
+});
+
+test("download cookie permissions include only the current origin", () => {
+    const request = login.downloadCookies.permissionRequest(fixture(false).api, "https://example.org/page");
+    assert.deepEqual(request.origins, ["https://example.org/*"]);
+    assert.deepEqual(request.permissions, ["cookies", "nativeMessaging"]);
+    assert.equal(login.downloadCookies.siteOrigin("file:///temporary/a.zip"), null);
+});
+
+test("download tokens use sixteen cryptographically random bytes", () => {
+    let length;
+    const token = login.downloadCookies.createToken({ getRandomValues: bytes => {
+        length = bytes.length;
+        bytes.set(Array.from({ length: 16 }, (_, index) => index));
+    } });
+    assert.equal(length, 16);
+    assert.equal(token, "000102030405060708090a0b0c0d0e0f");
+    const crypto = require("node:crypto").webcrypto;
+    assert.notEqual(login.downloadCookies.createToken(crypto), login.downloadCookies.createToken(crypto));
+});
+
+test("download handoff queries only the download URL and sends cookies through native messaging", async () => {
+    const state = fixture(false);
+    state.api.storage.local.get = async () => ({ downloadCookieSites: ["https://example.org"] });
+    state.api.cookies.getAll = async query => {
+        state.reads.push(query);
+        return [{ name: "session", value: "synthetic-private" }];
+    };
+    const url = "https://example.org/private/archive.zip";
+    const token = await login.downloadCookies.transfer(state.api, url);
+    assert.match(token, /^[a-f0-9]{32}$/);
+    assert.deepEqual(state.reads, [{ url }]);
+    assert.equal(state.messages.length, 1);
+    assert.equal(state.messages[0].payload.token, token);
+    assert.equal(state.messages[0].payload.type, "downloadCookies");
+    assert.equal(state.messages[0].payload.cookie, "session=synthetic-private");
+    assert.equal(state.messages[0].payload.url, url);
+});
+
+test("download native errors and malformed cookies never expose cookie contents", async () => {
+    const state = fixture(false);
+    state.api.storage.local.get = async () => ({ downloadCookieSites: ["https://example.org"] });
+    state.api.cookies.getAll = async () => [{ name: "session", value: "synthetic-private" }];
+    state.api.runtime.sendNativeMessage = async () => { throw new Error("synthetic-private"); };
+    await assert.rejects(login.downloadCookies.transfer(state.api, "https://example.org/a.zip"), { message: "downloadCookiesFailed" });
+    state.api.cookies.getAll = async () => [{ name: "session", value: "synthetic-private\r\nInjected: true" }];
+    await assert.rejects(login.downloadCookies.transfer(state.api, "https://example.org/a.zip"), { message: "downloadCookiesFailed" });
+    assert.deepEqual(state.messages, []);
+});
+
+test("Safari download cookies reuse the app extension host without requesting native permission", async () => {
+    const state = fixture(false, true, "safari-web-extension");
+    state.api.runtime.getManifest = () => ({ optional_permissions: ["cookies"] });
+    state.api.storage.local.get = async () => ({ downloadCookieSites: ["https://example.org"] });
+    state.api.cookies.getAll = async () => [{ name: "session", value: "synthetic-private" }];
+    assert.deepEqual(login.downloadCookies.permissionRequest(state.api, "https://example.org/page"), {
+        permissions: ["cookies"], origins: ["https://example.org/*"]
+    });
+    const token = await login.downloadCookies.transfer(state.api, "https://example.org/a.zip");
+    assert.equal(state.messages[0].host, "com.cqagc.mulee");
+    assert.equal(state.messages[0].payload.token, token);
+});

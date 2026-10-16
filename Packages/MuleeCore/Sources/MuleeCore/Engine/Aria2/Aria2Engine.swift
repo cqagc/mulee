@@ -74,7 +74,8 @@ public actor Aria2Engine: DownloadEngine {
 
     public func add(
         link: ParsedLink, directory: URL?, context: DownloadRequestContext,
-        checksum: DownloadChecksum? = nil, paused: Bool = false
+        checksum: DownloadChecksum? = nil, paused: Bool = false,
+        httpThreads: Int? = nil, speedLimitBytes: Int64? = nil
     ) async throws -> String {
         let client = try runningClient()
         guard case .http(let url, _, _) = link,
@@ -83,6 +84,12 @@ public actor Aria2Engine: DownloadEngine {
         }
         var params: [Aria2RPCValue] = [.array([.string(url.absoluteString)])]
         var values = try Aria2RequestOptions.values(context: context, checksum: checksum)
+        if let httpThreads {
+            let threads = String(min(16, max(1, httpThreads)))
+            values["split"] = .string(threads)
+            values["max-connection-per-server"] = .string(threads)
+        }
+        if let speedLimitBytes { values["max-download-limit"] = .string(String(max(0, speedLimitBytes))) }
         if let directory { values["dir"] = .string(directory.path) }
         if paused { values["pause"] = .string("true") }
         if !values.isEmpty { params.append(.object(values)) }

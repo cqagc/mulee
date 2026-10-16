@@ -39,7 +39,7 @@
         "message": "接管瀏覽器下載"
     },
     "takeoverHint": {
-        "message": "預設關閉。依下列副檔名取消瀏覽器下載並交給 Mulee 確認。需要登入 cookie 的下載可能失敗，失敗時可暫時關閉接管；不讀取或傳遞 cookie。"
+        "message": "預設關閉。符合的瀏覽器下載會取消並交給 Mulee 確認；僅為你明確允許的網站交接登入狀態。"
     },
     "takeoverUnavailable": {
         "message": "此瀏覽器未提供下載接管 API。請使用右鍵選單或手動選取連結傳送至 Mulee。"
@@ -106,5 +106,20 @@
     },
     "videoLoginFailed": {
         "message": "無法傳遞登入狀態。Chrome 請先在 Mulee 設定·影片中點「允許 Chrome 擴充功能傳遞登入狀態」；Safari 請使用正式簽署的 Mulee。"
+    },
+    "downloadCookies": {
+        "message": "允許 Mulee 讀取此網站登入狀態"
+    },
+    "downloadCookiesHint": {
+        "message": "預設關閉。僅為明確授權的下載網站讀取 Cookie，透過 Native Messaging 交給 Mulee，不進入連結或工作歷史。Chrome 請先在 Mulee 的「影片」設定中啟用擴充功能交接。"
+    },
+    "downloadCookiesUnavailable": {
+        "message": "此頁面無法授權網站登入狀態。"
+    },
+    "downloadCookiesDenied": {
+        "message": "未獲得網站權限，登入狀態交接仍然關閉。"
+    },
+    "downloadCookiesFailed": {
+        "message": "無法交接網站登入狀態。請檢查 Mulee 的原生交接設定後重試。"
     }
 }

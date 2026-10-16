@@ -8,13 +8,9 @@ public enum UnzipRuleMatcher {
             let matches: Bool
             switch rule.matchKind {
             case .sourceSite:
-                let domain = normalizedDomain(rule.pattern)
-                let host = normalizedDomain(sourceURL?.host ?? "")
-                matches = !domain.isEmpty && (host == domain || host.hasSuffix("." + domain))
+                matches = RuleMatcher.domain(sourceURL?.host, matches: rule.pattern, allowsWildcards: false)
             case .filenamePrefix:
-                let pattern = rule.pattern.components(separatedBy: "*")
-                    .map(NSRegularExpression.escapedPattern(for:)).joined(separator: ".*")
-                matches = filename.range(of: "^" + pattern, options: .regularExpression) != nil
+                matches = RuleMatcher.wildcard(filename, matches: rule.pattern, prefix: true)
             case .filenameRegex:
                 do {
                     let expression = try NSRegularExpression(pattern: rule.pattern)
@@ -35,11 +31,4 @@ public enum UnzipRuleMatcher {
         return UnzipRuleMatch(sources: book == nil ? [] : [.passwordBook], matchedRule: book, errors: errors)
     }
 
-    private static func normalizedDomain(_ value: String) -> String {
-        var domain = value.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        if let host = URL(string: domain)?.host { domain = host }
-        while domain.hasSuffix(".") { domain.removeLast() }
-        if domain.hasPrefix("www.") { domain.removeFirst(4) }
-        return domain
-    }
 }

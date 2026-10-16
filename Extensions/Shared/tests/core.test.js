@@ -146,3 +146,20 @@ test("collection, selection extraction and handoff deduplicate normalized URLs",
     assert.deepEqual(new URL(entry).searchParams.getAll("url"), [base, otherPart]);
     assert.equal(new URL(entry).searchParams.get("referrer"), base);
 });
+
+
+test("handoff context encodes request metadata and only accepts a 128-bit token", () => {
+    // 合成的 128 位十六进制值，只用来验证格式。
+    const token = Array.from({ length: 32 }, (_, i) => (i % 16).toString(16)).join("");
+    const [entry] = links.buildBatches(["https://example.org/a.zip"], "https://example.org/page", "", {
+        userAgent: "Synthetic Browser/1.0", filename: "/temporary/a file.zip", token, cookie: "synthetic-private"
+    });
+    const query = new URL(entry).searchParams;
+    assert.equal(query.get("ua"), "Synthetic Browser/1.0");
+    assert.equal(query.get("filename"), "a file.zip");
+    assert.equal(query.get("token"), token);
+    assert.equal(entry.includes("synthetic-private"), false);
+    assert.equal(query.has("cookie"), false);
+    const [invalid] = links.buildBatches(["https://example.org/a.zip"], "", "", { token: "short" });
+    assert.equal(new URL(invalid).searchParams.has("token"), false);
+});

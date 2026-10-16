@@ -10,6 +10,7 @@ struct NewTaskSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: NewTaskModel
     @State private var needsSettingsDefaults: Bool
+    @State private var addingTask: Task<Void, Never>?
 
     init(draft: NewTaskModel? = nil) {
         _draft = State(initialValue: draft ?? NewTaskModel())
@@ -56,6 +57,15 @@ struct NewTaskSheet: View {
                 .padding(.bottom, 8)
 
             ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(draft.inputRows, id: \.line) { row in
+                        Text("第 \(row.line) 行：\(row.message)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(12)
                 if draft.links.isEmpty {
                     ContentUnavailableView("等待粘贴链接", systemImage: MuleeSymbol.add.name)
                 } else {
@@ -64,7 +74,9 @@ struct NewTaskSheet: View {
                             if item.id != draft.links.first?.id {
                                 Divider()
                             }
-                            NewTaskLinkRow(item: item)
+                            NewTaskLinkRow(item: item) {
+                                await draft.mergeTrackers(for: item, in: model)
+                            }
                         }
                     }
                 }
@@ -82,6 +94,15 @@ struct NewTaskSheet: View {
             NewTaskFooterView(draft: draft, cancel: cancel, startDownload: startDownload)
         }
         .frame(width: 640)
+        .disabled(draft.isChecking)
+        .onDisappear { addingTask?.cancel() }
+        .onChange(of: draft.knownDownloadBytes, initial: true) { refreshDiskCheck() }
+        .onChange(of: draft.saveDirectory) { refreshDiskCheck() }
+        .onChange(of: draft.parsedLinks, initial: true) {
+            for item in draft.links {
+                item.applyJunkFilter(BitTorrentEngineConfiguration.configuration(from: settings))
+            }
+        }
         .dropDestination(for: URL.self, action: dropTorrentFiles)
         .onAppear(perform: prepareDraft)
         .onChange(of: model.pendingNewTaskText) {
@@ -123,10 +144,20 @@ struct NewTaskSheet: View {
         dismiss()
     }
 
+    private func refreshDiskCheck() {
+        _ = draft.checkDisk { size, directory in
+            guard size > 0, let protection = model.diskReserveMonitor else { return false }
+            return try protection.requiresConfirmation(forKnownBytes: size, in: directory)
+        }
+    }
+
     private func startDownload() {
         guard draft.canStartDownload else { return }
-        draft.createTasks(in: model)
-        dismiss()
+        addingTask = Task { @MainActor in
+            guard await draft.checkBeforeAdding(in: model, settings: settings), !Task.isCancelled else { return }
+            draft.createTasks(in: model)
+            dismiss()
+        }
     }
 }
 

@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "__MSG_name__",
     "description": "__MSG_description__",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "default_locale": "zh_CN",
     "permissions": [
         "contextMenus",
@@ -37,7 +37,7 @@
     ],
     "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3ODHf9IryS65Uu5Rn4ZmCP3cL0vDEIRSZ8Fyxlmfn4jksmEss/d0/USrSlnUIMvuMg8+IYLVtXjGz6Tuf8BgDDbinI+8PpK2hnKJTFtN/HbAivWdlEvIMG1VNBFiRxT66aGO7718MfsYakRQYb11sd8VIId2/r5Jow8PcFS6o4Ky8rn6O02UU0nrvmfXjOGTSDJ3b1fospDPV4MY1XmBOZ5QEuION4pgptJ6/BFj7d5gh6glLCoGd25MNglgBkZkcunTOi7igHh1o7R6xEJl6C2huRGbBm6B1L81UL5nOmMETY7OP8IpsdbYmtlhBgo/kpz+350UprWnyyxwoGm5GwIDAQAB",
     "optional_host_permissions": [
-        "https://*.bilibili.com/*",
-        "https://*.youtube.com/*"
+        "http://*/*",
+        "https://*/*"
     ]
 }

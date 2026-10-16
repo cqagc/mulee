@@ -143,7 +143,8 @@ import Testing
         #expect(await ed2k.pausedIDs == ["task-1"])
         #expect(await ed2k.resumedIDs == ["task-1"])
         #expect(await ed2k.deletesFiles == [deleteFiles])
-        #expect(model.tasks.isEmpty)
+        #expect(model.activeTasks.isEmpty)
+        #expect(deleteFiles ? model.tasks.isEmpty : model.tasks.first?.deletedAt != nil)
     }
 
     @Test("电驴启动失败不影响 HTTP，错误文案不提 aria2")
@@ -197,7 +198,8 @@ import Testing
         await coordinator.remove(task.id, deleteFiles: deleteFiles)
         await coordinator.poll()
 
-        #expect(model.tasks.isEmpty)
+        #expect(model.activeTasks.isEmpty)
+        #expect(deleteFiles ? model.tasks.isEmpty : model.tasks.first?.deletedAt != nil)
         #expect(await ed2k.removedIDs == ["task-1"])
         #expect(await ed2k.deletesFiles == [deleteFiles])
         await coordinator.stop()
@@ -214,12 +216,13 @@ import Testing
 
         model.clearCompletedTasks()
         for _ in 0..<100 {
-            if model.tasks.isEmpty { break }
+            if model.activeTasks.isEmpty { break }
             try await Task.sleep(for: .milliseconds(5))
         }
         await coordinator.poll()
 
-        #expect(model.tasks.isEmpty)
+        #expect(model.activeTasks.isEmpty)
+        #expect(model.tasks.first?.deletedAt != nil)
         #expect(await ed2k.removedIDs == ["task-1"])
         #expect(await ed2k.deletesFiles == [false])
         await coordinator.stop()

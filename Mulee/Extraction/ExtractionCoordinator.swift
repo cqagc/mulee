@@ -50,7 +50,7 @@ final class ExtractionCoordinator {
     }
 
     func requestExtraction(_ id: DownloadTask.ID) {
-        guard let task = model.tasks.first(where: { $0.id == id }), task.status == .completed,
+        guard let task = model.tasks.first(where: { $0.id == id }), task.deletedAt == nil, task.status == .completed,
               let path = task.savePath,
               ArchiveVolumeDetector.detect(filename: path.lastPathComponent, directoryFilenames: []).isArchive else { return }
         manualRequests.insert(id)
@@ -75,7 +75,7 @@ final class ExtractionCoordinator {
                 }
             }
         }
-        for task in model.tasks where task.status == .completed {
+        for task in model.tasks where task.deletedAt == nil && task.status == .completed {
             guard seenCompletions.insert(task.id).inserted else { continue }
             guard settings.autoExtract, task.postDownload.autoExtract,
                   !Self.isFinished(task.postDownload), let path = task.savePath,
@@ -131,7 +131,7 @@ final class ExtractionCoordinator {
         }
         for id in candidates {
             if model.tasks.contains(where: { $0.id == id && $0.pauseReason == .diskSpace }) { continue }
-            guard let task = model.tasks.first(where: { $0.id == id }), task.status == .completed,
+            guard let task = model.tasks.first(where: { $0.id == id }), task.deletedAt == nil, task.status == .completed,
                   task.postDownload.autoExtract, !Self.isFinished(task.postDownload), let archive = task.savePath else {
                 candidates.removeAll { $0 == id }
                 continue
@@ -145,6 +145,7 @@ final class ExtractionCoordinator {
                 continue
             }
             let peers = model.tasks.filter {
+                guard $0.deletedAt == nil else { return false }
                 let parent = $0.savePath?.deletingLastPathComponent().standardizedFileURL
                     ?? URL(filePath: settings.saveDirectory).standardizedFileURL
                 return parent == directory
@@ -224,7 +225,7 @@ final class ExtractionCoordinator {
 
     private func markWaiting(_ ids: Set<DownloadTask.ID>) {
         update(ids) { task in
-            guard task.status == .completed, task.postDownload.extractionState != .waitingForVolumes else { return }
+            guard task.deletedAt == nil, task.status == .completed, task.postDownload.extractionState != .waitingForVolumes else { return }
             task.postDownload.extractionState = .waitingForVolumes
             task.postDownload.extractProgress = nil
         }

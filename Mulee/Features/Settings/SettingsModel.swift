@@ -72,7 +72,10 @@ final class SettingsModel {
         static let whenAllDone = "general.whenAllDone"
         static let saveDirectory = "download.saveDirectory"
         static let maxConcurrentTasks = "download.maxConcurrentTasks"
+        static let downloadRules = "download.rules"
+        static let sortIntoFolders = "download.sortIntoFolders"
         static let httpThreads = "download.httpThreads"
+        static let duplicateAction = "download.duplicateAction"
         static let diskReserveEnabled = "download.diskReserveEnabled"
         static let diskReserveGB = "download.diskReserveGB"
         static let downloadLimit = "network.downloadLimitMBps"
@@ -106,6 +109,7 @@ final class SettingsModel {
         static let ed2kObfuscation = "ed2k.obfuscation"
         static let ed2kConnectToServers = "ed2k.connectToServers"
         static let ed2kEnableKad = "ed2k.enableKad"
+        static let videoFormatChoiceBySite = "video.formatChoiceBySite"
         static let videoQuality = "video.quality"
         static let ytDlpChannel = "video.ytDlpChannel"
         static let updateBeforeRetry = "video.updateBeforeRetry"
@@ -146,7 +150,14 @@ final class SettingsModel {
     // MARK: 下载
     var saveDirectory: String { didSet { defaults.set(saveDirectory, forKey: Key.saveDirectory) } }
     var maxConcurrentTasks: Int { didSet { defaults.set(maxConcurrentTasks, forKey: Key.maxConcurrentTasks) } }
+    var downloadRules: [DownloadRule] {
+        didSet {
+            if let data = try? JSONEncoder().encode(downloadRules) { defaults.set(data, forKey: Key.downloadRules) }
+        }
+    }
+    var sortIntoFolders: Bool { didSet { defaults.set(sortIntoFolders, forKey: Key.sortIntoFolders) } }
     var httpThreads: Int { didSet { defaults.set(httpThreads, forKey: Key.httpThreads) } }
+    var duplicateAction: DownloadRequestContext.DuplicateAction { didSet { defaults.set(duplicateAction.rawValue, forKey: Key.duplicateAction) } }
     var diskReserveEnabled: Bool { didSet { defaults.set(diskReserveEnabled, forKey: Key.diskReserveEnabled) } }
     var diskReserveGB: Int {
         didSet {
@@ -195,6 +206,7 @@ final class SettingsModel {
     var ed2kEnableKad: Bool { didSet { defaults.set(ed2kEnableKad, forKey: Key.ed2kEnableKad) } }
 
     // MARK: 视频
+    var videoFormatChoiceBySite: [String: String] { didSet { defaults.set(videoFormatChoiceBySite, forKey: Key.videoFormatChoiceBySite) } }
     var videoQuality: VideoQuality { didSet { defaults.set(videoQuality.rawValue, forKey: Key.videoQuality) } }
     var ytDlpChannel: YtDlpChannel { didSet { defaults.set(ytDlpChannel.rawValue, forKey: Key.ytDlpChannel) } }
     var updateBeforeRetry: Bool { didSet { defaults.set(updateBeforeRetry, forKey: Key.updateBeforeRetry) } }
@@ -215,6 +227,8 @@ final class SettingsModel {
         slowModeUploadMBps = defaults.object(forKey: Key.slowModeUploadMBps) as? Double ?? 0.2
         slowModeDownloadMBps = defaults.object(forKey: Key.slowModeDownloadMBps) as? Double ?? 1
         diskReserveGB = min(500, max(1, Self.int(defaults, Key.diskReserveGB, 10)))
+        duplicateAction = Self.raw(defaults, Key.duplicateAction, .rename)
+        videoFormatChoiceBySite = defaults.dictionary(forKey: Key.videoFormatChoiceBySite) as? [String: String] ?? [:]
         diskReserveEnabled = Self.bool(defaults, Key.diskReserveEnabled, true)
         whenAllDone = Self.raw(defaults, Key.whenAllDone, .none)
         notificationSound = Self.bool(defaults, Key.notificationSound, false)
@@ -227,6 +241,8 @@ final class SettingsModel {
         watchClipboard = Self.bool(defaults, Key.watchClipboard, false)
         saveDirectory = defaults.string(forKey: Key.saveDirectory) ?? Self.defaultSaveDirectory
         maxConcurrentTasks = Self.int(defaults, Key.maxConcurrentTasks, 5)
+        downloadRules = defaults.data(forKey: Key.downloadRules).flatMap { try? JSONDecoder().decode([DownloadRule].self, from: $0) } ?? []
+        sortIntoFolders = Self.bool(defaults, Key.sortIntoFolders, false)
         httpThreads = Self.int(defaults, Key.httpThreads, 8)
         downloadLimit = Self.int(defaults, Key.downloadLimit, 0)
         uploadLimit = defaults.object(forKey: Key.uploadLimit) as? Double ?? 2

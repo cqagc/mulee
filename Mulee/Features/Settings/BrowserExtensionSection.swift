@@ -13,9 +13,13 @@ struct BrowserExtensionSection: View {
     var body: some View {
         Section("浏览器扩展") {
             LabeledContent("Safari", value: safariStatus)
+            LabeledContent("扩展版本", value: "1.1.0")
             Button("在 Safari 中启用", action: openSafariPreferences)
             Button("安装 Chrome 扩展…", action: revealChromeExtension)
             Text("只把你点选的链接交给本机 Mulee，在新建下载面板确认后开始下载。")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            Text("网站登录状态默认不读取。仅在扩展弹窗中允许当前网站后，通过原生通道交接；Cookie 不进入链接或任务历史。")
                 .font(.callout)
                 .foregroundStyle(.secondary)
             if let issue {

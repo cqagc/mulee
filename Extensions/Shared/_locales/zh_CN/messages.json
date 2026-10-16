@@ -39,7 +39,7 @@
         "message": "接管浏览器下载"
     },
     "takeoverHint": {
-        "message": "默认关闭。按以下扩展名取消浏览器下载并交给 Mulee 确认。需要登录 cookie 的下载可能失败，失败时可临时关闭接管；不读取或传递 cookie。"
+        "message": "默认关闭。匹配的浏览器下载会取消并交给 Mulee 确认；仅为你明确允许的网站交接登录状态。"
     },
     "takeoverUnavailable": {
         "message": "此浏览器未提供下载接管 API。请使用右键菜单或手动选择链接发送到 Mulee。"
@@ -106,5 +106,20 @@
     },
     "videoLoginFailed": {
         "message": "无法传递登录状态。Chrome 请先在 Mulee 设置·视频中点「允许 Chrome 扩展传递登录状态」；Safari 请使用正式签名的 Mulee。"
+    },
+    "downloadCookies": {
+        "message": "允许 Mulee 读取此网站登录状态"
+    },
+    "downloadCookiesHint": {
+        "message": "默认关闭。仅为明确授权的下载网站读取 Cookie，通过 Native Messaging 交给 Mulee，不进入链接或任务历史。Chrome 请先在 Mulee 的「视频」设置中启用扩展交接。"
+    },
+    "downloadCookiesUnavailable": {
+        "message": "此页面无法授权网站登录状态。"
+    },
+    "downloadCookiesDenied": {
+        "message": "未获得网站权限，登录状态交接仍然关闭。"
+    },
+    "downloadCookiesFailed": {
+        "message": "无法交接网站登录状态。请检查 Mulee 的原生交接配置后重试。"
     }
 }

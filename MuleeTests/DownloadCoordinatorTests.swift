@@ -61,7 +61,8 @@ import Testing
         #expect(await engine.resumedIDs == ["task-1"])
         #expect(await engine.removedIDs == ["task-1"])
         #expect(await engine.deletesFiles == [false])
-        #expect(model.tasks.isEmpty)
+        #expect(model.activeTasks.isEmpty)
+        #expect(model.tasks.first?.deletedAt != nil)
         #expect(model.selectedTaskID == nil)
         await coordinator.stop()
     }
@@ -97,7 +98,8 @@ import Testing
         #expect(model.tasks.first?.status == .waitingForSources)
         await coordinator.remove(id)
 
-        #expect(model.tasks.isEmpty)
+        #expect(model.activeTasks.isEmpty)
+        #expect(model.tasks.first?.deletedAt != nil)
         #expect(await engine.pausedIDs.isEmpty)
         #expect(await engine.resumedIDs.isEmpty)
         #expect(await engine.removedIDs.isEmpty)

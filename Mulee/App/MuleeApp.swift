@@ -61,6 +61,7 @@ struct MuleeApp: App {
 
         MenuBarExtra {
             MenuBarPanelView()
+                .modifier(MainWindowPresenter())
                 .modifier(SettingsSyncModifier())
                 .environment(model)
                 .environment(settings)

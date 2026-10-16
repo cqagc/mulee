@@ -39,7 +39,7 @@
     "message": "ブラウザのダウンロードを引き継ぐ"
   },
   "takeoverHint": {
-    "message": "デフォルトではオフです。対象のブラウザダウンロードをキャンセルし、Muleeに送って確認します。ログイン用Cookieが必要な場合はダウンロードできないことがあります。その場合は引き継ぎを一時的にオフにしてください。Cookieの読み取りや転送は行いません。"
+    "message": "初期設定ではオフです。一致するブラウザーのダウンロードをキャンセルして Mulee に渡し、確認します。ログイン状態は明示的に許可したサイトのみ共有されます。"
   },
   "takeoverUnavailable": {
     "message": "このブラウザはダウンロードの引き継ぎに対応していません。右クリックメニューを使うか、リンクを選択してMuleeに送ってください。"
@@ -106,5 +106,20 @@
   },
   "videoLoginFailed": {
     "message": "ログイン状態を共有できません。Chromeでは、先にMuleeの「設定」＞「動画」で「Chrome拡張機能にログイン状態の受け渡しを許可」をクリックしてください。Safariでは、正式に署名されたMuleeを使用してください。"
+  },
+  "downloadCookies": {
+    "message": "Mulee にこのサイトのログイン状態の読み取りを許可"
+  },
+  "downloadCookiesHint": {
+    "message": "初期設定ではオフです。明示的に許可したダウンロードサイトの Cookie のみを Native Messaging で Mulee に渡します。リンクやタスク履歴には含めません。Chrome では、先に Mulee の「動画」設定で拡張機能との連携を有効にしてください。"
+  },
+  "downloadCookiesUnavailable": {
+    "message": "このページではサイトのログイン状態を許可できません。"
+  },
+  "downloadCookiesDenied": {
+    "message": "サイトの権限が許可されていません。ログイン状態の共有はオフのままです。"
+  },
+  "downloadCookiesFailed": {
+    "message": "ログイン状態を共有できませんでした。Mulee のネイティブ連携設定を確認して再試行してください。"
   }
 }

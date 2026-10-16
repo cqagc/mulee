@@ -18,10 +18,14 @@ nonisolated enum VideoNativeMessaging {
     }
 
     static func readRequest(from input: FileHandle) throws -> VideoCookieRequest {
+        try VideoCookieRequest.parse(readPayload(from: input))
+    }
+
+    static func readPayload(from input: FileHandle) throws -> Data {
         let header = try readExactly(4, from: input)
         let length = header.withUnsafeBytes { $0.loadUnaligned(as: UInt32.self).littleEndian }
         guard length > 0, length <= VideoCookieRequest.maximumBytes else { throw EngineError.unsupportedLink }
-        return try VideoCookieRequest.parse(readExactly(Int(length), from: input))
+        return try readExactly(Int(length), from: input)
     }
 
     static func readExactly(_ count: Int, from input: FileHandle) throws -> Data {
@@ -39,8 +43,15 @@ nonisolated enum VideoNativeMessaging {
         guard acceptsOrigin(arguments) else { exit(1) }
         let accepted: Bool
         do {
-            let request = try readRequest(from: .standardInput)
-            try await VideoLoginStore.shared.save(request)
+            let payload = try readPayload(from: .standardInput)
+            if let object = try JSONSerialization.jsonObject(with: payload) as? [String: Any],
+               object["type"] as? String == "downloadCookies" {
+                let request = try DownloadCookieRequest.parse(payload)
+                try DownloadCookieHandoff.save(request, directory: DownloadCookieHandoff.directory())
+            } else {
+                let request = try VideoCookieRequest.parse(payload)
+                try await VideoLoginStore.shared.save(request)
+            }
             accepted = true
         } catch {
             accepted = false

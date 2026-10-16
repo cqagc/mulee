@@ -66,8 +66,8 @@ final class DownloadScheduling {
         guard !busy, isCurrent() else { return }
         busy = true
         defer { busy = false }
-        let enginePaused = Set(model.tasks.filter { $0.status == .paused }.map(\.id))
-        for task in model.tasks {
+        let enginePaused = Set(model.activeTasks.filter { $0.status == .paused }.map(\.id))
+        for task in model.activeTasks {
             if pauses.reason(for: task) == "queue", task.status == .paused {
                 if let index = model.tasks.firstIndex(where: { $0.id == task.id }) {
                     model.tasks[index].status = .queued
@@ -87,9 +87,9 @@ final class DownloadScheduling {
                 }
             }
         }
-        let admitted = GlobalConcurrencyPolicy.admitted(tasks: model.tasks, limit: options.maxConcurrentDownloads)
+        let admitted = GlobalConcurrencyPolicy.admitted(tasks: model.activeTasks, limit: options.maxConcurrentDownloads)
         // 先暂停超额任务，再释放名额，避免一次轮询内短暂恢复过多任务。
-        for task in model.tasks where GlobalConcurrencyPolicy.occupiesSlot(task) && !admitted.contains(task.id) {
+        for task in model.activeTasks where GlobalConcurrencyPolicy.occupiesSlot(task) && !admitted.contains(task.id) {
             guard isCurrent(), let id = task.engineTaskID,
                   let engine = engines.first(where: { $0.kind == task.kind }) else { continue }
             guard pauses.reason(for: task) != "user",
@@ -113,14 +113,14 @@ final class DownloadScheduling {
         }
         if sample {
             for kind in TaskKind.allCases {
-                let tasks = model.tasks.filter { $0.kind == kind && !isQueuePaused($0) }
+                let tasks = model.activeTasks.filter { $0.kind == kind && !isQueuePaused($0) }
                 samples[kind] = Array(((samples[kind] ?? []) + [tasks.reduce(0) { $0 + max(0, $1.downloadRate) }]).suffix(3))
                 uploads[kind] = Array(((uploads[kind] ?? []) + [tasks.reduce(0) { $0 + max(0, $1.uploadRate) }]).suffix(3))
             }
         }
         let changed = options != previousOptions
         if changed || lastAdjustment == nil || now.timeIntervalSince(lastAdjustment ?? now) >= 3 {
-            let desired = allocation(options: options, tasks: model.tasks, engines: engines, admitted: admitted, reset: changed)
+            let desired = allocation(options: options, tasks: model.activeTasks, engines: engines, admitted: admitted, reset: changed)
             let significant = changed || desired.contains { kind, value in
                 guard let old = applied[kind] else { return true }
                 return significantChange(old.downloadLimit, value.downloadLimit)
@@ -155,7 +155,7 @@ final class DownloadScheduling {
             }
             previousOptions = options
         }
-        for task in model.tasks where admitted.contains(task.id) && isQueuePaused(task) {
+        for task in model.activeTasks where admitted.contains(task.id) && isQueuePaused(task) {
             guard isCurrent(), let id = task.engineTaskID,
                   let engine = engines.first(where: { $0.kind == task.kind }) else { continue }
             do {

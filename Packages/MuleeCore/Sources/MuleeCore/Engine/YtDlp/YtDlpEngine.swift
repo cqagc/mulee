@@ -144,8 +144,10 @@ public actor YtDlpEngine: DownloadEngine {
         try await add(link: link, directory: directory, entry: nil, paused: true)
     }
 
-    public func add(link: ParsedLink, directory: URL?, entry: YtDlpPlaylistEntry?, paused: Bool = false) async throws -> String {
+    public func add(link: ParsedLink, directory: URL?, entry: YtDlpPlaylistEntry?, paused: Bool = false,
+                    formatID: String? = nil, formatVideoOnly: Bool = false) async throws -> String {
         try requireRunning()
+        if let formatID, !YtDlpFormat.isValidID(formatID) { throw EngineError.unsupportedLink }
         guard case .video(let url, let site, _) = link,
               ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { throw EngineError.unsupportedLink }
         guard let options else { throw EngineError.notRunning }
@@ -153,7 +155,8 @@ public actor YtDlpEngine: DownloadEngine {
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
         let id = UUID().uuidString.lowercased()
         jobs.append(YtDlpJob(id: id, url: url, site: site, directory: destination, name: entry?.taskTitle ?? url.lastPathComponent,
-                                playlistIndex: entry?.index, playlistTitle: entry?.title, status: paused ? .paused : .queued))
+                                playlistIndex: entry?.index, playlistTitle: entry?.title,
+                                formatID: formatID, formatVideoOnly: formatVideoOnly, status: paused ? .paused : .queued))
         try persist()
         if !paused, options.downloadLimit > 0 { await requeueActive() }
         schedule()
@@ -255,7 +258,7 @@ public actor YtDlpEngine: DownloadEngine {
     }
 
     private func run(_ id: String, token: UUID) async {
-        let selectedQuality = quality
+        let selectedQuality: YtDlpQuality = jobs.first(where: { $0.id == id })?.formatID == nil ? quality : .best
         let selectedSubtitles = subtitles
         let selectedChannel = channel
         let shouldUpdate = updatesEnabled
@@ -440,6 +443,9 @@ public actor YtDlpEngine: DownloadEngine {
             "--progress-template", YtDlpProgress.downloadTemplate,
             "--progress-template", YtDlpProgress.postprocessTemplate
         ] + YtDlpPlaylistEntry.arguments(for: job.url, site: job.site) + quality.arguments
+        if let formatID = job.formatID, YtDlpFormat.isValidID(formatID) {
+            result += ["--format", job.formatVideoOnly == true ? formatID + "+ba/" + formatID : formatID]
+        }
         if let ffmpegURL { result += ["--ffmpeg-location", ffmpegURL.path] }
         if let deno { result += ["--js-runtimes", "deno:" + deno.path] }
         if let url = taskCookiesURL ?? cookiesURL { result += ["--cookies", url.path] }

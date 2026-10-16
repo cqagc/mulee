@@ -8,6 +8,7 @@ public struct TorrentFileInfo: Sendable, Hashable {
     public let files: [TorrentFileEntry]
     public let totalSize: Int64
     public let isPrivate: Bool
+    public let trackers: [String]
 
     public static func parse(data: Data) throws -> TorrentFileInfo {
         var parser = try BencodeParser(data: data)
@@ -47,9 +48,19 @@ public struct TorrentFileInfo: Sendable, Hashable {
             let hex = String(byte, radix: 16)
             return byte < 16 ? "0" + hex : hex
         }.joined()
+        var trackers: [String] = []
+        if let announce = root[Data("announce".utf8)]?.bytes {
+            trackers.append(String(decoding: announce, as: UTF8.self))
+        }
+        for tier in root[Data("announce-list".utf8)]?.list ?? [] {
+            for tracker in tier.list ?? [] {
+                if let bytes = tracker.bytes { trackers.append(String(decoding: bytes, as: UTF8.self)) }
+            }
+        }
         return TorrentFileInfo(
             name: name, infoHash: hash, files: files, totalSize: total,
-            isPrivate: info[Data("private".utf8)]?.integer == 1
+            isPrivate: info[Data("private".utf8)]?.integer == 1,
+            trackers: Array(Set(trackers)).sorted()
         )
     }
 }

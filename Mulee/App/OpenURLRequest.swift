@@ -10,6 +10,7 @@ struct OpenURLRequest {
     var sourcePageURL: URL?
     var password: String?
     var requestContext = DownloadRequestContext()
+    var cookieToken: String?
 
     static func parse(_ url: URL, detectPagePassword: Bool) -> Self? {
         guard url.absoluteString.utf8.count <= maximumBytes else { return nil }
@@ -31,6 +32,12 @@ struct OpenURLRequest {
                 links += parsed
                 guard links.count <= maximumLinks else { return nil }
             }
+            let tokens = items.filter { $0.name == "token" }
+            guard tokens.count <= 1 else { return nil }
+            let cookieToken = tokens.first?.value
+            if !tokens.isEmpty {
+                guard let cookieToken, DownloadCookieRequest.isValidToken(cookieToken), links.count == 1 else { return nil }
+            }
             let referrer = items.first { $0.name == "referrer" }?.value.flatMap(URL.init(string:))
             let source = referrer.flatMap { url in
                 ["http", "https"].contains(url.scheme?.lowercased() ?? "") && url.host != nil
@@ -44,7 +51,7 @@ struct OpenURLRequest {
             guard (try? context.validate()) != nil else { return nil }
             return Self(
                 links: links, sourcePageURL: source, password: pagePassword(in: text, enabled: detectPagePassword),
-                requestContext: context
+                requestContext: context, cookieToken: cookieToken
             )
         }
         guard url.isFileURL ? url.pathExtension.lowercased() == "torrent"

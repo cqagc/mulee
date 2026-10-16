@@ -18,6 +18,7 @@ final class SettingsRuntime {
     ) {
         self.model = model
         self.settings = settings
+        model.downloadSettings = settings
         self.now = now
         self.applyOptions = applyOptions
         clipboard = ClipboardWatcher(pasteboard: pasteboard) { [weak model] links in
@@ -47,6 +48,7 @@ final class SettingsRuntime {
 
     func refresh() {
         let date = now()
+        model.purgeExpiredTrash(now: date)
         model.slowModeController?.refresh()
         model.whenAllDoneController?.settingsDidChange()
         model.whenAllDoneController?.refresh()

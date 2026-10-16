@@ -10,7 +10,7 @@ struct TaskInspectorActions: View {
     var body: some View {
         HStack(spacing: 6) {
             Button(presentation.pauseTitle, systemImage: presentation.pauseSymbol.name, action: togglePause)
-                .disabled(!presentation.canPauseOrResume)
+                .disabled(task.deletedAt != nil || !presentation.canPauseOrResume)
             Button("复制链接", systemImage: MuleeSymbol.copy.name, action: copyLink)
             Button("在访达中显示", systemImage: MuleeSymbol.revealInFinder.name, action: reveal)
         }

@@ -6,6 +6,10 @@ struct NewTaskTorrentFilesView: View {
 
     var body: some View {
         LazyVStack(alignment: .leading, spacing: 6) {
+            if item.skippedJunkCount > 0 {
+                Text("已跳过 \(item.skippedJunkCount) 个无用文件，可手动勾回。")
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if let files = Binding($item.files) {
                 let selectedCount = item.files?.filter(\.isSelected).count ?? 0
                 ForEach(files) { $file in

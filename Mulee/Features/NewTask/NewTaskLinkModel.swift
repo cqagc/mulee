@@ -7,6 +7,19 @@ import Observation
 final class NewTaskLinkModel: Identifiable {
     let link: ParsedLink
     var files: [TorrentFile]?
+    private(set) var torrentInfo: TorrentFileInfo?
+    private var filteredJunkNames: Set<String> = []
+    private var didFilterJunk = false
+    private(set) var videoFormats: [YtDlpFormat] = []
+    private(set) var isLoadingVideoFormats = false
+    private(set) var videoFormatsError: String?
+    private var didLoadVideoFormats = false
+    var videoFormatID = ""
+    var duplicateTaskID: String?
+    var duplicateMessage: String?
+    var canMergeTrackers = false
+    var duplicateAcknowledged = false
+    var isMergingTrackers = false
     private(set) var torrentName: String?
     private(set) var metadataError: String?
     private(set) var videoParts: [YtDlpPlaylistEntry] = []
@@ -35,12 +48,76 @@ final class NewTaskLinkModel: Identifiable {
         if case .torrentFile(let url, _) = link, url.isFileURL {
             do {
                 let info = try TorrentFileInfo.parse(data: Data(contentsOf: url))
+                torrentInfo = info
                 torrentName = info.name
                 files = info.files.map { TorrentFile(name: $0.path, size: $0.size) }
             } catch {
                 metadataError = String(localized: "无法读取种子文件，请重新选择完整的 .torrent 文件")
             }
         }
+    }
+
+    var infoHash: String? {
+        if case .magnet(let hash, _, _) = link { return hash.lowercased() }
+        return torrentInfo?.infoHash
+    }
+
+    var trackers: [String] {
+        if let info = torrentInfo { return info.trackers }
+        guard case .magnet(_, _, let original) = link else { return [] }
+        return URLComponents(string: original)?.queryItems?.filter { $0.name == "tr" }.compactMap(\.value) ?? []
+    }
+
+    func applyJunkFilter(_ configuration: TorrentEngineSettings) {
+        guard !didFilterJunk, files != nil else { return }
+        didFilterJunk = true
+        for index in files?.indices ?? 0..<0 {
+            guard let file = files?[index], configuration.isJunkFile(path: file.name) else { continue }
+            filteredJunkNames.insert(file.name)
+            files?[index].isSelected = false
+        }
+    }
+
+    var skippedJunkCount: Int {
+        files?.filter { filteredJunkNames.contains($0.name) && !$0.isSelected }.count ?? 0
+    }
+
+    var selectedVideoFormat: YtDlpFormat? { videoFormats.first { $0.id == videoFormatID } }
+
+    var videoSiteKey: String? {
+        guard case .video(let url, let site, _) = link else { return nil }
+        switch site {
+        case .youtube: return "youtube.com"
+        case .bilibili: return "bilibili.com"
+        case .other: return url.host?.lowercased()
+        }
+    }
+
+    func loadVideoFormats(
+        remembered: String? = nil, using provider: (URL, VideoSite) async throws -> [YtDlpFormat]
+    ) async {
+        guard case .video(let url, let site, _) = link, !didLoadVideoFormats else { return }
+        didLoadVideoFormats = true
+        isLoadingVideoFormats = true
+        defer { isLoadingVideoFormats = false }
+        do {
+            let formats = try await provider(url, site)
+            try Task.checkCancellation()
+            videoFormats = formats
+            if let remembered, formats.contains(where: { $0.id == remembered }) { videoFormatID = remembered }
+        } catch is CancellationError {
+            didLoadVideoFormats = false
+        } catch {
+            videoFormatID = ""
+            videoFormatsError = (error as? YtDlpFormats.ListingError)?.errorDescription
+                ?? String(localized: "无法读取视频格式，仍可跟随全局设置添加。")
+        }
+    }
+
+    var knownDownloadSize: Int64? {
+        if let selectedSize { return selectedSize }
+        if case .ed2k(_, let size, _, _) = link { return size }
+        return selectedVideoFormat?.size
     }
 
     var filePriorities: [Int]? { files?.map { $0.isSelected ? 4 : 0 } }

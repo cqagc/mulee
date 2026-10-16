@@ -167,7 +167,8 @@ import Testing
         // stop 等待完整的准备及提交循环，确保没有迟到的 add。
         await coordinator.stop()
 
-        #expect(model.tasks.isEmpty)
+        #expect(model.activeTasks.isEmpty)
+        #expect(model.tasks.first?.deletedAt != nil)
         #expect(await video.addedLinks.isEmpty)
     }
 

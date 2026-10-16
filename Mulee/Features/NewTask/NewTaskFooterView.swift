@@ -36,6 +36,32 @@ struct NewTaskFooterView: View {
                     .foregroundStyle(Theme.wait)
             }
 
+            if let warning = draft.diskWarning {
+                Text(warning)
+                    .font(.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+                Toggle("已了解磁盘空间风险，继续添加", isOn: $draft.diskConfirmed)
+                    .toggleStyle(.checkbox)
+            }
+            if let note = draft.diskCheckNote {
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            if draft.needsDuplicateChoice {
+                Picker("遇到同名文件", selection: $draft.duplicateChoice) {
+                    Text("请选择处理方式").tag(DownloadRequestContext.DuplicateAction?.none)
+                    Text("自动编号保留两份").tag(DownloadRequestContext.DuplicateAction?.some(.rename))
+                    Text("覆盖已有文件").tag(DownloadRequestContext.DuplicateAction?.some(.overwrite))
+                }
+            }
+            if draft.links.contains(where: { $0.link.kind == .bittorrent || $0.link.kind == .video }) {
+                Text("BT 与视频沿用引擎的同名处理。要保留独立副本，请选择其他保存目录。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             HStack(spacing: 8) {
                 Spacer()
                 Button("取消", action: cancel)

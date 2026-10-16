@@ -14,6 +14,10 @@ struct MenuBarPresentation {
 
     let tasks: [DownloadTask]
 
+    init(tasks: [DownloadTask]) {
+        self.tasks = tasks.filter { $0.deletedAt == nil }
+    }
+
     /// 「正在下载」里显示的任务：下载中、合并中、解压中，最多 4 个。
     var visibleTasks: [DownloadTask] {
         Array(tasks.filter { Self.activeStatuses.contains($0.status) }.prefix(Self.maxVisibleTasks))

@@ -23,6 +23,10 @@ enum MagnetLinkParser: Sendable {
                 } else {
                     infoHash = Base32.decodeHex(hash)
                 }
+            } else if name == "xt", infoHash == nil,
+                      let topic = value.removingPercentEncoding?.lowercased(), topic.hasPrefix("urn:btmh:1220") {
+                let hash = String(topic.dropFirst("urn:btmh:1220".count))
+                if hash.count == 64, InfoHashLink.magnet(for: hash) != nil { infoHash = hash }
             } else if name == "dn", displayName == nil {
                 displayName = value.replacingOccurrences(of: "+", with: " ").removingPercentEncoding
             }

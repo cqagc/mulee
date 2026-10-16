@@ -12,7 +12,7 @@ enum EngineSnapshotMerger {
         // 按引擎任务标识建索引：上万条任务时逐条线性查找是平方级开销，每秒轮询会卡住主线程。
         let snapshotIDs = snapshots.mapValues { Set($0.map(\.engineTaskID)) }
         var result = tasks.map { task in
-            guard let id = task.engineTaskID, let current = snapshotIDs[task.kind],
+            guard task.deletedAt == nil, let id = task.engineTaskID, let current = snapshotIDs[task.kind],
                   !current.contains(id),
                   [.downloading, .queued, .paused].contains(task.status) else { return task }
             var task = task
@@ -55,6 +55,11 @@ enum EngineSnapshotMerger {
                         task.detail = detail
                     }
                 }
+                if task.deletedAt != nil { continue }
+                if task.lastProgressAt == nil || task.receivedBytes != snapshot.receivedBytes
+                    || (task.status != .downloading && snapshot.status == .downloading) {
+                    task.lastProgressAt = now
+                }
                 task.name = snapshot.name
                 let pathExtension = URL(filePath: snapshot.name).pathExtension
                 task.fileExtension = pathExtension.isEmpty ? nil : pathExtension
@@ -72,7 +77,7 @@ enum EngineSnapshotMerger {
                 }
                 // 引擎快照可能仍在报告旧状态，保护原因由应用持有。
                 task.status = task.pauseReason == .diskSpace ? .paused : snapshot.status
-                task.savePath = snapshot.savePath
+                if task.fileBookmark == nil { task.savePath = snapshot.savePath }
                 if let directories = snapshot.writeDirectories { task.writeDirectories = directories }
                 task.errorMessage = snapshot.errorMessage
                 if kind == .http {

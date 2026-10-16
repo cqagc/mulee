@@ -1,9 +1,11 @@
+import MuleeCore
 import SwiftUI
 
 /// 设置·下载。
 struct DownloadSettingsTab: View {
     @Environment(SettingsModel.self) private var model
     @State private var isChoosingFolder = false
+    @State private var isShowingRules = false
 
     var body: some View {
         @Bindable var model = model
@@ -28,11 +30,19 @@ struct DownloadSettingsTab: View {
                 Text("所有引擎合计；电驴等待来源和 BT 做种不占名额")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                Picker("遇到同名文件", selection: $model.duplicateAction) {
+                    Text("自动编号保留两份").tag(DownloadRequestContext.DuplicateAction.rename)
+                    Text("覆盖已有文件").tag(DownloadRequestContext.DuplicateAction.overwrite)
+                    Text("每次询问").tag(DownloadRequestContext.DuplicateAction.ask)
+                }
                 Picker("HTTP 每任务线程数", selection: $model.httpThreads) {
                     ForEach(SettingsModel.httpThreadOptions, id: \.self) { count in
                         Text("\(count)").tag(count)
                     }
                 }
+            }
+            Section("下载规则") {
+                Button("管理下载规则…") { isShowingRules = true }
             }
             Section("磁盘保护") {
                 Toggle("保留磁盘可用空间", isOn: $model.diskReserveEnabled)
@@ -44,6 +54,7 @@ struct DownloadSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+        .sheet(isPresented: $isShowingRules) { DownloadRulesSettingsView() }
         .fileImporter(isPresented: $isChoosingFolder, allowedContentTypes: [.folder], onCompletion: folderChosen)
     }
 

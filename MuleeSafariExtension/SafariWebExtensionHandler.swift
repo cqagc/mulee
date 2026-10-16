@@ -11,15 +11,22 @@ final class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             return object["url"] as? String
         }
         let cookieData = (message as? [String: Any]).flatMap { object -> Data? in
-            guard object["type"] as? String == "videoCookies", JSONSerialization.isValidJSONObject(object) else { return nil }
+            guard ["videoCookies", "downloadCookies"].contains(object["type"] as? String ?? ""),
+                  JSONSerialization.isValidJSONObject(object) else { return nil }
             return try? JSONSerialization.data(withJSONObject: object)
         }
         let response = BrowserExtensionResponse(context: context)
         Task { @MainActor in
             if let cookieData {
                 do {
-                    let request = try VideoCookieRequest.parse(cookieData)
-                    try VideoCookieHandoff.save(request, directory: VideoCookieHandoff.directory())
+                    let type = (try JSONSerialization.jsonObject(with: cookieData) as? [String: Any])?["type"] as? String
+                    if type == "downloadCookies" {
+                        let request = try DownloadCookieRequest.parse(cookieData)
+                        try DownloadCookieHandoff.save(request, directory: DownloadCookieHandoff.directory())
+                    } else {
+                        let request = try VideoCookieRequest.parse(cookieData)
+                        try VideoCookieHandoff.save(request, directory: VideoCookieHandoff.directory())
+                    }
                     response.complete(opened: true)
                 } catch {
                     response.complete(opened: false)

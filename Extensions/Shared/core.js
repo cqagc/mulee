@@ -117,7 +117,7 @@
         return [...new Set([...hrefs, ...extractLinks(text), pageURL].filter(isDownloadable).map(normalizeURL))];
     }
 
-    function buildBatches(links, referrer = "", text = "") {
+    function buildBatches(links, referrer = "", text = "", context = {}) {
         if (!Array.isArray(links) || !links.length || !links.every(value => remoteLink(value))) {
             throw new Error("invalidLinks");
         }
@@ -128,8 +128,15 @@
         } catch {
             // Browser-internal pages are not valid referrers.
         }
+        const userAgent = typeof context.userAgent === "string" && !/[\r\n\u0000]/.test(context.userAgent)
+            ? context.userAgent : "";
+        const filename = typeof context.filename === "string" ? context.filename.split(/[\\/]/).at(-1) : "";
+        const token = /^[a-f0-9]{32}$/.test(context.token || "") ? context.token : "";
         const suffix = (source ? "&referrer=" + encodeURIComponent(source) : "")
-            + (text ? "&text=" + encodeURIComponent(text) : "");
+            + (text ? "&text=" + encodeURIComponent(text) : "")
+            + (userAgent ? "&ua=" + encodeURIComponent(userAgent) : "")
+            + (filename ? "&filename=" + encodeURIComponent(filename) : "")
+            + (token ? "&token=" + token : "");
         const prefix = "mulee://add?";
         const batches = [];
         let parameters = [];

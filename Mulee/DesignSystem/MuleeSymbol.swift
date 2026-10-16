@@ -46,6 +46,7 @@ enum MuleeSymbol: String, CaseIterable {
     case copy = "doc.on.doc"
     case revealInFinder = "folder"
     case delete = "trash"
+    case tags = "tag"
     case retry = "arrow.clockwise"
     case inspector = "sidebar.right"
     case sidebar = "sidebar.left"

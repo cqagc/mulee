@@ -37,6 +37,7 @@ struct MenuBarPanelView: View {
         }
         .padding(14)
         .frame(width: 340)
+        .modifier(NewTaskDropReceiver())
     }
 }
 

@@ -6,6 +6,9 @@ const status = document.getElementById("status");
 const sendButton = document.getElementById("send");
 const takeover = document.getElementById("takeover");
 const extensions = document.getElementById("extensions");
+const downloadCookies = document.getElementById("download-cookies");
+let cookieSite;
+
 const videoLogin = document.getElementById("video-login");
 const videoLoginSync = document.getElementById("video-login-sync");
 
@@ -51,6 +54,9 @@ async function initialize() {
     extensions.value = settings.extensions;
     try {
         const [tab] = await extensionAPI.tabs.query({ active: true, currentWindow: true });
+        cookieSite = globalThis.MuleeDownloadCookies?.siteOrigin(tab.url);
+        downloadCookies.disabled = !cookieSite;
+        downloadCookies.checked = cookieSite ? await MuleeDownloadCookies.isAuthorized(extensionAPI, cookieSite) : false;
         const [result] = await extensionAPI.scripting.executeScript({
             target: { tabId: tab.id },
             func: () => ({
@@ -166,3 +172,22 @@ videoLoginSync.addEventListener("click", async () => {
 
 updateSelection();
 initialize().catch(showError);
+
+downloadCookies.addEventListener("change", async () => {
+    try {
+        if (!cookieSite) throw new Error("downloadCookiesUnavailable");
+        if (downloadCookies.checked) {
+            // 权限申请直接在用户手势中发起，仅请求当前站点。
+            const granted = await extensionAPI.permissions.request(MuleeDownloadCookies.permissionRequest(extensionAPI, cookieSite));
+            if (!granted) throw new Error("downloadCookiesDenied");
+        }
+        const settings = await extensionAPI.storage.local.get({ downloadCookieSites: [] });
+        const sites = settings.downloadCookieSites.filter(site => site !== cookieSite);
+        if (downloadCookies.checked) sites.push(cookieSite);
+        await extensionAPI.storage.local.set({ downloadCookieSites: sites });
+    } catch (error) {
+        downloadCookies.checked = false;
+        status.textContent = message(["downloadCookiesUnavailable", "downloadCookiesDenied"].includes(error.message)
+            ? error.message : "downloadCookiesFailed");
+    }
+});

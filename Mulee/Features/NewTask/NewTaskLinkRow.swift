@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct NewTaskLinkRow: View {
-    let item: NewTaskLinkModel
+    @Bindable var item: NewTaskLinkModel
+    let mergeTrackers: () async -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,7 +45,24 @@ struct NewTaskLinkRow: View {
             if item.link.kind == .video {
                 NewTaskVideoOptionsView(item: item)
             }
+            if let message = item.duplicateMessage {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(message)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if item.canMergeTrackers && !item.duplicateAcknowledged {
+                        Button("合并 tracker，保留已有任务") {
+                            Task { await mergeTrackers() }
+                        }
+                        .disabled(item.isMergingTrackers)
+                    }
+                    Toggle("保留已有任务，跳过本次重复项", isOn: $item.duplicateAcknowledged)
+                        .toggleStyle(.checkbox)
+                }
+                .font(.caption)
+                .padding(12)
+            }
             NewTaskChecksumView(item: item)
         }
     }
+
 }

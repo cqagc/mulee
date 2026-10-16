@@ -7,6 +7,11 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
     }
 
     /// 可选字段使旧版历史仍可解码；用户暂停不会被磁盘恢复逻辑接管。
+    public var tags: [String]?
+    public var fileBookmark: Data?
+    public var fileMissing: Bool?
+    public var deletedAt: Date?
+    public var lastProgressAt: Date?
     public var pauseReason: PauseReason?
     public var writeDirectories: [URL]?
     public let id: UUID

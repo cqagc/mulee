@@ -2,6 +2,32 @@ import Foundation
 import MuleeCore
 
 extension AppModel {
+    func waitForBrowserHTTPReplacement(_ id: UUID, now: Date = .now) {
+        guard let task = tasks.first(where: { $0.id == id && $0.deletedAt == nil && $0.kind == .http }) else { return }
+        pendingBrowserHTTPReplacement = nil
+        waitingHTTPReplacement = HTTPReplacementWait(
+            taskID: id, host: URL(string: task.sourceLink)?.host?.lowercased(),
+            filename: task.requestContext?.suggestedFilename ?? task.name, expiresAt: now.addingTimeInterval(300)
+        )
+    }
+
+    func acceptBrowserHTTPReplacement(_ link: ParsedLink, context: DownloadRequestContext, now: Date = .now) -> Bool {
+        guard let waiting = waitingHTTPReplacement else { return false }
+        guard now < waiting.expiresAt,
+              tasks.contains(where: { $0.id == waiting.taskID && $0.deletedAt == nil }) else {
+            waitingHTTPReplacement = nil
+            return false
+        }
+        guard case .http(let url, _, _) = link else { return false }
+        let filename = context.suggestedFilename ?? url.lastPathComponent
+        guard url.host?.lowercased() == waiting.host || (!filename.isEmpty && filename == waiting.filename) else { return false }
+        waitingHTTPReplacement = nil
+        pendingBrowserHTTPReplacement = BrowserHTTPReplacement(taskID: waiting.taskID, url: url, context: context)
+        selectedTaskID = waiting.taskID
+        mainWindowRequest += 1
+        return true
+    }
+
     /// 在确认草稿后，将来源与临时密码绑定到本次新建的任务。
     func addTasks(
         from links: [ParsedLink], autoExtract: Bool, directory: URL? = nil,
@@ -17,7 +43,9 @@ extension AppModel {
                     await coordinator.add(
                         links: [link], autoExtract: autoExtract, directory: directory,
                         filePriorities: filePriorities, torrentDownloadModes: torrentDownloadModes, videoEntries: videoEntries,
-                        requestContexts: contexts.mapValues(\.requestContext), checksums: contexts.compactMapValues(\.checksum)
+                        requestContexts: contexts.mapValues(\.requestContext), checksums: contexts.compactMapValues(\.checksum),
+                        videoFormatIDs: contexts.compactMapValues(\.videoFormatID),
+                        videoOnlyFormats: contexts.mapValues(\.videoFormatVideoOnly)
                     )
                     for index in tasks.indices where !previousIDs.contains(tasks[index].id) && tasks[index].sourceLink == link.original {
                         tasks[index].sourcePageURL = contexts[link]?.sourcePageURL

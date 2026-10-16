@@ -39,7 +39,7 @@
         "message": "Intercept browser downloads"
     },
     "takeoverHint": {
-        "message": "Off by default. Matching browser downloads are cancelled and sent to Mulee for confirmation. Downloads requiring login cookies may fail; temporarily disable interception if needed. Cookies are never read or forwarded."
+        "message": "Off by default. Matching browser downloads are cancelled and sent to Mulee for confirmation. Sign-in is shared only for websites you explicitly allow."
     },
     "takeoverUnavailable": {
         "message": "This browser does not provide the download interception API. Use the context menu or select links to send to Mulee."
@@ -106,5 +106,20 @@
     },
     "videoLoginFailed": {
         "message": "Unable to share sign-in. For Chrome, click “Allow the Chrome extension to share sign-in” in Mulee’s Video settings. For Safari, use a signed release of Mulee."
+    },
+    "downloadCookies": {
+        "message": "Allow Mulee to read sign-in for this website"
+    },
+    "downloadCookiesHint": {
+        "message": "Off by default. Only cookies for explicitly allowed download websites are sent to Mulee through Native Messaging. Cookies never enter links or task history. For Chrome, enable native handoff in Mulee’s Video settings first."
+    },
+    "downloadCookiesUnavailable": {
+        "message": "This page cannot grant website sign-in access."
+    },
+    "downloadCookiesDenied": {
+        "message": "Website permission was not granted. Sign-in sharing remains off."
+    },
+    "downloadCookiesFailed": {
+        "message": "Could not share website sign-in. Check the native handoff setup in Mulee and retry."
     }
 }

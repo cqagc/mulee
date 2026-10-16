@@ -142,4 +142,7 @@
 - 扩展新增可选权限与 Native Messaging 消息类型。
 
 ## 裁决记录
-（实施过程中补充）
+- A1 aria2 子进程以 `umask 077` 启动，session 和日志从创建起就是 0600。
+- A1 扩展交接 Cookie 沿用视频登录的文件交接通道：一次性 token 命名的 0600 文件（目录 0700），App 读取后立即删除，超过 60 秒的交接文件清理掉；`mulee://` 链接只带 token。不另建进程间通信。
+- C1 规则里的 User-Agent、线程数、单任务限速只作用于 HTTP 任务；保存目录和分类对所有类型生效。
+- D4 添加前的磁盘检查调用 `DiskReserveMonitor.requiresConfirmation(forKnownBytes:in:)`，读取失败时不拦截添加。

@@ -2,6 +2,15 @@ import Foundation
 
 /// 浏览器或粘贴解析提供的请求信息；Cookie 只在内存与任务专属钥匙串中保留。
 public struct DownloadRequestContext: Sendable, Hashable, Codable {
+    public enum DuplicateAction: String, Codable, Sendable, CaseIterable {
+        case rename
+        case overwrite
+        case ask
+    }
+
+    /// nil 保留既有引擎默认行为；ask 在新建面板确认后转换为具体策略。
+    public var duplicateAction: DuplicateAction?
+
     public static let safariUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15"
 
     public var referer: URL?
@@ -58,7 +67,7 @@ public struct DownloadRequestContext: Sendable, Hashable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case referer, userAgent, suggestedFilename, headers
+        case referer, userAgent, suggestedFilename, headers, duplicateAction
     }
 
     public init(from decoder: any Decoder) throws {
@@ -68,12 +77,14 @@ public struct DownloadRequestContext: Sendable, Hashable, Codable {
         suggestedFilename = try container.decodeIfPresent(String.self, forKey: .suggestedFilename)
         headers = try container.decodeIfPresent([String: String].self, forKey: .headers) ?? [:]
         cookie = nil
+        duplicateAction = try container.decodeIfPresent(DuplicateAction.self, forKey: .duplicateAction)
         self = withoutCookie
         headers = headers.filter { !["authorization", "proxy-authorization"].contains($0.key.lowercased()) }
     }
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(duplicateAction, forKey: .duplicateAction)
         try container.encodeIfPresent(referer, forKey: .referer)
         try container.encodeIfPresent(userAgent, forKey: .userAgent)
         try container.encodeIfPresent(suggestedFilename, forKey: .suggestedFilename)

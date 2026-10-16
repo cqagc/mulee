@@ -9,9 +9,10 @@ import Foundation
               let url = URL(string: value), url.scheme == "mulee",
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let items = components.queryItems,
-              items.allSatisfy({ ["url", "referrer", "text"].contains($0.name) && $0.value != nil }),
-              items.filter({ $0.name == "referrer" }).count <= 1,
-              items.filter({ $0.name == "text" }).count <= 1,
+              items.allSatisfy({ ["url", "referrer", "text", "ua", "filename", "token"].contains($0.name) && $0.value != nil }),
+              ["referrer", "text", "ua", "filename", "token"].allSatisfy({ name in
+                  items.filter { $0.name == name }.count <= 1
+              }),
               OpenURLRequest.parse(url, detectPagePassword: false) != nil else { return nil }
         return url
     }

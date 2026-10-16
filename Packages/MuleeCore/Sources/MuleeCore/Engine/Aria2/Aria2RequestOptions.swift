@@ -17,6 +17,10 @@ enum Aria2RequestOptions {
         var lines = headers.keys.sorted().map { "\($0): \(headers[$0, default: ""])" }
         if let cookie = context.requestCookie { lines.append("Cookie: \(cookie)") }
         if !lines.isEmpty { values["header"] = .array(lines.map(Aria2RPCValue.string)) }
+        if let action = context.duplicateAction, action != .ask {
+            values["auto-file-renaming"] = .string(action == .rename ? "true" : "false")
+            values["allow-overwrite"] = .string(action == .overwrite ? "true" : "false")
+        }
         if let checksum { values["checksum"] = .string(checksum.aria2Value) }
         return values
     }

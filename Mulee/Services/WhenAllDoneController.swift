@@ -63,8 +63,8 @@ final class WhenAllDoneController {
     func select(_ action: WhenAllDoneAction) {
         dismissCountdown()
         model.whenAllDoneAction = action
-        known = Set(model.tasks.map(\.id))
-        tracked = Set(model.tasks.filter {
+        known = Set(model.activeTasks.map(\.id))
+        tracked = Set(model.activeTasks.filter {
             [.downloading, .queued, .waitingForSources, .extracting, .postProcessing].contains($0.status)
                 || $0.postDownload.extractionState == .queued
         }.map(\.id))
@@ -74,14 +74,14 @@ final class WhenAllDoneController {
         guard !isRefreshing, model.whenAllDoneAction != .none else { return }
         isRefreshing = true
         defer { isRefreshing = false }
-        let ids = Set(model.tasks.map(\.id))
+        let ids = Set(model.activeTasks.map(\.id))
         let added = ids.subtracting(known)
         known = ids
         if !added.isEmpty {
             tracked.formUnion(added)
             dismissCountdown()
         }
-        let tasks = model.tasks.filter { tracked.contains($0.id) }
+        let tasks = model.activeTasks.filter { tracked.contains($0.id) }
         guard !tasks.isEmpty else {
             dismissCountdown()
             return

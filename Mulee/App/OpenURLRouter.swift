@@ -6,10 +6,15 @@ import OSLog
 final class OpenURLRouter {
     private let model: AppModel
     private let settings: SettingsModel
+    private let cookieDirectory: URL?
 
-    init(model: AppModel, settings: SettingsModel) {
+    init(model: AppModel, settings: SettingsModel, cookieDirectory: URL? = nil) {
         self.model = model
         self.settings = settings
+        self.cookieDirectory = cookieDirectory ?? (AppEnvironment.isRunningUnitTests ? nil : try? DownloadCookieHandoff.directory())
+        if let directory = self.cookieDirectory {
+            try? DownloadCookieHandoff.cleanup(directory: directory)
+        }
     }
 
     /// 从服务菜单接收选中文本，沿用浏览器入口的远程链接和数量限制。
@@ -34,15 +39,28 @@ final class OpenURLRouter {
             model.openURLIssue = String(localized: "链接无效、超出限制，或包含不允许的本地文件。")
             return false
         }
+        var newLinks: [ParsedLink] = []
         for request in requests {
+            var context = request.requestContext
+            if let token = request.cookieToken {
+                if let cookieDirectory, let link = request.links.first,
+                   let url = URL(string: link.original),
+                   let cookie = try? DownloadCookieHandoff.take(token: token, url: url, directory: cookieDirectory) {
+                    context.cookie = cookie
+                } else {
+                    model.openURLIssue = String(localized: "浏览器登录状态已过期或无法读取，请在浏览器里重新点下载。")
+                }
+            }
             for link in request.links {
+                if model.acceptBrowserHTTPReplacement(link, context: context) { continue }
                 model.pendingNewTaskContexts[link] = NewTaskContext(
-                    sourcePageURL: request.sourcePageURL, password: request.password, requestContext: request.requestContext
+                    sourcePageURL: request.sourcePageURL, password: request.password, requestContext: context
                 )
+                newLinks.append(link)
             }
         }
-        let text = requests.flatMap(\.links).map(\.original).joined(separator: "\n")
-        model.showNewTask(prefill: text)
+        let text = newLinks.map(\.original).joined(separator: "\n")
+        if !newLinks.isEmpty { model.showNewTask(prefill: text) }
         NSApp?.activate()
         #if DEBUG
         Logger(subsystem: "com.cqagc.mulee", category: "OpenURL").debug(

@@ -55,7 +55,8 @@ function worker({ takeover = false, videoLogin = false, native = false, scheme =
             return { ok: true };
         };
     }
-    const context = { MuleeLinks: core, MuleeVideoLogin: login, console, [native ? "browser" : "chrome"]: api };
+    const context = { MuleeLinks: core, MuleeVideoLogin: login, MuleeDownloadCookies: login.downloadCookies,
+        navigator: { userAgent: "Synthetic Browser/1.0" }, URL, console, [native ? "browser" : "chrome"]: api };
     vm.createContext(context);
     vm.runInContext(fs.readFileSync(path.join(__dirname, "../background.js"), "utf8"), context);
     return { api, calls, context };
@@ -69,11 +70,13 @@ test("download interception is inactive by default and never touches cookies", a
 
 test("enabled interception cancels matching downloads before handing off with referrer", async () => {
     const { context, calls } = worker({ takeover: true });
-    await vm.runInContext('interceptDownload({ id: 1, state: "in_progress", url: "https://example.org/a.zip", referrer: "https://example.org/page" })', context);
+    await vm.runInContext('interceptDownload({ id: 1, state: "in_progress", url: "https://example.org/a.zip", referrer: "https://example.org/page", filename: "/temporary/downloads/archive.zip" })', context);
     assert.equal(calls[0][0], "cancel");
     const entry = calls.find(call => call[0] === "session")[1]["handoff-9"];
     assert.equal(new URL(entry).searchParams.get("referrer"), "https://example.org/page");
     assert.equal(new URL(entry).searchParams.get("url"), "https://example.org/a.zip");
+    assert.equal(new URL(entry).searchParams.get("ua"), "Synthetic Browser/1.0");
+    assert.equal(new URL(entry).searchParams.get("filename"), "archive.zip");
 });
 
 test("interception ignores nonmatching, completed and unsafe downloads", async () => {
@@ -132,6 +135,34 @@ test("background handoff normalizes and deduplicates links before opening Mulee"
     await vm.runInContext('sendLinks(["https://youtube.com/watch?v=abc&list=xyz&t=20&si=one", "https://youtube.com/watch?v=abc&list=xyz&t=20&feature=share"], "", "")', context);
     assert.equal(calls.length, 1);
     assert.deepEqual(new URL(calls[0][2].url).searchParams.getAll("url"), ["https://youtube.com/watch?v=abc&list=xyz&t=20"]);
+});
+
+test("authorized cookies are paired with one token per link before Safari opens the handoff", async () => {
+    const { context, api, calls } = worker({ native: true });
+    const reads = [];
+    api.storage.local.get = async defaults => ({ ...defaults, downloadCookieSites: ["https://example.org"] });
+    api.cookies.getAll = async query => {
+        reads.push(query);
+        return [{ name: "session", value: "synthetic-private" }];
+    };
+    await vm.runInContext('sendLinks(["https://example.org/a.zip?utm_source=one", "https://example.org/a.zip", "https://other.example.org/b.zip", "https://example.org/c.zip"], "https://example.org/page", "")', context);
+    assert.deepEqual(reads, [{ url: "https://example.org/a.zip" }, { url: "https://example.org/c.zip" }]);
+    const transfers = calls.filter(call => call[0] === "native" && call[2].type === "downloadCookies");
+    const entries = calls.filter(call => call[0] === "native" && call[2].url?.startsWith("mulee:"));
+    assert.equal(transfers.length, 2);
+    assert.equal(entries.length, 3);
+    assert.notEqual(transfers[0][2].token, transfers[1][2].token);
+    for (const transfer of transfers) {
+        const entry = entries.find(call => new URL(call[2].url).searchParams.get("url") === transfer[2].url);
+        assert.equal(new URL(entry[2].url).searchParams.get("token"), transfer[2].token);
+        assert.ok(calls.indexOf(transfer) < calls.indexOf(entry));
+    }
+    assert.equal(new URL(entries[1][2].url).searchParams.has("token"), false);
+    for (const entry of entries) {
+        assert.equal(entry[2].url.includes("synthetic-private"), false);
+        assert.equal(new URL(entry[2].url).searchParams.get("ua"), "Synthetic Browser/1.0");
+    }
+    assert.equal(calls.some(call => call[0] === "session" || call[0] === "create"), false);
 });
 
 test("sync response preserves actionable errors and sanitizes unexpected failures", async () => {
@@ -203,6 +234,8 @@ async function popup({ url = "https://www.bilibili.com/", hrefs = [], videoLogin
             : selector === ".link input:checked" ? inputs().filter(input => input.checked) : inputs()
     };
     const messages = [];
+    const permissionRequests = [];
+    const stored = {};
     const locale = JSON.parse(fs.readFileSync(path.join(__dirname, "../_locales/en/messages.json"), "utf8"));
     let initialized;
     const ready = new Promise(resolve => { initialized = resolve; });
@@ -211,8 +244,15 @@ async function popup({ url = "https://www.bilibili.com/", hrefs = [], videoLogin
             getMessage: (key, substitution) => locale[key]?.message.replace("$1", substitution) || "",
             getUILanguage: () => "en"
         },
-        storage: { local: { get: async defaults => ({ ...defaults, videoLogin }), set: async () => {} } },
-        permissions: { contains: async () => true, request: async () => true, remove: async () => {} },
+        storage: { local: {
+            get: async defaults => ({ ...defaults, videoLogin, ...stored }),
+            set: async values => Object.assign(stored, values)
+        } },
+        permissions: {
+            contains: async () => true,
+            request: async request => { permissionRequests.push(request); return true; },
+            remove: async () => {}
+        },
         runtime: {
             getManifest: () => ({ optional_permissions: ["downloads", "cookies", "nativeMessaging"] }),
             sendMessage: async message => {
@@ -227,11 +267,11 @@ async function popup({ url = "https://www.bilibili.com/", hrefs = [], videoLogin
         } },
         action: { setBadgeText: async () => initialized() }
     };
-    const context = { document, chrome: api, MuleeLinks: core, MuleeVideoLogin: login };
+    const context = { document, chrome: api, MuleeLinks: core, MuleeVideoLogin: login, MuleeDownloadCookies: login.downloadCookies };
     vm.createContext(context);
     vm.runInContext(fs.readFileSync(path.join(__dirname, "../popup.js"), "utf8"), context);
     await ready;
-    return { nodes, inputs, messages };
+    return { nodes, inputs, messages, permissionRequests, stored };
 }
 
 test("homepage popup leaves links unchecked and bulk controls update the send count", async () => {
@@ -311,11 +351,30 @@ test("popup preserves specific sync errors on both login controls and during lin
 });
 
 test("all four locales provide selection and actionable login messages", () => {
-    const keys = ["sendSelected", "selectAll", "selectNone", "videoLoginNotFound", "videoLoginReloadRequired"];
+    const keys = ["sendSelected", "selectAll", "selectNone", "videoLoginNotFound", "videoLoginReloadRequired",
+        "downloadCookies", "downloadCookiesHint", "downloadCookiesUnavailable", "downloadCookiesDenied", "downloadCookiesFailed"];
     for (const language of ["en", "ja", "zh_CN", "zh_TW"]) {
         const locale = JSON.parse(fs.readFileSync(path.join(__dirname, "../_locales", language, "messages.json"), "utf8"));
         for (const key of keys) assert.ok(locale[key].message, language + ": " + key);
         assert.ok(locale.sendSelected.message.includes("$1"));
         assert.ok(locale.videoLoginReloadRequired.message.includes("chrome://extensions"));
     }
+});
+
+test("download cookie popup is off by default and requests only the current website", async () => {
+    const state = await popup({ url: "https://example.org/a.zip" });
+    const toggle = state.nodes.get("download-cookies");
+    assert.equal(toggle.checked, false);
+    assert.equal(toggle.disabled, false);
+    toggle.checked = true;
+    await toggle.dispatch("change");
+    assert.equal(toggle.checked, true);
+    assert.equal(state.permissionRequests.length, 1);
+    assert.deepEqual(state.permissionRequests[0].origins, ["https://example.org/*"]);
+    assert.deepEqual(state.permissionRequests[0].permissions, ["cookies", "nativeMessaging"]);
+    assert.deepEqual(Array.from(state.stored.downloadCookieSites), ["https://example.org"]);
+    toggle.checked = false;
+    await toggle.dispatch("change");
+    assert.deepEqual(Array.from(state.stored.downloadCookieSites), []);
+    assert.equal(state.permissionRequests.length, 1);
 });

@@ -14,7 +14,7 @@ async function openEntry(url) {
             throw new Error("nativeRejected");
         } catch (error) {
             // A missing native host falls back to the browser's external-protocol prompt.
-            console.info("Mulee native handoff unavailable:", error.message);
+            console.info("Mulee native handoff unavailable");
         }
     }
     // A dedicated extension tab survives the external-protocol confirmation. It closes
@@ -24,15 +24,33 @@ async function openEntry(url) {
     await extensionAPI.tabs.sendMessage(tab.id, { type: "handoffReady" }).catch(() => {});
 }
 
-async function sendLinks(links, referrer, text) {
-    const batches = linksAPI.buildBatches(links, referrer, text);
+async function sendLinks(links, referrer, text, context = {}) {
+    const requestContext = { ...context, userAgent: globalThis.navigator?.userAgent || "" };
+    let batches = linksAPI.buildBatches(links, referrer, text, requestContext);
     if (globalThis.MuleeVideoLogin) await globalThis.MuleeVideoLogin.transfer(extensionAPI, links);
+    if (globalThis.MuleeDownloadCookies) {
+        const entries = [];
+        for (const batch of batches) {
+            const parameters = new URL(batch).searchParams;
+            const values = parameters.getAll("url");
+            const tokens = [];
+            for (const link of values) tokens.push(await globalThis.MuleeDownloadCookies.transfer(extensionAPI, link));
+            if (tokens.every(token => !token)) {
+                entries.push(batch);
+            } else {
+                for (let index = 0; index < values.length; index++) {
+                    entries.push(...linksAPI.buildBatches([values[index]], referrer, text, { ...requestContext, token: tokens[index] }));
+                }
+            }
+        }
+        batches = entries;
+    }
     for (const url of batches) await openEntry(url);
     return batches.length;
 }
 
 function reportIssue(error) {
-    console.error("Mulee:", error);
+    console.error("Mulee handoff failed");
     extensionAPI.action.setBadgeText({ text: "!" });
     extensionAPI.action.setTitle({ title: extensionAPI.i18n.getMessage(error.message) || extensionAPI.i18n.getMessage("sendFailed") });
 }
@@ -67,7 +85,8 @@ extensionAPI.runtime.onMessage.addListener((message, sender, respond) => {
     if (message?.type !== "sendLinks") return false;
     sendLinks(message.links, message.referrer, message.text).then(
         batches => respond({ ok: true, batches }),
-        error => respond({ ok: false, error: error.message })
+        error => respond({ ok: false, error: ["invalidLinks", "tooLarge", "downloadCookiesFailed",
+            "videoLoginNotFound", "videoLoginReloadRequired", "videoLoginFailed"].includes(error.message) ? error.message : "sendFailed" })
     );
     return true;
 });
@@ -79,9 +98,10 @@ async function interceptDownload(item) {
     if (!linksAPI.hasExtension(item.finalUrl || item.url, extensions)
         && !extensions.some(extension => item.filename?.toLowerCase().endsWith("." + extension))) return;
     // Validate the complete request before cancelling the browser's transfer.
-    linksAPI.buildBatches([item.finalUrl || item.url], item.referrer || "");
+    const context = { filename: item.filename || "", userAgent: globalThis.navigator?.userAgent || "" };
+    linksAPI.buildBatches([item.finalUrl || item.url], item.referrer || "", "", context);
     await extensionAPI.downloads.cancel(item.id);
-    await sendLinks([item.finalUrl || item.url], item.referrer || "", "");
+    await sendLinks([item.finalUrl || item.url], item.referrer || "", "", context);
 }
 
 // Optional permission may already exist when an MV3 worker restarts. Register

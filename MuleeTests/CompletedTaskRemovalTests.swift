@@ -29,18 +29,21 @@ import Testing
         if clearAll { model.clearCompletedTasks() }
         else { model.remove(completed.id) }
 
-        #expect(model.tasks.map(\.id) == [active.id])
+        #expect(model.activeTasks.map(\.id) == [active.id])
+        #expect(model.tasks.first { $0.id == completed.id }?.deletedAt != nil)
         #expect(model.selectedTaskID == nil)
         await video.releaseSnapshot()
         await polling.value
         try await waitUntil { await video.removedIDs == ["removed"] }
         #expect(await video.deletesFiles == [false])
         await coordinator.poll()
-        #expect(!model.tasks.contains { $0.engineTaskID == "removed" })
+        #expect(model.activeTasks.contains { $0.engineTaskID == "removed" } == false)
         #expect(try Data(contentsOf: file) == contents)
         model.flushTaskHistory()
         await coordinator.stop()
-        #expect(TaskHistoryStore(directory: root).load().tasks.map(\.id) == [active.id])
+        let saved = TaskHistoryStore(directory: root).load().tasks
+        #expect(saved.filter { $0.deletedAt == nil }.map(\.id) == [active.id])
+        #expect(saved.first { $0.id == completed.id }?.deletedAt != nil)
     }
 
     @Test(arguments: [false, true])
@@ -63,12 +66,13 @@ import Testing
 
         await coordinator.remove(completed.id)
 
-        #expect(model.tasks.isEmpty)
+        #expect(model.activeTasks.isEmpty)
         await coordinator.stop()
         // 不 flush tasks.json：模拟保存列表前退出，删除意图仍须优先于旧历史。
         let restored = AppModel(tasks: [], preventsSleepWhileDownloading: false)
         restored.loadTaskHistory(from: TaskHistoryStore(directory: root))
-        #expect(restored.tasks.isEmpty)
+        #expect(restored.activeTasks.isEmpty)
+        #expect(restored.tasks.first?.deletedAt != nil)
         let nextVideo = FakeEngine(kind: .video)
         await nextVideo.setSnapshots([snapshot(id: "removed", file: file), snapshot(id: "duplicate", file: file)])
         // 补删再次失败时也必须过滤；同 URL 的另一条任务照常恢复。
@@ -76,7 +80,7 @@ import Testing
         let next = DownloadCoordinator(model: restored, engines: [nextVideo])
         await next.start(options: options)
         await next.poll()
-        #expect(restored.tasks.map(\.engineTaskID) == ["duplicate"])
+        #expect(restored.activeTasks.map(\.engineTaskID) == ["duplicate"])
         await next.stop()
         restored.flushTaskHistory()
 
@@ -109,7 +113,8 @@ import Testing
         await coordinator.start(options: EngineOptions(downloadDirectory: root))
 
         model.clearCompletedTasks()
-        #expect(model.tasks.isEmpty)
+        #expect(model.activeTasks.isEmpty)
+        #expect(model.tasks.first?.deletedAt != nil)
         gate.release()
         try await waitUntil { model.engineStates[.video] == .running }
 

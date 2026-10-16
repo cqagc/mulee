@@ -75,7 +75,9 @@ import Testing
     @Test func restoredEngineSessionMatchesHistoryIdentity() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: "TaskHistory-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let tasks = [task(status: .completed, id: "completed"), task(status: .paused)]
+        var completed = task(status: .completed, id: "completed")
+        completed.savePath = directory.appendingPathComponent("missing.zip")
+        let tasks = [completed, task(status: .paused)]
         try TaskHistoryStore(directory: directory).flush(tasks: tasks)
         let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
         model.loadTaskHistory(from: TaskHistoryStore(directory: directory))
@@ -88,7 +90,9 @@ import Testing
         model.flushTaskHistory()
 
         #expect(model.tasks.count == 2)
-        #expect(model.tasks.first == TaskHistoryStore.durableTasks(tasks).first)
+        var expectedCompleted = try #require(TaskHistoryStore.durableTasks(tasks).first)
+        expectedCompleted.fileMissing = true
+        #expect(model.tasks.first == expectedCompleted)
         #expect(model.tasks.last?.id == tasks.last?.id)
         #expect(model.tasks.last?.receivedBytes == 40)
         #expect(model.tasks.last?.status == .downloading)
@@ -128,14 +132,15 @@ import Testing
         model.clearCompletedTasks()
         model.flushTaskHistory()
 
-        #expect(model.tasks == before)
+        #expect(model.activeTasks == before)
+        #expect(model.tasks.first { $0.id == completed.id }?.deletedAt != nil)
         #expect(model.selectedTaskID == nil)
         #expect(!model.hasCompletedTasks)
-        #expect(TaskHistoryStore(directory: directory).load().tasks == before)
+        #expect(TaskHistoryStore(directory: directory).load().tasks.filter { $0.deletedAt == nil } == before)
         #expect(try Data(contentsOf: downloadedFile) == contents)
         #expect(await engine.removedIDs.isEmpty)
         await coordinator.poll()
-        #expect(!model.tasks.contains { $0.id == completed.id || $0.engineTaskID == "completed" })
+        #expect(model.activeTasks.contains { $0.id == completed.id || $0.engineTaskID == "completed" } == false)
         await coordinator.stop()
         model.flushTaskHistory()
     }
@@ -152,12 +157,14 @@ import Testing
         await engine.waitForHeldSnapshot()
 
         model.remove(completed.id)
-        #expect(model.tasks.isEmpty)
+        #expect(model.activeTasks.isEmpty)
+        #expect(model.tasks.first?.deletedAt != nil)
         await engine.releaseSnapshot()
         await polling.value
         await coordinator.poll()
 
-        #expect(model.tasks.isEmpty)
+        #expect(model.activeTasks.isEmpty)
+        #expect(model.tasks.first?.deletedAt != nil)
         #expect(await engine.removedIDs.isEmpty)
         #expect(await engine.deletesFiles.isEmpty)
         await coordinator.stop()
@@ -179,7 +186,8 @@ import Testing
         await polling.value
         await coordinator.poll()
 
-        #expect(model.tasks.isEmpty)
+        #expect(model.activeTasks.isEmpty)
+        #expect(model.tasks.first?.deletedAt != nil)
         #expect(await engine.removedIDs == ["gid"])
         #expect(await engine.deletesFiles == [false])
         await coordinator.stop()

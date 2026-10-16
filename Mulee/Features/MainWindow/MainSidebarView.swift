@@ -20,6 +20,26 @@ struct MainSidebarView: View {
                     .tag(item)
                 }
             }
+            Section("智能列表") {
+                ForEach(SidebarItem.smartLists) { item in
+                    Label(item.title, systemImage: item.symbol.name)
+                        .badge(counts[item, default: 0])
+                        .tag(item)
+                }
+                ForEach(counts.keys.compactMap { item -> String? in
+                    if case .tag(let name) = item { return name }
+                    return nil
+                }.sorted(), id: \.self) { name in
+                    Label(name, systemImage: MuleeSymbol.tags.name)
+                        .badge(counts[.tag(name), default: 0])
+                        .tag(SidebarItem.tag(name))
+                }
+            }
+            Section {
+                Label(SidebarItem.recentlyDeleted.title, systemImage: MuleeSymbol.delete.name)
+                    .badge(counts[.recentlyDeleted, default: 0])
+                    .tag(SidebarItem.recentlyDeleted)
+            }
             Section("类型") {
                 ForEach(SidebarItem.kinds) { item in
                     Label(item.title, systemImage: item.symbol.name)
