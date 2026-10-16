@@ -384,11 +384,25 @@ def run(args):
             ports = ec.ports()
             print("EC 实际端口：" + json.dumps(ports), flush=True)
             # 确认 EC 数据与此实例实际持有的监听 socket 一致。
-            sockets = subprocess.check_output(["/usr/sbin/lsof", "-nP", "-a", "-p", str(process.pid),
-                                                "-i"], text=True)
+            # amuled 的部分 UDP 端口在 EC 就绪后才绑定，最多等 15 秒。
+            deadline = time.monotonic() + 15
+            while True:
+                sockets = subprocess.check_output(["/usr/sbin/lsof", "-nP", "-a", "-p", str(process.pid),
+                                                    "-i"], text=True)
+                missing = [(protocol, port) for protocol, values in ports.items() for port in values
+                           if not any(protocol.upper() in line and f":{port}" in line for line in sockets.splitlines())]
+                if not missing or time.monotonic() > deadline:
+                    break
+                time.sleep(1)
+            # 服务器 UDP 端口（TCP+3）由 amuled 在连上服务器后才打开；决定外部能否连入的是 TCP 和 Kad UDP。
+            server_udp = {("udp", port + 3) for port in ports.get("tcp", [])}
+            pending = [item for item in missing if item in server_udp]
+            if pending:
+                print(f"提示：服务器 UDP 端口尚未打开，仍会映射：{pending}", flush=True)
+            missing = [item for item in missing if item not in server_udp]
+            assert not missing, f"EC 报告的端口没有监听：{missing}\n{sockets}"
             for protocol, values in ports.items():
                 for port in values:
-                    assert any(protocol.upper() in line and f":{port}" in line for line in sockets.splitlines())
                     if gateway is not None and discovery_error is None:
                         assert not gateway.mapping(protocol, port), "候选端口已有路由器映射，拒绝覆盖"
                         checked_ports.add((protocol, port))
