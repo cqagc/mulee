@@ -6,4 +6,9 @@ struct TorrentdEvent: Codable, Sendable, Equatable {
     var listenPort: Int? = nil
     var name: String? = nil
     var message: String? = nil
+    var jobId: String? = nil
+    var completedPieces: Int? = nil
+    var totalPieces: Int? = nil
+    var processedBytes: Int64? = nil
+    var totalBytes: Int64? = nil
 }

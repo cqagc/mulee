@@ -7,6 +7,8 @@ struct MuleeApp: App {
     @State private var settings: SettingsModel
 
     init() {
+        let session = SingleInstanceSession.current
+        precondition(session.isPrimary)
         let settings = SettingsModel()
         _settings = State(initialValue: settings)
         let usesSampleData: Bool
@@ -29,6 +31,7 @@ struct MuleeApp: App {
             for kind in TaskKind.allCases { model.engineStates[kind] = .running }
         }
         _model = State(initialValue: model)
+        appDelegate.configureSingleInstance(session)
         appDelegate.configure(model: model, settings: settings, usesSampleData: usesSampleData)
     }
 

@@ -20,6 +20,8 @@
 
 namespace mulee {
 namespace {
+void validate_tracker(const std::string& url);
+
 int available_port(int requested) {
     // Select one free TCP + UDP port before asking libtorrent to bind all
     // interfaces. With port 0 libtorrent may otherwise select different ports
@@ -87,7 +89,12 @@ void Session::dispatch(const std::string& line) {
             if (!field->is_object()) throw RequestError("invalid_params", "params must be an object");
             params = field->as_object();
         }
-        auto result = execute(std::string(method->as_string()), params);
+        if (method->as_string() == "create_torrent") {
+            start_create(id, params);
+            return;
+        }
+        auto result = method->as_string() == "cancel_create"
+            ? cancel_create(params) : execute(std::string(method->as_string()), params);
         protocol_.respond(id, result);
     } catch (const RequestError& error) {
         protocol_.fail(id, error.code, error.what());
@@ -98,6 +105,125 @@ void Session::dispatch(const std::string& line) {
     } catch (const std::exception& error) {
         protocol_.fail(id, "internal", error.what());
     }
+}
+
+Session::~Session() {
+    stop_create();
+}
+
+void Session::stop_create() {
+    if (!create_job_) return;
+    create_job_->cancelled = true;
+    if (create_job_->worker.joinable()) create_job_->worker.join();
+    create_job_.reset();
+}
+
+void Session::start_create(const json::value& request_id, const json::object& params) {
+    auto job_id = params.contains("job_id") ? string_param(params, "job_id") : json::serialize(request_id);
+    if (job_id.empty() || job_id.size() > 128)
+        throw RequestError("invalid_params", "Expected a job_id of 1 to 128 bytes");
+    if (create_job_) {
+        std::lock_guard<std::mutex> guard(create_job_->mutex);
+        if (!create_job_->finished) throw RequestError("conflict", "Torrent creation is already running");
+    }
+    stop_create();
+    auto job = std::make_shared<CreateJob>();
+    job->id = job_id;
+    create_job_ = job;
+    job->worker = std::thread([this, job, request_id, params] {
+        json::object result;
+        std::string code;
+        std::string message;
+        try {
+            result = create_torrent(params, *job);
+        } catch (const RequestError& error) {
+            code = error.code;
+            message = error.what();
+        } catch (const std::system_error& error) {
+            code = "io_error";
+            message = error.what();
+        } catch (const std::exception& error) {
+            code = "internal";
+            message = error.what();
+        }
+        {
+            std::lock_guard<std::mutex> guard(job->mutex);
+            job->finished = true;
+        }
+        if (code.empty()) protocol_.respond(request_id, result);
+        else protocol_.fail(request_id, code, message);
+    });
+}
+
+json::object Session::cancel_create(const json::object& params) {
+    auto id = string_param(params, "job_id");
+    if (!create_job_ || create_job_->id != id) return {{"cancelled", false}};
+    std::lock_guard<std::mutex> guard(create_job_->mutex);
+    if (create_job_->finished) return {{"cancelled", false}};
+    create_job_->cancelled = true;
+    return {{"cancelled", true}};
+}
+
+json::object Session::create_torrent(const json::object& params, CreateJob& job) {
+    auto check_cancelled = [&] {
+        if (job.cancelled) throw RequestError("cancelled", "Torrent creation cancelled");
+    };
+    check_cancelled();
+    auto source = fs::path(absolute_path(string_param(params, "path"))).lexically_normal();
+    auto destination = absolute_path(string_param(params, "output"));
+    bool private_torrent = bool_param(params, "private");
+    const auto& trackers = required(params, "trackers");
+    if (!trackers.is_array() || trackers.as_array().size() > 50)
+        throw RequestError("invalid_params", "Expected at most 50 trackers");
+    for (const auto& url : trackers.as_array()) {
+        if (!url.is_string()) throw RequestError("invalid_params", "Expected tracker URL");
+        validate_tracker(std::string(url.as_string()));
+    }
+    if (!fs::exists(source) || fs::is_symlink(source) || (!fs::is_directory(source) && !fs::is_regular_file(source)))
+        throw RequestError("io_error", "Expected a file or directory");
+    if (fs::exists(destination)) throw RequestError("conflict", "Destination already exists");
+    if (fs::is_directory(source)) {
+        for (const auto& entry : fs::recursive_directory_iterator(source)) {
+            check_cancelled();
+            if (entry.is_symlink()) throw RequestError("invalid_params", "Symbolic links cannot be included");
+        }
+    }
+    lt::file_storage files;
+    lt::add_files(files, source.string(), [&](const std::string&) {
+        check_cancelled();
+        return true;
+    });
+    if (files.num_files() == 0) throw RequestError("invalid_params", "Source contains no files");
+    lt::create_torrent creator(files, 0); // 不传 v1_only/v2_only，生成自动分块的混合种子。
+    creator.set_priv(private_torrent);
+    int tier = 0;
+    for (const auto& url : trackers.as_array()) creator.add_tracker(std::string(url.as_string()), tier++);
+    if (params.contains("comment")) creator.set_comment(string_param(params, "comment").c_str());
+    lt::error_code error;
+    auto last_progress = std::chrono::steady_clock::time_point{};
+    lt::set_piece_hashes(creator, source.parent_path().string(), [&](lt::piece_index_t piece) {
+        // 回调抛错会展开 set_piece_hashes 的 disk_aborter，终止并回收哈希线程。
+        check_cancelled();
+        auto now = std::chrono::steady_clock::now();
+        if (now - last_progress < std::chrono::milliseconds(200)) return;
+        last_progress = now;
+        auto completed = static_cast<int>(piece) + 1;
+        auto processed = std::min(files.total_size(), std::int64_t(completed) * creator.piece_length());
+        protocol_.send({{"event", "create_progress"}, {"job_id", job.id},
+            {"completed_pieces", completed}, {"total_pieces", creator.num_pieces()},
+            {"processed_bytes", processed}, {"total_bytes", files.total_size()}});
+    }, error);
+    check_cancelled();
+    if (error) throw RequestError("io_error", error.message());
+    auto buffer = creator.generate_buf();
+    lt::torrent_info info(lt::span<char const>(buffer), error, lt::from_span);
+    if (error) throw RequestError("invalid_torrent", error.message());
+    // 发布与取消互斥；取消确认后不会再写出种子，已有目标始终保留。
+    std::lock_guard<std::mutex> guard(job.mutex);
+    check_cancelled();
+    persistence_.write_torrent(destination, buffer);
+    job.finished = true;
+    return {{"path", destination}, {"id", torrent_id(info.info_hashes())}};
 }
 
 Torrent& Session::find(const json::object& params) {
@@ -665,41 +791,6 @@ json::object Session::manage(const std::string& method, const json::object& para
         ip_filters_ = std::move(filters);
         return {{"blocked_ranges", ranges.size()}};
     }
-    if (method == "create_torrent") {
-        auto source = fs::path(absolute_path(string_param(params, "path"))).lexically_normal();
-        auto destination = absolute_path(string_param(params, "output"));
-        bool private_torrent = bool_param(params, "private");
-        const auto& trackers = required(params, "trackers");
-        if (!trackers.is_array() || trackers.as_array().size() > 50)
-            throw RequestError("invalid_params", "Expected at most 50 trackers");
-        for (const auto& url : trackers.as_array()) {
-            if (!url.is_string()) throw RequestError("invalid_params", "Expected tracker URL");
-            validate_tracker(std::string(url.as_string()));
-        }
-        if (!fs::exists(source) || fs::is_symlink(source) || (!fs::is_directory(source) && !fs::is_regular_file(source)))
-            throw RequestError("io_error", "Expected a file or directory");
-        if (fs::exists(destination)) throw RequestError("conflict", "Destination already exists");
-        if (fs::is_directory(source)) {
-            for (const auto& entry : fs::recursive_directory_iterator(source))
-                if (entry.is_symlink()) throw RequestError("invalid_params", "Symbolic links cannot be included");
-        }
-        lt::file_storage files;
-        lt::add_files(files, source.string());
-        if (files.num_files() == 0) throw RequestError("invalid_params", "Source contains no files");
-        lt::create_torrent creator(files, 0); // 不传 v1_only/v2_only，生成自动分块的混合种子。
-        creator.set_priv(private_torrent);
-        int tier = 0;
-        for (const auto& url : trackers.as_array()) creator.add_tracker(std::string(url.as_string()), tier++);
-        if (params.contains("comment")) creator.set_comment(string_param(params, "comment").c_str());
-        lt::error_code error;
-        lt::set_piece_hashes(creator, source.parent_path().string(), error);
-        if (error) throw RequestError("io_error", error.message());
-        auto buffer = creator.generate_buf();
-        persistence_.write_torrent(destination, buffer);
-        lt::torrent_info info(lt::span<char const>(buffer), error, lt::from_span);
-        if (error) throw RequestError("invalid_torrent", error.message());
-        return {{"path", destination}, {"id", torrent_id(info.info_hashes())}};
-    }
     auto& torrent = find(params);
     auto& handle = torrent.handle;
     if (method == "trackers") return tracker_list(torrent);
@@ -881,7 +972,7 @@ json::object Session::execute(const std::string& method, const json::object& par
     if (method == "move_storage" || method == "rename_file" || method == "force_recheck"
         || method == "force_reannounce" || method == "trackers" || method == "set_trackers"
         || method == "peers" || method == "ban_ip" || method == "import_ip_blocklist"
-        || method == "create_torrent" || method == "export_torrent") return manage(method, params);
+        || method == "export_torrent") return manage(method, params);
     if (method == "configure") return configure(params);
     if (method == "set_extra_port_mappings") return set_extra_port_mappings(params);
     if (method == "add") return add(params);

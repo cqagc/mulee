@@ -5,11 +5,14 @@ import MuleeCore
 /// 菜单栏常驻，并在退出前给下载引擎最多五秒保存会话。
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
-    let updates = AppUpdateController.shared
+    private(set) lazy var updates = AppUpdateController.shared
     var openURLRouter: OpenURLRouter? {
         didSet { drainPendingOpenURLs() }
     }
     private var pendingOpenURLs: [[URL]] = []
+    private var singleInstanceSession: SingleInstanceSession?
+    private var singleInstanceHandoff: SingleInstanceHandoff?
+    private var handoffTask: Task<Void, Never>?
     private var servicesProvider: DownloadServicesProvider?
     private var settingsRuntime: SettingsRuntime?
     private var diskReserveMonitor: DiskReserveMonitor?
@@ -28,7 +31,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var hasReplied = false
     private let shutdownProgress = ShutdownProgressController()
 
+    func configureSingleInstance(
+        _ session: SingleInstanceSession,
+        send: @escaping @MainActor ([URL], pid_t) async -> Void = SingleInstanceHandoff.send,
+        activate: @escaping @MainActor (pid_t) -> Void = SingleInstanceHandoff.activate,
+        terminate: @escaping @MainActor () -> Void = { NSApp.terminate(nil) }
+    ) {
+        singleInstanceSession = session
+        guard !session.isPrimary else { return }
+        let handoff = SingleInstanceHandoff(session: session, send: send, activate: activate, terminate: terminate)
+        singleInstanceHandoff = handoff
+        for urls in pendingOpenURLs { handoff.receive(urls) }
+        pendingOpenURLs.removeAll()
+    }
+
+    func finishSingleInstanceHandoff() async {
+        await singleInstanceHandoff?.finish()
+    }
+
     func application(_ application: NSApplication, open urls: [URL]) {
+        if let singleInstanceHandoff {
+            singleInstanceHandoff.receive(urls)
+            return
+        }
         pendingOpenURLs.append(urls)
         drainPendingOpenURLs()
     }
@@ -39,6 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     private func drainPendingOpenURLs() {
+        guard singleInstanceHandoff == nil else { return }
         guard let openURLRouter else { return }
         let pending = pendingOpenURLs
         pendingOpenURLs.removeAll()
@@ -46,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func configure(model: AppModel, settings: SettingsModel, usesSampleData: Bool) {
+        guard singleInstanceSession?.isPrimary != false else { return }
         openURLRouter = OpenURLRouter(model: model, settings: settings)
         servicesProvider = DownloadServicesProvider(router: openURLRouter)
         self.model = model
@@ -119,6 +146,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if singleInstanceHandoff != nil {
+            NSApp.setActivationPolicy(.prohibited)
+            handoffTask = Task { [weak self] in
+                do { try await Task.sleep(for: .seconds(2)) }
+                catch { return }
+                await self?.finishSingleInstanceHandoff()
+            }
+            return
+        }
         NSApp.servicesProvider = servicesProvider
         NSUpdateDynamicServices()
         if !AppEnvironment.isRunningUnitTests, !Self.wasLaunchedAtLogin {
@@ -139,6 +175,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        handoffTask?.cancel()
         openURLRouter?.stopCookieCleanup()
     }
 
@@ -155,6 +192,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        guard singleInstanceHandoff == nil else { return false }
         guard !isTerminating, !shutdownProgress.isActive else { return false }
         model?.mainWindowRequest += 1
         return false
@@ -170,6 +208,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if singleInstanceHandoff != nil { return .terminateNow }
         if updates.installation.isPrepared { return .terminateNow }
         if updates.installationPending {
             guard updates.installation.mayInstall() else { return .terminateCancel }

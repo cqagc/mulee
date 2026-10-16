@@ -112,4 +112,27 @@ import Testing
         }
         await client.finish(grace: .zero)
     }
+
+    @Test("取消制作向引擎发送 job_id，确认哈希退出后才结束原请求")
+    func cancelCreation() async throws {
+        let fake = TorrentFakeTransport(automaticReplies: false)
+        let client = TorrentdClient(transport: fake)
+        try await client.start()
+        try await client.waitUntilReady()
+        var requests = fake.requests.makeAsyncIterator()
+        let creation = Task {
+            try await client.call("create_torrent", TorrentdEmpty(), as: TorrentFileResult.self, cancelCreateJobID: "fixture")
+        }
+        let create = try #require(await requests.next())
+        creation.cancel()
+        let cancel = try #require(await requests.next())
+        #expect(cancel.method == "cancel_create")
+        #expect(cancel.parameters["job_id"] == .string("fixture"))
+        try await fake.reply(cancel, result: .object(["cancelled": .bool(true)]))
+        let response = TorrentdResponse(id: create.id, result: nil, error: TorrentdError(code: "cancelled", message: "cancelled"))
+        await fake.emit(try JSONEncoder().encode(response) + Data([10]))
+        await #expect(throws: CancellationError.self) { try await creation.value }
+        #expect(await client.isRunning())
+        await client.finish(grace: .zero)
+    }
 }

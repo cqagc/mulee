@@ -25,6 +25,7 @@ final class NewTaskModel {
     var autoExtract: Bool
     private var contexts: [ParsedLink: NewTaskContext] = [:]
     private var hasPrefilledDirectory = false
+    private var hasAppliedSettingsDefaults = false
 
     private let parser: ((String) -> [ParsedLink])?
     private let metadataProvider: (any TorrentMetadataProvider)?
@@ -83,6 +84,9 @@ final class NewTaskModel {
     }
 
     func applySettingsDefaults(from settings: SettingsModel) {
+        // 设置默认值跟随草稿生命周期，不能在面板重建时覆盖用户的修改。
+        guard !hasAppliedSettingsDefaults else { return }
+        hasAppliedSettingsDefaults = true
         // 面板出现前可能已收到预填；只补默认值，不能替换草稿或覆盖交接指定的目录。
         if !hasPrefilledDirectory {
             saveDirectory = URL(filePath: settings.saveDirectory, directoryHint: .isDirectory)

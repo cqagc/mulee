@@ -35,6 +35,7 @@ struct Torrent {
 class Session {
 public:
     Session(Protocol& protocol, Persistence& persistence);
+    ~Session();
     void restore();
     void dispatch(const std::string& line);
     void poll();
@@ -43,6 +44,18 @@ public:
     int listen_port() const;
 
 private:
+    struct CreateJob {
+        std::string id;
+        std::atomic<bool> cancelled{false};
+        std::mutex mutex;
+        bool finished = false;
+        std::thread worker;
+    };
+    std::shared_ptr<CreateJob> create_job_;
+    void start_create(const json::value& request_id, const json::object& params);
+    json::object create_torrent(const json::object& params, CreateJob& job);
+    json::object cancel_create(const json::object& params);
+    void stop_create();
     Protocol& protocol_;
     Persistence& persistence_;
     lt::session_params dht_state_;

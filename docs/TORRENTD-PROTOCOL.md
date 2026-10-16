@@ -42,9 +42,9 @@ mulee-torrentd --state-dir <目录>
 {"event": "fatal", "message": "..."}
 ```
 
-事件只是提示，App 以 `list` 的结果为准；丢失事件不影响正确性。
+下载事件只是提示，App 以 `list` 的结果为准；制作种子的 `create_progress` 用于显示进度，最终状态以 `create_torrent` 响应为准。
 
-错误码 `code`：`invalid_request`（JSON 无法解析或缺 method）、`unknown_method`、`invalid_params`、`not_found`（任务不存在）、`invalid_torrent`（种子文件或磁力链接无效）、`io_error`、`metadata_pending`（元数据尚未取得）、`private_torrent`（禁止向私有种子自动追加 tracker）、`tracker_limit`、`conflict`（目标已有同名文件）、`internal`。`message` 给开发者看，可以是英文。
+错误码 `code`：`invalid_request`（JSON 无法解析或缺 method）、`unknown_method`、`invalid_params`、`not_found`（任务不存在）、`invalid_torrent`（种子文件或磁力链接无效）、`io_error`、`metadata_pending`（元数据尚未取得）、`private_torrent`（禁止向私有种子自动追加 tracker）、`tracker_limit`、`conflict`（目标已有同名文件或制作任务正在运行）、`cancelled`（制作已取消）、`internal`。`message` 给开发者看，可以是英文。
 
 数字一律是 JSON 整数（字节数、速度用字节 / 秒），比率用浮点；时间用 Unix 秒（整数）；路径是绝对 POSIX 路径。
 
@@ -216,9 +216,21 @@ mulee-torrentd --state-dir <目录>
 
 ### `create_torrent` / `export_torrent`
 
-`create_torrent` 参数 `{"path": "/tmp/source", "output": "/tmp/fixture.torrent", "private": false, "trackers": ["https://tracker.invalid/announce"], "comment": "可选备注"}`。输入为文件或目录；制作 v1+v2 混合种子，分块大小自动，每个 tracker 单独 tier；最多 50 个 tracker。不允许符号链接，输出已存在返回 `conflict`。计算文件哈希后原子写入，结果 `{"path": "/tmp/fixture.torrent", "id": "<info hash>"}`。
+`create_torrent` 参数 `{"job_id": "<唯一制作任务标识>", "path": "/tmp/source", "output": "/tmp/fixture.torrent", "private": false, "trackers": ["https://tracker.invalid/announce"], "comment": "可选备注"}`。输入为文件或目录；制作 v1+v2 混合种子，分块大小自动，每个 tracker 单独 tier；最多 50 个 tracker。不允许符号链接，输出已存在返回 `conflict`。计算文件哈希后原子写入，结果 `{"path": "/tmp/fixture.torrent", "id": "<info hash>"}`。
+
+`job_id` 为 1–128 字节的字符串，Swift 端使用 UUID；兼容旧调用时可省略，默认使用请求 `id` 的 JSON 表示。同一时间只允许一个制作任务，重复创建返回 `conflict`。哈希在工作线程执行，不阻塞其他协议命令。哈希每完成一个分块检查取消状态；进度通知最多每 200 ms 一次：
+
+```json
+{"event": "create_progress", "job_id": "<制作任务标识>", "completed_pieces": 20, "total_pieces": 100, "processed_bytes": 10485760, "total_bytes": 52428800}
+```
+
+百分比为 `completed_pieces / total_pieces`；字节数包含 v1+v2 混合种子的对齐填充。节流可能省略最后一次进度事件，成功响应表示制作完成。
 
 `export_torrent` 参数 `{"id": "...", "output": "/tmp/export.torrent"}`，结果同上。从 resume data 导出，保留 info hash 和 v2 piece layers，以及当前启用的 tracker 列表。磁力未取得元数据返回 `metadata_pending`；v2 尚未取得完整 piece layers 时返回 `io_error`，待哈希可用后重试。已有输出返回 `conflict`。
+
+### `cancel_create`
+
+参数 `{"job_id": "<制作任务标识>"}`，结果 `{"cancelled": true}` 表示已请求中止；不存在或已完成返回 `{"cancelled": false}`。取消后，原 `create_torrent` 请求返回错误码 `cancelled`，表示哈希线程已停止，不会发布输出。取消与最终原子写入互斥，已有目标文件不会因取消被删除。App 等原请求结束后清理制作临时目录。`shutdown`、stdin EOF 和进程终止同样中止正在制作的任务。
 
 ### `session_status`
 

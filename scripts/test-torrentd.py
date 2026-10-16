@@ -598,7 +598,69 @@ def incomplete_file_tests(binary, root):
     print("PASS C2/E4：逐文件校验改名、未完成/完成重启一致、连续开头、首尾 2% 优先、取消顺序下载", flush=True)
 
 
+def creation_progress_and_cancellation(binary, root):
+    source = root / "hash-source.bin"
+    with source.open("wb") as stream:
+        stream.truncate(2 * 1024 * 1024 * 1024)
+    daemon = Daemon(binary, root / "state-create")
+    daemon.configure(root / "create-downloads")
+    for cancelled in (True, False):
+        job_id = "cancelled" if cancelled else "completed"
+        output = root / (job_id + ".torrent")
+        daemon.sequence += 1
+        create_id = daemon.sequence
+        daemon.process.stdin.write(json.dumps({
+            "id": create_id, "method": "create_torrent", "params": {
+                "job_id": job_id, "path": str(source), "output": str(output),
+                "private": False, "trackers": [],
+            },
+        }) + "\n")
+        daemon.process.stdin.flush()
+        progress = []
+        cancel_id = None
+        replies = {}
+        deadline = time.monotonic() + 60
+        while create_id not in replies or (cancel_id is not None and cancel_id not in replies):
+            assert time.monotonic() < deadline, "Creation did not finish promptly"
+            message = daemon.message(timeout=60)
+            if "event" in message:
+                if message["event"] != "create_progress":
+                    continue
+                assert message["job_id"] == job_id, message
+                assert 0 < message["completed_pieces"] <= message["total_pieces"], message
+                assert 0 < message["processed_bytes"] <= message["total_bytes"], message
+                now = time.monotonic()
+                if progress:
+                    assert message["completed_pieces"] > progress[-1][1]["completed_pieces"]
+                    assert now - progress[-1][0] >= 0.17, "Progress was not throttled"
+                progress.append((now, message))
+                if cancelled and cancel_id is None:
+                    daemon.sequence += 1
+                    cancel_id = daemon.sequence
+                    daemon.process.stdin.write(json.dumps({
+                        "id": cancel_id, "method": "cancel_create", "params": {"job_id": job_id},
+                    }) + "\n")
+                    daemon.process.stdin.flush()
+                    cancelled_at = time.monotonic()
+            else:
+                replies[message["id"]] = message
+        assert progress, "create_torrent emitted no progress"
+        if cancelled:
+            assert replies[create_id]["error"]["code"] == "cancelled", replies
+            assert replies[cancel_id]["result"]["cancelled"] is True, replies
+            assert time.monotonic() - cancelled_at < 3, "Cancellation waited for hashing"
+            assert not output.exists()
+        else:
+            assert "result" in replies[create_id], replies
+            assert output.is_file()
+            assert len(progress) >= 2, "Fixture must exercise sustained progress"
+        assert daemon.request("cancel_create", {"job_id": job_id}) == {"cancelled": False}
+    daemon.close("shutdown")
+    print("PASS 制作种子进度、200 ms 节流、立即取消与输出清理", flush=True)
+
+
 def run_tests(binary, root):
+    creation_progress_and_cancellation(binary, root)
     rename_storage_conflict_tests(binary, root / "rename-conflicts")
     isolated_snapshot_conflict_tests(binary, root / "snapshot-conflicts")
     incomplete_file_tests(binary, root / "incomplete-files")

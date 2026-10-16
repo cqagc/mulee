@@ -3,6 +3,45 @@ import Testing
 @testable import MuleeCore
 
 @Suite struct TorrentEngineTests {
+    @Test("制作进度按 job_id 分发，取消 API 使用同一个 job_id")
+    func creationProgress() async throws {
+        let fake = TorrentFakeTransport()
+        try await TorrentFixtures.withEngine(fake: fake) { engine, root in
+            try await engine.start(options: EngineOptions(downloadDirectory: root))
+            await fake.hold("create_torrent")
+            let jobID = UUID()
+            let (updates, continuation) = AsyncStream<TorrentCreationProgress>.makeStream()
+            let creation = Task {
+                try await engine.createTorrent(from: root, to: root.appending(path: "fixture.torrent"), jobID: jobID) {
+                    continuation.yield($0)
+                }
+            }
+            var requests = fake.requests.makeAsyncIterator()
+            var create: TorrentTestRequest?
+            while let request = await requests.next() {
+                if request.method == "create_torrent" { create = request; break }
+            }
+            #expect(create?.parameters["job_id"] == .string(jobID.uuidString))
+            let event = """
+                {"event":"create_progress","job_id":"\(jobID.uuidString)","completed_pieces":2,
+                 "total_pieces":4,"processed_bytes":512,"total_bytes":1024}
+                """.replacingOccurrences(of: "\n", with: "")
+            await fake.emit(Data((event + "\n").utf8))
+            var progress = updates.makeAsyncIterator()
+            #expect(await progress.next() == TorrentCreationProgress(
+                completedPieces: 2, totalPieces: 4, processedBytes: 512, totalBytes: 1024
+            ))
+            try await engine.cancelCreate(jobID: jobID)
+            #expect(await fake.sent.last?.method == "cancel_create")
+            #expect(await fake.sent.last?.parameters["job_id"] == .string(jobID.uuidString))
+            let request = try #require(create)
+            let cancelled = TorrentdResponse(id: request.id, result: nil, error: TorrentdError(code: "cancelled", message: "cancelled"))
+            await fake.emit(try JSONEncoder().encode(cancelled) + Data([10]))
+            await #expect(throws: CancellationError.self) { try await creation.value }
+            continuation.finish()
+        }
+    }
+
     @Test("单任务改名冲突映射为可读错误，其他快照正常返回")
     func isolatedSnapshotConflict() async throws {
         let fake = TorrentFakeTransport()

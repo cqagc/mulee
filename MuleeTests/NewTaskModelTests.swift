@@ -144,6 +144,104 @@ import Testing
         #expect(app.pendingNewTaskText.isEmpty)
     }
 
+    @Test func consumedPrefillSurvivesSheetRecreation() throws {
+        let temporary = try TemporaryDefaults(prefix: "sheet-recreation.")
+        defer { temporary.clean() }
+        let settings = SettingsModel(defaults: temporary.defaults)
+        let app = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let text = "https://example.org/archive.zip"
+        let link = try #require(LinkParser.parse(text).first)
+        let sourcePage = try #require(URL(string: "https://example.org/page"))
+        let directory = URL(filePath: "/tmp/fictional-handoff", directoryHint: .isDirectory)
+        app.pendingNewTaskDirectory = directory
+        app.pendingNewTaskContexts[link] = NewTaskContext(
+            sourcePageURL: sourcePage, password: "fictional",
+            requestContext: DownloadRequestContext(cookie: "session=fictional")
+        )
+        app.showNewTask(prefill: text)
+        weak var originalDraft: NewTaskModel?
+        do {
+            let draft = app.prepareNewTaskDraft(settings: settings)
+            originalDraft = draft
+            draft.autoExtract = false
+            try #require(draft.inputText == text)
+            try #require(app.pendingNewTaskText.isEmpty)
+        }
+
+        // 模拟首个面板销毁，释放其局部强引用；重建时只能从全局状态恢复草稿。
+        let rebuiltDraft = app.prepareNewTaskDraft(settings: settings)
+
+        #expect(rebuiltDraft === originalDraft)
+        #expect(rebuiltDraft.inputText == text)
+        #expect(rebuiltDraft.saveDirectory == directory)
+        #expect(rebuiltDraft.autoExtract == false)
+        #expect(rebuiltDraft.links.first?.requestContext.cookie == "session=fictional")
+        rebuiltDraft.createTasks(in: app)
+        let task = try #require(app.tasks.first)
+        #expect(task.sourcePageURL == sourcePage)
+        #expect(app.pagePasswords[task.id] == "fictional")
+    }
+
+    @Test("重建保留用户目录与选项，追加预填只消费一次")
+    func rebuiltSheetPreservesEditsAndAppendsNewPrefill() throws {
+        let temporary = try TemporaryDefaults(prefix: "sheet-edits.")
+        defer { temporary.clean() }
+        let settings = SettingsModel(defaults: temporary.defaults)
+        let app = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let first = "https://example.org/first.zip"
+        let second = "https://example.org/second.zip"
+        app.showNewTask(prefill: first)
+        let draft = app.prepareNewTaskDraft(settings: settings)
+        let firstItem = try #require(draft.links.first)
+        let directory = URL(filePath: "/tmp/fictional-user-directory", directoryHint: .isDirectory)
+        draft.saveDirectory = directory
+        draft.autoExtract = false
+        firstItem.checksumText = String(repeating: "a", count: 64)
+        app.showNewTask(prefill: second)
+
+        let rebuiltDraft = app.prepareNewTaskDraft(settings: settings)
+        app.prepareNewTaskDraft(settings: settings)
+
+        #expect(rebuiltDraft === draft)
+        #expect(rebuiltDraft.inputText == first + "\n" + second)
+        #expect(rebuiltDraft.saveDirectory == directory)
+        #expect(rebuiltDraft.autoExtract == false)
+        #expect(rebuiltDraft.links.first === firstItem)
+        #expect(rebuiltDraft.links.first?.checksumText == String(repeating: "a", count: 64))
+        #expect(app.pendingNewTaskText.isEmpty)
+    }
+
+    @Test("取消或提交才结束草稿，下次打开重新取默认值", arguments: [false, true])
+    func finishingDraftStartsFresh(_ submit: Bool) throws {
+        let temporary = try TemporaryDefaults(prefix: "sheet-finish.")
+        defer { temporary.clean() }
+        let settings = SettingsModel(defaults: temporary.defaults)
+        let app = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        app.showNewTask(prefill: "https://example.org/archive.zip")
+        weak var previousDraft: NewTaskModel?
+        do {
+            let draft = app.prepareNewTaskDraft(settings: settings)
+            previousDraft = draft
+            draft.autoExtract = false
+            if submit { draft.createTasks(in: app) }
+        }
+
+        app.finishNewTask()
+        #expect(app.isShowingNewTask == false)
+        settings.autoExtract = true
+        app.showNewTask()
+        let nextDraft = app.prepareNewTaskDraft(settings: settings)
+
+        #expect(previousDraft == nil)
+        #expect(nextDraft.inputText.isEmpty)
+        #expect(nextDraft.links.isEmpty)
+        #expect(nextDraft.autoExtract)
+        #expect(app.tasks.count == (submit ? 1 : 0))
+        #expect(app.pendingNewTaskText.isEmpty)
+        #expect(app.pendingNewTaskDirectory == nil)
+        #expect(app.pendingNewTaskContexts.isEmpty)
+    }
+
     @Test func defaultSaveDirectoryIsMuleeDownloads() {
         let draft = NewTaskModel(parser: { _ in [] })
 
@@ -218,15 +316,14 @@ import Testing
         }
         app.showNewTask(prefill: second)
         app.showNewTask()
-        var draft = NewTaskModel()
-        var needsSettingsDefaults = true
+        let draft = app.newTaskDraft
 
         // 模拟 onChange 先于 onAppear，预填已经从全局状态取走。
         if consumeBeforeAppearance { draft.consumePendingText(from: app) }
         let originalDraft = draft
         let earlyItem = draft.links.first
         earlyItem?.sequentialDownload = true
-        NewTaskSheet.prepareDraft(&draft, needsSettingsDefaults: &needsSettingsDefaults, settings: settings, model: app)
+        app.prepareNewTaskDraft(settings: settings)
 
         #expect(draft === originalDraft)
         if let earlyItem {
@@ -237,7 +334,6 @@ import Testing
         #expect(draft.linkCount == 2)
         #expect(draft.saveDirectory.path == (includesDirectory ? "/tmp/fictional-intent" : settings.saveDirectory))
         #expect(!draft.autoExtract)
-        #expect(!needsSettingsDefaults)
         #expect(app.pendingNewTaskText.isEmpty)
         #expect(app.pendingNewTaskContexts.isEmpty)
         #expect(app.pendingNewTaskDirectory == nil)
@@ -247,7 +343,7 @@ import Testing
         originalItem.sequentialDownload = true
         app.showNewTask(prefill: "https://example.org/third.zip")
         draft.consumePendingText(from: app)
-        NewTaskSheet.prepareDraft(&draft, needsSettingsDefaults: &needsSettingsDefaults, settings: settings, model: app)
+        app.prepareNewTaskDraft(settings: settings)
 
         #expect(draft.inputText == magnet + "\n" + second + "\nhttps://example.org/third.zip")
         #expect(draft.linkCount == 3)

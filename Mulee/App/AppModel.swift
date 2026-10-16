@@ -63,6 +63,8 @@ final class AppModel {
     var selectedTaskID: DownloadTask.ID?
     /// 是否显示「新建下载」面板。
     var isShowingNewTask = false
+    /// 草稿属于应用；窗口或 sheet 重建后仍使用同一份预填与交接上下文。
+    private(set) var newTaskDraft = NewTaskModel()
     var openURLIssue: String?
     /// 打开「新建下载」面板时预填的文本，读取后由面板清空。
     var pendingNewTaskText = ""
@@ -134,6 +136,22 @@ final class AppModel {
             pendingNewTaskText += separator + text
         }
         isShowingNewTask = true
+    }
+
+    @discardableResult
+    func prepareNewTaskDraft(settings: SettingsModel) -> NewTaskModel {
+        newTaskDraft.applySettingsDefaults(from: settings)
+        newTaskDraft.consumePendingText(from: self)
+        return newTaskDraft
+    }
+
+    /// 只在用户取消或成功提交后结束草稿；视图消失不能清空它。
+    func finishNewTask() {
+        isShowingNewTask = false
+        pendingNewTaskText = ""
+        pendingNewTaskDirectory = nil
+        pendingNewTaskContexts = [:]
+        newTaskDraft = NewTaskModel()
     }
 
     /// 暂停所有未完成的任务。

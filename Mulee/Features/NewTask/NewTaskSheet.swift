@@ -8,14 +8,14 @@ struct NewTaskSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(SettingsModel.self) private var settings
     @Environment(\.dismiss) private var dismiss
-    @State private var draft: NewTaskModel
-    @State private var needsSettingsDefaults: Bool
+    private let suppliedDraft: NewTaskModel?
     @State private var addingTask: Task<Void, Never>?
 
     init(draft: NewTaskModel? = nil) {
-        _draft = State(initialValue: draft ?? NewTaskModel())
-        _needsSettingsDefaults = State(initialValue: draft == nil)
+        suppliedDraft = draft
     }
+
+    private var draft: NewTaskModel { suppliedDraft ?? model.newTaskDraft }
 
     private func recognitionMessage(_ row: SmartPasteParser.Row) -> String {
         if row.isInfoHash { return String(localized: "已识别为磁力链接") }
@@ -113,7 +113,7 @@ struct NewTaskSheet: View {
         .dropDestination(for: URL.self, action: dropTorrentFiles)
         .onAppear(perform: prepareDraft)
         .onChange(of: model.pendingNewTaskText) {
-            consumePendingText()
+            prepareDraft()
         }
     }
 
@@ -133,27 +133,16 @@ struct NewTaskSheet: View {
     }
 
     private func prepareDraft() {
-        Self.prepareDraft(&draft, needsSettingsDefaults: &needsSettingsDefaults, settings: settings, model: model)
-    }
-
-    static func prepareDraft(
-        _ draft: inout NewTaskModel, needsSettingsDefaults: inout Bool,
-        settings: SettingsModel, model: AppModel
-    ) {
-        if needsSettingsDefaults {
-            draft.applySettingsDefaults(from: settings)
-            needsSettingsDefaults = false
+        if let suppliedDraft {
+            suppliedDraft.consumePendingText(from: model)
+        } else {
+            // onChange 即使先于 onAppear，也会准备并复用应用持有的草稿。
+            model.prepareNewTaskDraft(settings: settings)
         }
-        draft.consumePendingText(from: model)
-    }
-
-    private func consumePendingText() {
-        // onChange 可能早于 onAppear；先留在全局队列，等面板完成准备再取走。
-        guard !needsSettingsDefaults else { return }
-        draft.consumePendingText(from: model)
     }
 
     private func cancel() {
+        model.finishNewTask()
         dismiss()
     }
 
@@ -169,6 +158,7 @@ struct NewTaskSheet: View {
         addingTask = Task { @MainActor in
             guard await draft.checkBeforeAdding(in: model, settings: settings), !Task.isCancelled else { return }
             draft.createTasks(in: model)
+            model.finishNewTask()
             dismiss()
         }
     }

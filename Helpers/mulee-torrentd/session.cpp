@@ -531,6 +531,7 @@ void Session::poll() {
 
 void Session::shutdown() {
     stopping_ = true;
+    stop_create();
     clear_extra_port_mapping_handles();
     extra_mappings_.clear();
     // Snapshot local DHT routing state before pausing; this performs no network wait.

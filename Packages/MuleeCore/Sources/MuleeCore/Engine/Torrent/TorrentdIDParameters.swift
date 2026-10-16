@@ -109,6 +109,31 @@ struct TorrentdCreateParameters: Encodable, Sendable {
     let `private`: Bool
     let trackers: [String]
     let comment: String?
+    let jobId: String
+}
+
+struct TorrentdCreateJobParameters: Encodable, Sendable {
+    let jobId: String
+}
+
+/// 已完成哈希的分块数及字节数；字节数包含混合种子的对齐填充。
+public struct TorrentCreationProgress: Decodable, Sendable, Equatable {
+    public let completedPieces: Int
+    public let totalPieces: Int
+    public let processedBytes: Int64
+    public let totalBytes: Int64
+
+    public init(completedPieces: Int, totalPieces: Int, processedBytes: Int64, totalBytes: Int64) {
+        self.completedPieces = completedPieces
+        self.totalPieces = totalPieces
+        self.processedBytes = processedBytes
+        self.totalBytes = totalBytes
+    }
+
+    public var fractionCompleted: Double {
+        guard totalPieces > 0 else { return 0 }
+        return min(1, max(0, Double(completedPieces) / Double(totalPieces)))
+    }
 }
 
 struct TorrentdExportParameters: Encodable, Sendable {

@@ -28,6 +28,7 @@ public actor TorrentEngine: DownloadEngine {
     private var restarting: Task<Void, Never>?
     private var restartUsed = false
     private var shouldRun = false
+    private var creationProgress: [String: @Sendable (TorrentCreationProgress) async -> Void] = [:]
     private static let logger = Logger(subsystem: "MuleeCore", category: "Torrent")
 
     /// stateDirectory 由 App 传入 ~/Library/Application Support/Mulee/torrent。
@@ -331,12 +332,26 @@ public actor TorrentEngine: DownloadEngine {
 
     /// 从文件或目录制作分块大小自动选择的 v1+v2 混合种子。
     public func createTorrent(
-        from source: URL, to output: URL, isPrivate: Bool = false, trackers: [String] = [], comment: String? = nil
+        from source: URL, to output: URL, isPrivate: Bool = false, trackers: [String] = [], comment: String? = nil,
+        jobID: UUID = UUID(),
+        progress: @escaping @Sendable (TorrentCreationProgress) async -> Void = { _ in }
     ) async throws -> TorrentFileResult {
+        try Task.checkCancellation()
         let client = try await runningClient()
-        return try await client.call("create_torrent", TorrentdCreateParameters(
-            path: source.path, output: output.path, private: isPrivate, trackers: trackers, comment: comment
-        ), timeout: .seconds(3600))
+        let id = jobID.uuidString
+        creationProgress[id] = progress
+        defer { creationProgress.removeValue(forKey: id) }
+        let result: TorrentFileResult = try await client.call("create_torrent", TorrentdCreateParameters(
+            path: source.path, output: output.path, private: isPrivate, trackers: trackers, comment: comment, jobId: id
+        ), timeout: .seconds(3600), cancelCreateJobID: id)
+        try Task.checkCancellation()
+        return result
+    }
+
+    /// 取消指定制作任务；已完成或不存在时安全返回。
+    public func cancelCreate(jobID: UUID) async throws {
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call("cancel_create", TorrentdCreateJobParameters(jobId: jobID.uuidString))
     }
 
     /// 导出保留原始 info hash 的种子；磁力任务必须先获取元数据。
@@ -490,9 +505,19 @@ public actor TorrentEngine: DownloadEngine {
         client = rpc
         sessionID = id
         monitor = Task { [weak self] in
-            for await _ in rpc.events { }
+            for await event in rpc.events { await self?.receiveCreationProgress(event) }
             await self?.didExit(id, client: rpc)
         }
+    }
+
+    private func receiveCreationProgress(_ event: TorrentdEvent) async {
+        guard event.event == "create_progress", let id = event.jobId,
+              let completed = event.completedPieces, let total = event.totalPieces,
+              let processed = event.processedBytes, let bytes = event.totalBytes,
+              total > 0, completed >= 0, completed <= total, processed >= 0, processed <= bytes else { return }
+        await creationProgress[id]?(TorrentCreationProgress(
+            completedPieces: completed, totalPieces: total, processedBytes: processed, totalBytes: bytes
+        ))
     }
 
     private func shutdown() async {

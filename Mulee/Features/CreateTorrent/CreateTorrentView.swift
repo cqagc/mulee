@@ -32,7 +32,16 @@ struct CreateTorrentView: View {
             .disabled(model.isWorking)
             if let validation = model.validation { Text(validation).foregroundStyle(.secondary) }
             if model.isWorking {
-                ProgressView("正在计算文件校验值，文件较大时需要几分钟")
+                ProgressView(value: model.progress?.fractionCompleted ?? 0) {
+                    Text("正在计算文件校验值，文件较大时需要几分钟")
+                } currentValueLabel: {
+                    HStack {
+                        Text((model.progress?.fractionCompleted ?? 0).formatted(.percent.precision(.fractionLength(0))))
+                        Spacer()
+                        Text("已处理 \((model.progress?.processedBytes ?? 0).formatted(.byteCount(style: .file))) / \((model.progress?.totalBytes ?? 0).formatted(.byteCount(style: .file)))")
+                    }
+                    .monospacedDigit()
+                }
             }
             if let issue = model.issue { Text(issue).foregroundStyle(Theme.wait) }
             if let output = model.output {
@@ -69,8 +78,10 @@ struct CreateTorrentView: View {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = source.lastPathComponent + ".torrent"
         guard panel.runModal() == .OK, let output = panel.url else { return }
-        model.start(to: output) { source, temporaryOutput, isPrivate, trackers in
-            _ = try await engine.createTorrent(from: source, to: temporaryOutput, isPrivate: isPrivate, trackers: trackers)
+        model.start(to: output) { source, temporaryOutput, isPrivate, trackers, progress in
+            _ = try await engine.createTorrent(
+                from: source, to: temporaryOutput, isPrivate: isPrivate, trackers: trackers, progress: progress
+            )
         } seed: { torrent, directory in
             guard let coordinator = app.coordinator else { throw EngineError.notRunning }
             let draft = NewTaskModel(inputText: torrent.absoluteString, saveDirectory: directory, autoExtract: false)

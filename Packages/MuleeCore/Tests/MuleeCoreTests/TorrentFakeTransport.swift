@@ -18,6 +18,7 @@ actor TorrentFakeTransport: TorrentdTransport {
     private(set) var addedTorrent: Data?
     private var results: [String: TorrentdValue] = [:]
     private var errors: [String: String] = [:]
+    private var heldMethods = Set<String>()
 
     init(sendsReady: Bool = true, automaticReplies: Bool = true) {
         self.sendsReady = sendsReady
@@ -42,6 +43,7 @@ actor TorrentFakeTransport: TorrentdTransport {
             addedTorrent = try Data(contentsOf: URL(fileURLWithPath: path))
         }
         guard automaticReplies else { return }
+        guard !heldMethods.contains(request.method) else { return }
         if let code = errors[request.method] {
             var data = try JSONEncoder().encode(TorrentdResponse(
                 id: request.id, result: nil, error: TorrentdError(code: code, message: code)
@@ -74,6 +76,8 @@ actor TorrentFakeTransport: TorrentdTransport {
     }
 
     func setError(_ method: String, code: String?) { errors[method] = code }
+
+    func hold(_ method: String) { heldMethods.insert(method) }
 
     func setResult(_ method: String, _ value: TorrentdValue) {
         results[method] = value

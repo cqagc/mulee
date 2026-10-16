@@ -1,9 +1,10 @@
 import Foundation
+import MuleeCore
 import Observation
 
 @Observable
 final class CreateTorrentModel {
-    typealias Creator = (URL, URL, Bool, [String]) async throws -> Void
+    typealias Creator = (URL, URL, Bool, [String], @escaping @Sendable (TorrentCreationProgress) async -> Void) async throws -> Void
 
     var source: URL?
     var trackerText = ""
@@ -12,6 +13,7 @@ final class CreateTorrentModel {
     private(set) var isWorking = false
     private(set) var output: URL?
     private(set) var issue: String?
+    private(set) var progress: TorrentCreationProgress?
     private(set) var job: Task<Void, Never>?
     private var activeJob: UUID?
 
@@ -29,10 +31,11 @@ final class CreateTorrentModel {
         isWorking = true
         output = nil
         issue = nil
+        progress = nil
         let trackers = trackers
         let privateTorrent = isPrivate
         let shouldSeed = startsSeeding
-        // 不取消 RPC 等待，才能在引擎完成后清理用户已取消的临时输出。
+        // 取消传播到引擎；RPC 确认哈希退出后再清理临时目录。
         job = Task {
             guard activeJob == token else { return }
             let manager = FileManager.default
@@ -45,8 +48,16 @@ final class CreateTorrentModel {
             }
             do {
                 try manager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false)
-                try await creator(source, temporaryOutput, privateTorrent, trackers)
+                try await creator(source, temporaryOutput, privateTorrent, trackers) { [weak self] progress in
+                    await self?.updateProgress(progress, token: token)
+                }
                 guard activeJob == token else { return }
+                if let progress {
+                    self.progress = TorrentCreationProgress(
+                        completedPieces: progress.totalPieces, totalPieces: progress.totalPieces,
+                        processedBytes: progress.totalBytes, totalBytes: progress.totalBytes
+                    )
+                }
                 // moveItem 不覆盖已有输出，避免生成期间其他进程写入的文件被替换。
                 try manager.moveItem(at: temporaryOutput, to: destination)
                 output = destination
@@ -63,5 +74,11 @@ final class CreateTorrentModel {
     func cancel() {
         activeJob = nil
         isWorking = false
+        job?.cancel()
+    }
+
+    private func updateProgress(_ progress: TorrentCreationProgress, token: UUID) {
+        guard activeJob == token else { return }
+        self.progress = progress
     }
 }

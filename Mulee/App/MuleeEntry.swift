@@ -19,6 +19,22 @@ import SwiftUI
         if VideoNativeMessaging.isNativeInvocation(CommandLine.arguments) {
             await VideoNativeMessaging.run(arguments: CommandLine.arguments)
         }
+        let session = SingleInstanceSession.current
+        guard session.isPrimary else {
+            runSingleInstanceHandoff(session)
+            return
+        }
         MuleeApp.main()
+    }
+
+    @MainActor private static func runSingleInstanceHandoff(_ session: SingleInstanceSession) {
+        // 转交模式只运行 AppKit 事件循环，完全不实例化 SwiftUI App 和任何场景。
+        let application = NSApplication.shared
+        let delegate = AppDelegate()
+        delegate.configureSingleInstance(session)
+        application.delegate = delegate
+        application.setActivationPolicy(.prohibited)
+        application.run()
+        withExtendedLifetime(delegate) {}
     }
 }

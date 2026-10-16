@@ -11,6 +11,8 @@ actor TorrentdClient {
     private var ready = false
     private var nextID = 0
     private var pending: [Int: TorrentdPending<TorrentdValue>] = [:]
+    private var sentRequests = Set<Int>()
+    private var cancelledCreations: [Int: String] = [:]
     private var readyWaiters: [UUID: TorrentdPending<Void>] = [:]
     private var buffer = Data()
     private static let maximumLineLength = 16 * 1_024 * 1_024
@@ -61,7 +63,8 @@ actor TorrentdClient {
         _ method: String,
         _ params: Parameters,
         as type: Result.Type = Result.self,
-        timeout: Duration? = nil
+        timeout: Duration? = nil,
+        cancelCreateJobID: String? = nil
     ) async throws -> Result {
         guard active, ready else { throw EngineError.notRunning }
         nextID += 1
@@ -81,13 +84,22 @@ actor TorrentdClient {
                 }
                 pending[id] = TorrentdPending(continuation: continuation, timeout: timer)
                 Task { [weak self, transport] in
-                    do { try await transport.send(requestData) } catch {
+                    do {
+                        try await transport.send(requestData)
+                        await self?.didSend(id)
+                    } catch {
                         await self?.fail(id, error: error)
                     }
                 }
             }
         } onCancel: {
-            Task { await self.fail(id, error: CancellationError()) }
+            Task {
+                if let cancelCreateJobID {
+                    await self.cancelCreateRequest(id, jobID: cancelCreateJobID)
+                } else {
+                    await self.fail(id, error: CancellationError())
+                }
+            }
         }
         do {
             return try Self.decoder().decode(type, from: JSONEncoder().encode(value))
@@ -136,9 +148,13 @@ actor TorrentdClient {
                 } else {
                     let response = try Self.decoder().decode(TorrentdResponse.self, from: Data(line))
                     guard let request = pending.removeValue(forKey: response.id) else { continue }
+                    sentRequests.remove(response.id)
+                    cancelledCreations.removeValue(forKey: response.id)
                     request.timeout.cancel()
                     if let error = response.error {
-                        request.continuation.resume(throwing: TorrentErrorDescriptions.error(for: error.code))
+                        let failure: any Error = error.code == "cancelled"
+                            ? CancellationError() : TorrentErrorDescriptions.error(for: error.code)
+                        request.continuation.resume(throwing: failure)
                     } else if let result = response.result {
                         request.continuation.resume(returning: result)
                     } else {
@@ -157,8 +173,26 @@ actor TorrentdClient {
 
     private func fail(_ id: Int, error: any Error) {
         guard let request = pending.removeValue(forKey: id) else { return }
+        sentRequests.remove(id)
+        cancelledCreations.removeValue(forKey: id)
         request.timeout.cancel()
         request.continuation.resume(throwing: error)
+    }
+
+    private func didSend(_ id: Int) async {
+        guard pending[id] != nil else { return }
+        sentRequests.insert(id)
+        if let jobID = cancelledCreations[id] {
+            await cancelCreateRequest(id, jobID: jobID)
+        }
+    }
+
+    private func cancelCreateRequest(_ id: Int, jobID: String) async {
+        guard pending[id] != nil else { return }
+        cancelledCreations[id] = jobID
+        guard sentRequests.contains(id) else { return }
+        // 等创建命令写入后再发取消；保留原 RPC，确认哈希退出后调用方才清理临时目录。
+        let _: TorrentdEmpty? = try? await call("cancel_create", TorrentdCreateJobParameters(jobId: jobID))
     }
 
     private func failReady(_ id: UUID, error: any Error) {
