@@ -8,6 +8,13 @@ public enum SmartPasteParser {
         public let context: DownloadRequestContext
         public let message: String
         public var isInfoHash: Bool = false
+
+        public var isTorrentFile: Bool {
+            !links.isEmpty && links.allSatisfy {
+                if case .torrentFile = $0 { return true }
+                return false
+            }
+        }
     }
 
     public static func parse(_ text: String) -> [Row] {
@@ -49,6 +56,12 @@ public enum SmartPasteParser {
                     expanded.append(contentsOf: batch)
                 }
                 let links = expanded.flatMap(LinkParser.parse)
+                if !isCurl, !links.isEmpty, links.allSatisfy({
+                    if case .torrentFile = $0 { return true }
+                    return false
+                }) {
+                    message = "已识别种子文件"
+                }
                 let firstURL = urls.first.flatMap { URL(string: $0) }
                 let hasCredentials = context.requestCookie != nil || context.headers.keys.contains {
                     ["authorization", "proxy-authorization"].contains($0.lowercased())

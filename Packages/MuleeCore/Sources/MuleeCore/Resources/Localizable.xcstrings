@@ -2843,6 +2843,35 @@
         }
       }
     },
+    "无法访问电驴下载目录，电驴任务暂时无法下载。请在 macOS 权限提示中允许访问，或在设置中更换保存目录后重试。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法访问电驴下载目录，电驴任务暂时无法下载。请在 macOS 权限提示中允许访问，或在设置中更换保存目录后重试。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The eD2k download folder cannot be accessed, so eD2k tasks cannot download for now. Allow access in the macOS permission prompt, or choose another save folder in Settings and try again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法存取電驢下載目錄，電驢任務暫時無法下載。請在 macOS 權限提示中允許存取，或在設定中更換儲存目錄後重試。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kのダウンロードフォルダにアクセスできないため、eD2kタスクを現在ダウンロードできません。macOSのアクセス許可でアクセスを許可するか、設定で保存先フォルダを変更してから再試行してください。"
+          }
+        }
+      }
+    },
     "无法读写下载文件，请检查磁盘空间和访问权限": {
       "extractionState": "manual",
       "localizations": {
@@ -3191,6 +3220,35 @@
         }
       }
     },
+    "电驴引擎启动超过 30 秒，电驴任务暂时无法下载。若有文件夹访问提示，请先允许访问，再重试；仍失败时请查看引擎日志。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电驴引擎启动超过 30 秒，电驴任务暂时无法下载。若有文件夹访问提示，请先允许访问，再重试；仍失败时请查看引擎日志。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The eD2k engine took more than 30 seconds to start. eD2k tasks cannot download for now. If a folder access prompt is open, allow access and try again. If it still fails, check the engine log."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電驢引擎啟動超過 30 秒，電驢任務暫時無法下載。若有檔案夾存取提示，請先允許存取，再重試；仍失敗時請查看引擎日誌。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "eD2kエンジンの起動に30秒以上かかっているため、eD2kタスクを現在ダウンロードできません。フォルダへのアクセス許可が表示されている場合は、許可してから再試行してください。引き続き失敗する場合はエンジンログを確認してください。"
+          }
+        }
+      }
+    },
     "电驴引擎响应异常：%@": {
       "extractionState": "manual",
       "localizations": {
@@ -3216,6 +3274,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "eD2kエンジンの応答に問題があります：%@"
+          }
+        }
+      }
+    },
+    "电驴引擎在连接就绪前退出，电驴任务暂时无法下载。请检查保存目录权限和引擎日志后重试。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电驴引擎在连接就绪前退出，电驴任务暂时无法下载。请检查保存目录权限和引擎日志后重试。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The eD2k engine quit before its connection was ready. eD2k tasks cannot download for now. Check the save folder permissions and engine log, then try again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "電驢引擎在連線就緒前結束，電驢任務暫時無法下載。請檢查儲存目錄權限和引擎日誌後重試。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続の準備ができる前にeD2kエンジンが終了したため、eD2kタスクを現在ダウンロードできません。保存先フォルダのアクセス権とエンジンログを確認してから再試行してください。"
           }
         }
       }
@@ -4579,6 +4666,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "オーディオ"
+          }
+        }
+      }
+    },
+    "下载引擎状态目录不安全，已停止启动以保护登录信息；请检查目录的所有者和权限，并移除符号链接后重试。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载引擎状态目录不安全，已停止启动以保护登录信息；请检查目录的所有者和权限，并移除符号链接后重试。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download engine state folder is unsafe. Startup was stopped to protect your login information. Check the folder owner and permissions, remove any symbolic link, then try again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載引擎狀態目錄不安全，已停止啟動以保護登入資訊；請檢查目錄的擁有者和權限，並移除符號連結後重試。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードエンジンの状態フォルダが安全ではないため、ログイン情報を保護するために起動を停止しました。所有者とアクセス権を確認し、シンボリックリンクを削除してから再試行してください。"
           }
         }
       }

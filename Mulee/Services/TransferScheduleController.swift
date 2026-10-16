@@ -96,26 +96,20 @@ final class TransferScheduleController {
     private let settings: SettingsModel
     private let now: () -> Date
     private let calendar: () -> Calendar
-    private let scheduleWake: (Date) -> Int32
-    private let cancelWake: (Date) -> Int32
+    private let powerAssertions: any PowerAssertionProviding
+    private var sleepAssertion: UInt32?
+    private var cleanedLegacyWakeEvents = false
     private let copyScheduledEvents: () -> [PowerEvent]
     private let cancelPowerEvent: (PowerEvent) -> Int32
     private var worker: Task<Void, Never>?
     private var previousConfiguration: Configuration?
     private var wasActive = false
-    private var attemptedWake: Date?
-    private var scheduledWake: Date?
     private var busy = false
 
     init(
         model: AppModel, settings: SettingsModel, now: @escaping () -> Date = Date.init,
         calendar: @escaping () -> Calendar = { .current },
-        scheduleWake: @escaping (Date) -> Int32 = {
-            IOPMSchedulePowerEvent($0 as CFDate, "com.cqagc.mulee" as CFString, kIOPMAutoWake as CFString)
-        },
-        cancelWake: @escaping (Date) -> Int32 = {
-            IOPMCancelScheduledPowerEvent($0 as CFDate, "com.cqagc.mulee" as CFString, kIOPMAutoWake as CFString)
-        },
+        powerAssertions: any PowerAssertionProviding = IOKitPowerAssertionProvider(),
         copyScheduledEvents: @escaping () -> [PowerEvent] = TransferScheduleController.scheduledPowerEvents,
         cancelPowerEvent: @escaping (PowerEvent) -> Int32 = {
             IOPMCancelScheduledPowerEvent($0.date as CFDate, $0.owner as CFString, $0.type as CFString)
@@ -125,8 +119,7 @@ final class TransferScheduleController {
         self.settings = settings
         self.now = now
         self.calendar = calendar
-        self.scheduleWake = scheduleWake
-        self.cancelWake = cancelWake
+        self.powerAssertions = powerAssertions
         self.copyScheduledEvents = copyScheduledEvents
         self.cancelPowerEvent = cancelPowerEvent
     }
@@ -145,26 +138,27 @@ final class TransferScheduleController {
     func stop() {
         worker?.cancel()
         worker = nil
-        clearWake()
+        releaseSleepAssertion()
     }
 
     isolated deinit {
         worker?.cancel()
-        if let scheduledWake { _ = cancelWake(scheduledWake) }
+        if let sleepAssertion { powerAssertions.releaseAssertion(sleepAssertion) }
     }
 
     func refresh() async {
         guard !busy else { return }
         busy = true
         defer { busy = false }
+        cleanLegacyWakeEventsOnce()
         let configuration = Configuration(settings: settings)
         let date = now()
         let calendar = calendar()
         let changed = configuration != previousConfiguration
         if changed {
-            clearWake()
             previousConfiguration = configuration
         }
+        updateSleepAssertion(configuration, at: date, calendar: calendar)
         guard configuration.enabled else {
             model.transferScheduleWakeIssue = nil
             model.isTransferScheduleActive = false
@@ -181,7 +175,7 @@ final class TransferScheduleController {
         let entering = active && (!wasActive || changed)
         wasActive = active
         model.isTransferScheduleActive = active
-        updateWake(configuration.nextStart(after: date, calendar: calendar), now: date)
+
         for task in model.activeTasks {
             guard !Task.isCancelled else { return }
             if active {
@@ -196,7 +190,7 @@ final class TransferScheduleController {
 
     private func pause(_ id: UUID) async {
         guard let index = model.tasks.firstIndex(where: { $0.id == id && $0.deletedAt == nil }),
-              model.tasks[index].pauseReason == nil, !model.userPausedTaskIDs.contains(id) else { return }
+              (model.tasks[index].pauseReason == nil || model.tasks[index].pauseReason == .schedule), !model.userPausedTaskIDs.contains(id) else { return }
         model.tasks[index].pauseReason = .schedule
         if let coordinator = model.coordinator {
             await coordinator.pause(id)
@@ -207,7 +201,7 @@ final class TransferScheduleController {
         }
         guard let current = model.tasks.firstIndex(where: { $0.id == id }),
               model.tasks[current].pauseReason == .schedule else { return }
-        if model.tasks[current].status != .paused || model.userPausedTaskIDs.contains(id) {
+        if model.userPausedTaskIDs.contains(id) {
             model.tasks[current].pauseReason = nil
         }
     }
@@ -216,54 +210,49 @@ final class TransferScheduleController {
         guard let index = model.tasks.firstIndex(where: { $0.id == id && $0.deletedAt == nil }),
               model.tasks[index].pauseReason != .diskSpace, !model.userPausedTaskIDs.contains(id),
               model.tasks[index].pauseReason == .schedule || model.tasks[index].status == .queued else { return }
+        let wasScheduled = model.tasks[index].pauseReason == .schedule
+        model.tasks[index].pauseReason = nil
         if let coordinator = model.coordinator {
             await coordinator.resume(id)
         } else {
             model.tasks[index].status = model.tasks[index].kind == .ed2k ? .waitingForSources : .downloading
         }
-        if let current = model.tasks.firstIndex(where: { $0.id == id }), model.tasks[current].status != .paused,
-           model.tasks[current].pauseReason == .schedule {
-            model.tasks[current].pauseReason = nil
+        if wasScheduled, let current = model.tasks.firstIndex(where: { $0.id == id }),
+           model.tasks[current].status == .paused, model.tasks[current].pauseReason == nil,
+           !model.userPausedTaskIDs.contains(id) {
+            model.tasks[current].pauseReason = .schedule
         }
     }
 
-    private func updateWake(_ start: Date?, now: Date) {
-        let wake = start?.addingTimeInterval(-60)
-        guard wake != attemptedWake else { return }
-        guard clearWake() else {
-            model.transferScheduleWakeIssue = String(localized: "系统无法清除旧的定时唤醒，尚未安排新唤醒；请稍后重试，下载计划仍会在下次唤醒后执行。")
+    private func updateSleepAssertion(_ configuration: Configuration, at date: Date, calendar: Calendar) {
+        let startsSoon = configuration.nextStart(after: date, calendar: calendar).map {
+            $0.timeIntervalSince(date) <= 10 * 60
+        } ?? false
+        guard settings.preventSleepBeforeScheduleStart, configuration.enabled, configuration.isValid,
+              configuration.isActive(at: date, calendar: calendar) || startsSoon else {
+            releaseSleepAssertion()
             return
         }
-        attemptedWake = wake
-        guard let wake, wake > now else { return }
-        let result = scheduleWake(wake)
-        if result == kIOReturnSuccess {
-            scheduledWake = wake
-            model.transferScheduleWakeIssue = nil
-        } else if result == kIOReturnNotPrivileged || result == kIOReturnNotPermitted {
-            model.transferScheduleWakeIssue = String(localized: "系统未授予定时唤醒权限，无法在睡眠中启动下载；计划仍会在下次唤醒后执行。")
-        } else {
-            model.transferScheduleWakeIssue = String(localized: "系统无法安排定时唤醒，无法在睡眠中启动下载；计划仍会在下次唤醒后执行。")
+        // 使用独立 ID，完成下载释放的断言不会覆盖计划的断言。
+        if sleepAssertion == nil {
+            sleepAssertion = powerAssertions.createAssertion(reason: "Mulee transfer schedule")
         }
+        model.transferScheduleWakeIssue = sleepAssertion == nil
+            ? String(localized: "暂时无法阻止电脑空闲睡眠；计划只在电脑醒着时执行。") : nil
     }
 
-    @discardableResult
-    private func clearWake() -> Bool {
-        // 系统事件可跨 App 进程存活，不能只依赖本次运行的内存记录。
-        let events = copyScheduledEvents().filter {
-            $0.owner == Self.wakeOwner || $0.owner == "com.cqagc.mulee.schedule"
+    private func releaseSleepAssertion() {
+        if let sleepAssertion { powerAssertions.releaseAssertion(sleepAssertion) }
+        sleepAssertion = nil
+        model.transferScheduleWakeIssue = nil
+    }
+
+    private func cleanLegacyWakeEventsOnce() {
+        guard !cleanedLegacyWakeEvents else { return }
+        cleanedLegacyWakeEvents = true
+        // 仅启动时清理旧版本遗留事件，不再创建任何定时唤醒。
+        for event in copyScheduledEvents() where event.owner == Self.wakeOwner || event.owner == "com.cqagc.mulee.schedule" {
+            _ = cancelPowerEvent(event)
         }
-        var succeeded = true
-        for event in events {
-            if cancelPowerEvent(event) != kIOReturnSuccess { succeeded = false }
-        }
-        if let scheduledWake, !events.contains(where: {
-            $0.date == scheduledWake && $0.owner == Self.wakeOwner && $0.type == kIOPMAutoWake
-        }) {
-            if cancelWake(scheduledWake) != kIOReturnSuccess { succeeded = false }
-        }
-        scheduledWake = nil
-        attemptedWake = nil
-        return succeeded
     }
 }

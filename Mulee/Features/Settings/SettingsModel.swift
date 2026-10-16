@@ -70,6 +70,7 @@ final class SettingsModel {
         static let notifyOnFailure = "general.notifyOnFailure"
         static let notificationSound = "general.notificationSound"
         static let whenAllDone = "general.whenAllDone"
+        static let preventSleepBeforeScheduleStart = "schedule.preventSleepBeforeStart"
         static let transferScheduleEnabled = "schedule.enabled"
         static let transferScheduleStartTime = "schedule.startTime"
         static let transferScheduleEndTime = "schedule.endTime"
@@ -155,6 +156,7 @@ final class SettingsModel {
     var whenAllDone: WhenAllDoneAction { didSet { defaults.set(whenAllDone.rawValue, forKey: Key.whenAllDone) } }
 
     // MARK: 下载
+    var preventSleepBeforeScheduleStart: Bool { didSet { defaults.set(preventSleepBeforeScheduleStart, forKey: Key.preventSleepBeforeScheduleStart) } }
     var transferScheduleEnabled: Bool { didSet { defaults.set(transferScheduleEnabled, forKey: Key.transferScheduleEnabled) } }
     var transferScheduleStartTime: String { didSet { defaults.set(transferScheduleStartTime, forKey: Key.transferScheduleStartTime) } }
     var transferScheduleEndTime: String { didSet { defaults.set(transferScheduleEndTime, forKey: Key.transferScheduleEndTime) } }
@@ -237,6 +239,7 @@ final class SettingsModel {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        preventSleepBeforeScheduleStart = Self.bool(defaults, Key.preventSleepBeforeScheduleStart, false)
         transferScheduleEnabled = Self.bool(defaults, Key.transferScheduleEnabled, false)
         transferScheduleStartTime = defaults.string(forKey: Key.transferScheduleStartTime) ?? "01:00"
         transferScheduleEndTime = defaults.string(forKey: Key.transferScheduleEndTime) ?? "07:00"

@@ -13,6 +13,22 @@ import Testing
         )
     }
 
+    @Test(arguments: [DownloadTask.PauseReason.schedule, .diskSpace])
+    func protectedQueueNeverResumes(reason: DownloadTask.PauseReason) async {
+        let engine = FakeEngine()
+        var queued = task(.http, "protected", .paused)
+        queued.pauseReason = reason
+        let model = AppModel(tasks: [queued], preventsSleepWhileDownloading: false)
+        let scheduling = DownloadScheduling(defaults: nil)
+        scheduling.queue(queued)
+        await scheduling.refresh(
+            model: model, engines: [engine], options: EngineOptions(downloadDirectory: URL(filePath: "/tmp")),
+            isCurrent: { true }
+        )
+        #expect(await engine.resumedIDs.isEmpty)
+        #expect(model.tasks[0].status == .paused)
+    }
+
     @Test func globalConcurrencyExemptsLongTailAndSeeding() async {
         let http = FakeEngine()
         let bt = FakeEngine(kind: .bittorrent)

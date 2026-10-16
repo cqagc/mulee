@@ -72,12 +72,44 @@ struct Aria2Configuration: Sendable {
         return values.keys.sorted().map { "\($0)=\(values[$0, default: ""])" }.joined(separator: "\n") + "\n"
     }
 
+    func prepareStateDirectory() throws {
+        let manager = FileManager.default
+        if !manager.fileExists(atPath: stateDirectory.path) {
+            try manager.createDirectory(at: stateDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        }
+        let descriptor = open(stateDirectory.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        guard descriptor >= 0 else { throw unsafeStateDirectory() }
+        defer { close(descriptor) }
+        var info = stat()
+        guard fstat(descriptor, &info) == 0, info.st_uid == getuid(),
+              fchmod(descriptor, 0o700) == 0, fstat(descriptor, &info) == 0,
+              info.st_mode & 0o777 == 0o700 else { throw unsafeStateDirectory() }
+    }
+
+    func protectStateFiles() throws {
+        for file in [sessionURL, logURL] where FileManager.default.fileExists(atPath: file.path) {
+            let descriptor = open(file.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+            guard descriptor >= 0 else { throw unsafeStateDirectory() }
+            defer { close(descriptor) }
+            var info = stat()
+            guard fstat(descriptor, &info) == 0, info.st_uid == getuid(),
+                  info.st_mode & S_IFMT == S_IFREG, fchmod(descriptor, 0o600) == 0 else {
+                throw unsafeStateDirectory()
+            }
+        }
+    }
+
+    private func unsafeStateDirectory() -> EngineError {
+        .launchFailed(String(localized: "下载引擎状态目录不安全，已停止启动以保护登录信息；请检查目录的所有者和权限，并移除符号链接后重试。", bundle: .module))
+    }
+
     func write() throws {
+        try prepareStateDirectory()
+        try protectStateFiles()
+        let logDescriptor = open(logURL.path, O_WRONLY | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0o600)
+        guard logDescriptor >= 0 else { throw unsafeStateDirectory() }
+        close(logDescriptor)
         let data = Data(try contents().utf8)
-        try FileManager.default.createDirectory(
-            at: stateDirectory, withIntermediateDirectories: true,
-            attributes: [.posixPermissions: 0o700]
-        )
         let temporaryURL = stateDirectory.appendingPathComponent(".aria2-\(UUID().uuidString).conf")
         let descriptor = open(temporaryURL.path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0o600)
         guard descriptor >= 0 else { throw POSIXError(.init(rawValue: errno) ?? .EIO) }

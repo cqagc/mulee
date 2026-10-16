@@ -3,6 +3,13 @@ import Testing
 @testable import MuleeCore
 
 @Suite struct SmartPasteParserTests {
+    @Test func torrentFilesHaveTheirOwnRecognitionMessage() throws {
+        let rows = SmartPasteParser.parse("file:///tmp/sample.torrent")
+        #expect(rows.first?.links.count == 1)
+        #expect(rows.first?.message == "已识别种子文件（1 个）")
+        #expect(SmartPasteParser.parse("https://example.com/sample.zip").first?.message == "已识别下载链接（1 个）")
+    }
+
     @Test func curlHeadersQuotesAndContinuation() throws {
         let command = """
         curl --compressed \\

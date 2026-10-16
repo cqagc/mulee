@@ -11,6 +11,7 @@ public actor Aria2Engine: DownloadEngine {
     private var configuration: Aria2Configuration?
     private var starting: Task<Void, any Error>?
     private var stopping: Task<Void, Never>?
+    private var permissionMonitor: Task<Void, Never>?
     private var incompleteTransfers: [String: IncompleteHTTPTransfer] = [:]
     private var finalizedFiles: [String: URL] = [:]
     private var resumeAttempts: [String: UUID] = [:]
@@ -324,6 +325,7 @@ public actor Aria2Engine: DownloadEngine {
     }
 
     public func snapshots() async throws -> [EngineTaskSnapshot] {
+        try configuration?.protectStateFiles()
         let client = try runningClient()
         let keys = Aria2RPCValue.array(Aria2RPCModels.Status.keys.map { .string($0) })
         let active: [Aria2RPCModels.Status] = try await client.call("aria2.tellActive", [keys])
@@ -385,6 +387,7 @@ public actor Aria2Engine: DownloadEngine {
     public func finalizeIncomplete(_ id: String, file: URL) throws -> URL {
         guard var transfer = incompleteTransfers[id] else { return file }
         if let completed = transfer.completedFile {
+            try transfer.cleanup()
             finalizedFiles[id] = completed
             incompleteTransfers[id] = nil
             try saveIncompleteTransfers()
@@ -470,15 +473,17 @@ public actor Aria2Engine: DownloadEngine {
     }
 
     private func launch(options: EngineOptions) async throws {
+        let configuration = Aria2Configuration(
+            stateDirectory: stateDirectory, port: try Aria2Process.availablePort(),
+            secret: Aria2Configuration.makeSecret(), options: options
+        )
+        try configuration.prepareStateDirectory()
+        try configuration.protectStateFiles()
         let record = stateDirectory.appendingPathComponent("incomplete.json")
         if FileManager.default.fileExists(atPath: record.path) {
             incompleteTransfers = try JSONDecoder().decode([String: IncompleteHTTPTransfer].self, from: Data(contentsOf: record))
         }
         let binary = try Aria2BinaryLocator.locate(explicitURL: binaryURL)
-        let configuration = Aria2Configuration(
-            stateDirectory: stateDirectory, port: try Aria2Process.availablePort(),
-            secret: Aria2Configuration.makeSecret(), options: options
-        )
         try await prepareSessionCredentials(configuration.sessionURL)
         try configuration.write()
         let rpc = try Aria2RPCClient(port: configuration.port, secret: configuration.secret)
@@ -518,6 +523,20 @@ public actor Aria2Engine: DownloadEngine {
             }
             guard child.isRunning else { throw EngineError.launchFailed(String(localized: "aria2 进程提前退出", bundle: .module)) }
             client = rpc
+            permissionMonitor = Task { [weak self] in
+                while !Task.isCancelled {
+                    do {
+                        try configuration.protectStateFiles()
+                        try await Task.sleep(for: .milliseconds(100))
+                    } catch is CancellationError {
+                        return
+                    } catch {
+                        // 目录仍是第一层保护；文件权限无法修复时停止写入敏感状态。
+                        await self?.stop()
+                        return
+                    }
+                }
+            }
         } catch {
             await child.finish(grace: .zero)
             didExit(child.id)
@@ -603,6 +622,7 @@ public actor Aria2Engine: DownloadEngine {
             }
             do {
                 let _: String = try await rpc.call("aria2.saveSession")
+                try configuration?.protectStateFiles()
             } catch {
                 Aria2Process.logger.error("保存 aria2 会话失败：\(error.localizedDescription, privacy: .public)")
             }
@@ -611,11 +631,15 @@ public actor Aria2Engine: DownloadEngine {
         // 仍由 aria2 刷新控制文件、磁盘缓存和最终 session，不强制结束下载。
         child.interrupt()
         await child.finish(grace: .seconds(3))
+        try? configuration?.protectStateFiles()
         didExit(child.id)
     }
 
     private func didExit(_ id: UUID) {
         guard process?.id == id else { return }
+        permissionMonitor?.cancel()
+        permissionMonitor = nil
+        try? configuration?.protectStateFiles()
         client = nil
         process = nil
     }

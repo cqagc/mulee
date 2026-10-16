@@ -39,15 +39,10 @@ struct MuleeApp: App {
                 .debugLaunchOptions()
                 .modifier(OnboardingLaunchModifier())
                 .background(MainWindowRegistration(delegate: appDelegate))
-                .onOpenURL { url in
-                    appDelegate.openURLRouter?.open([url])
-                }
-                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
                 .modifier(SettingsSyncModifier())
                 .environment(model)
                 .environment(settings)
         }
-        .handlesExternalEvents(matching: ["*"])
         .defaultLaunchBehavior(.suppressed)
         .restorationBehavior(.disabled)
         .defaultSize(width: 1240, height: 780)

@@ -6,6 +6,7 @@ struct TaskRowView: View, Equatable {
     static func == (lhs: Self, rhs: Self) -> Bool {
         guard lhs.presentation.task == rhs.presentation.task,
               lhs.presentation.seedingAction == rhs.presentation.seedingAction,
+              lhs.presentation.statusTitle == rhs.presentation.statusTitle,
               lhs.presentation.calendar == rhs.presentation.calendar else { return false }
         // 等待天数仍随时钟变化；其他行不因每次新建 presentation 的 now 而重绘。
         return lhs.presentation.task.status != .waitingForSources

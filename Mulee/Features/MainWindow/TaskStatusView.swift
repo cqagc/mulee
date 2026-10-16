@@ -29,6 +29,7 @@ struct TaskStatusView: View {
         }
         .font(.caption)
         .monospacedDigit()
-        .lineLimit(1)
+        .lineLimit(presentation.schedulePauseTitle == nil ? 1 : 3)
+        .help(presentation.statusTitle)
     }
 }

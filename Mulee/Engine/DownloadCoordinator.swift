@@ -286,6 +286,7 @@ final class DownloadCoordinator {
             if let detail = videoConfiguration.detail(for: link) {
                 task.detail = detail
             }
+            if scheduleRequiresPause() { task.pauseReason = .schedule }
             if link.kind == .video, videoBootstrap != nil || videoEngineFactory != nil || engine(for: .video) != nil {
                 task.status = .queued
                 model.tasks.insert(task, at: min(insertionIndex, model.tasks.count))
@@ -303,7 +304,7 @@ final class DownloadCoordinator {
             if let engine = engine(for: link.kind) {
                 pendingAdds[link.kind, default: 0] += 1
                 do {
-                    let queued = shouldQueueNewTask()
+                    var queued = task.pauseReason != nil || shouldQueueNewTask()
                     if let http = engine as? Aria2Engine {
                         let context = requestContext
                         try context.validate()
@@ -329,6 +330,10 @@ final class DownloadCoordinator {
                             } catch {
                                 // 预检网络失败时仍让 aria2 执行其重试策略；换链时必须取得可比对身份。
                             }
+                        }
+                        if scheduleRequiresPause() {
+                            task.pauseReason = .schedule
+                            queued = true
                         }
                         task.engineTaskID = try await http.add(
                             link: link, directory: directory, context: context, checksum: task.checksum, paused: queued,
@@ -356,8 +361,12 @@ final class DownloadCoordinator {
                     if task.kind == .bittorrent, let id = task.engineTaskID {
                         excludedTaskIDs[.bittorrent]?.remove(id)
                     }
-                    if queued { scheduling.queue(task) }
-                    task.status = .queued
+                    if scheduleRequiresPause() { task.pauseReason = .schedule }
+                    if task.pauseReason != nil, !queued, let engineID = task.engineTaskID {
+                        try await engine.pause(engineID)
+                    }
+                    if queued && task.pauseReason == nil { scheduling.queue(task) }
+                    task.status = task.pauseReason == nil ? .queued : .paused
                 } catch {
                     task.status = .failed
                     task.errorMessage = EngineStatusPresentation.errorMessage(error)
@@ -689,10 +698,15 @@ final class DownloadCoordinator {
 
     func resumeAfterDiskSpace(_ id: DownloadTask.ID) async {
         guard let index = model.tasks.firstIndex(where: { $0.id == id }),
-              model.tasks[index].status == .paused, model.tasks[index].pauseReason == .diskSpace else { return }
+              model.tasks[index].status == .paused, model.tasks[index].pauseReason == .diskSpace,
+              !model.userPausedTaskIDs.contains(id) else { return }
+        // 保护原因先解除，统一队列才能接纳；恢复失败时仍保留磁盘保护。
+        model.tasks[index].pauseReason = nil
         await resume(id)
-        guard let current = model.tasks.firstIndex(where: { $0.id == id }), model.tasks[current].status != .paused else { return }
-        model.tasks[current].pauseReason = nil
+        if let current = model.tasks.firstIndex(where: { $0.id == id }), model.tasks[current].status == .paused,
+           model.tasks[current].pauseReason == nil, !model.userPausedTaskIDs.contains(id) {
+            model.tasks[current].pauseReason = .diskSpace
+        }
     }
 
     func remove(_ id: DownloadTask.ID, deleteFiles: Bool = false) async {
@@ -817,6 +831,13 @@ final class DownloadCoordinator {
     private func perform(_ id: DownloadTask.ID, action: Action) async {
         guard let task = model.tasks.first(where: { $0.id == id && $0.deletedAt == nil }) else { return }
         if action == .resume, resubmittingTaskIDs.contains(id) { return }
+        if action == .resume, scheduleRequiresPause() {
+            if let index = model.tasks.firstIndex(where: { $0.id == id }), model.tasks[index].pauseReason != .diskSpace {
+                model.tasks[index].pauseReason = .schedule
+                await pause(id)
+            }
+            return
+        }
         if action == .pause { resubmissionAttempts[id] = nil }
         let resumeAttempt = UUID()
         if task.kind == .http {
@@ -1013,7 +1034,8 @@ final class DownloadCoordinator {
         for id in model.tasks.map(\.id) {
             guard generation == token, !Task.isCancelled else { return }
             guard let pending = waitingVideoLinks[id], !submittingVideoIDs.contains(id),
-                  model.tasks.contains(where: { $0.id == id && $0.status == .queued }) else { continue }
+                  model.tasks.contains(where: { $0.id == id && $0.status == .queued && $0.pauseReason == nil }),
+                  !scheduleRequiresPause() else { continue }
             submittingVideoIDs.insert(id)
             pendingAdds[.video, default: 0] += 1
             defer {
@@ -1052,6 +1074,12 @@ final class DownloadCoordinator {
                 model.tasks[index].errorMessage = EngineStatusPresentation.errorMessage(error)
             }
         }
+    }
+
+    private func scheduleRequiresPause() -> Bool {
+        guard let settings = model.downloadSettings else { return false }
+        let configuration = TransferScheduleController.Configuration(settings: settings)
+        return configuration.enabled && configuration.isValid && !configuration.isActive(at: .now, calendar: .current)
     }
 
     private func shouldQueueNewTask() -> Bool {

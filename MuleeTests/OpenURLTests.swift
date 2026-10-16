@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import MuleeCore
 import Testing
@@ -6,6 +7,48 @@ import Testing
 @Suite @MainActor struct OpenURLTests {
     private let magnet = "magnet:?xt=urn:btih:dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c"
     private let ed2k = "ed2k://|file|Sintel.zip|1024|9F3A0C5E7D21B84A6C0E93F15B71DC21|/"
+
+    @Test func delegateOpenEntryRoutesLinksAndTorrentFilesOnce() throws {
+        let temporary = try TemporaryDefaults(prefix: "delegate-open.")
+        defer { temporary.clean() }
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let delegate = AppDelegate()
+        delegate.openURLRouter = OpenURLRouter(model: model, settings: SettingsModel(defaults: temporary.defaults))
+        let entry: any NSApplicationDelegate = delegate
+        let link = try request(["https://example.org/delegate.zip"])
+        let torrent = URL(filePath: "/tmp/fictional.torrent")
+
+        entry.application?(NSApplication.shared, open: [link, torrent])
+
+        #expect(model.isShowingNewTask)
+        #expect(model.pendingNewTaskText.components(separatedBy: "\n") == [
+            "https://example.org/delegate.zip", torrent.absoluteString
+        ])
+        #expect(model.mainWindowRequest == 1)
+        #expect(model.tasks.isEmpty)
+    }
+
+    @Test func delegateQueuesColdLaunchEventsInArrivalOrder() throws {
+        let temporary = try TemporaryDefaults(prefix: "delegate-cold-open.")
+        defer { temporary.clean() }
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let delegate = AppDelegate()
+        let entry: any NSApplicationDelegate = delegate
+        entry.application?(NSApplication.shared, open: [try request(["https://example.org/first.zip"])])
+        entry.application?(NSApplication.shared, openFiles: ["/tmp/fictional.torrent"])
+        entry.application?(NSApplication.shared, open: [try #require(URL(string: magnet))])
+        #expect(model.pendingNewTaskText.isEmpty)
+
+        let router = OpenURLRouter(model: model, settings: SettingsModel(defaults: temporary.defaults))
+        delegate.openURLRouter = router
+
+        let expected = ["https://example.org/first.zip", URL(filePath: "/tmp/fictional.torrent").absoluteString, magnet]
+        #expect(model.pendingNewTaskText.components(separatedBy: "\n") == expected)
+        #expect(model.mainWindowRequest == 3)
+        delegate.openURLRouter = router
+        #expect(model.pendingNewTaskText.components(separatedBy: "\n") == expected)
+        #expect(model.tasks.isEmpty)
+    }
 
     private func request(_ values: [String], host: String = "add", text: String? = nil) throws -> URL {
         var components = URLComponents()

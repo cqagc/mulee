@@ -15,6 +15,50 @@ import Testing
         try #require(ISO8601DateFormatter().date(from: text))
     }
 
+    @Test(arguments: [TaskStatus.downloading, .queued, .waitingForSources])
+    func scheduleMarkedActiveTasksAreReallyPausedAgain(status: TaskStatus) async throws {
+        let defaults = try TemporaryDefaults(prefix: "ScheduleReassert-")
+        defer { defaults.clean() }
+        let settings = SettingsModel(defaults: defaults.defaults)
+        settings.transferScheduleEnabled = true
+        let calendar = calendar()
+        var task = MockData.tasks[0]
+        task.status = status
+        task.pauseReason = .schedule
+        let model = AppModel(tasks: [task], preventsSleepWhileDownloading: false)
+        let controller = TransferScheduleController(
+            model: model, settings: settings, now: { Date(timeIntervalSince1970: 0) },
+            calendar: { calendar }, copyScheduledEvents: { [] }
+        )
+        await controller.refresh()
+        #expect(model.tasks[0].status == .paused)
+        #expect(model.tasks[0].pauseReason == .schedule)
+    }
+
+    @Test func tasksAddedOutsideScheduleAreSubmittedPaused() async throws {
+        let defaults = try TemporaryDefaults(prefix: "ScheduleAdmission-")
+        defer { defaults.clean() }
+        let settings = SettingsModel(defaults: defaults.defaults)
+        settings.transferScheduleEnabled = true
+        settings.transferScheduleWeekdays = []
+        var calendar = Calendar.current
+        calendar.timeZone = .current
+        let today = calendar.component(.weekday, from: .now)
+        settings.transferScheduleWeekdays = [today % 7 + 1]
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        model.downloadSettings = settings
+        let engine = FakeEngine()
+        let coordinator = DownloadCoordinator(model: model, engines: [engine])
+        await coordinator.start(options: EngineOptions(downloadDirectory: URL(filePath: "/tmp")))
+        await coordinator.add(links: LinkParser.parse("https://example.com/scheduled.bin"), autoExtract: false)
+        #expect(model.tasks.first?.pauseReason == .schedule)
+        #expect(model.tasks.first?.status == .paused)
+        #expect(await engine.queuedLinks.count == 1)
+        #expect(await engine.pausedIDs == ["task-1"])
+        #expect(await engine.resumedIDs.isEmpty)
+        await coordinator.stop()
+    }
+
     @Test func boundariesAndWeekdaysFollowTheStartDayAcrossMidnight() throws {
         let calendar = calendar()
         let schedule = TransferScheduleController.Configuration(startTime: "22:00", endTime: "07:00", weekdays: [6])
@@ -82,7 +126,7 @@ import Testing
         tasks[5].status = .completed
         let model = AppModel(tasks: tasks, preventsSleepWhileDownloading: false)
         let controller = TransferScheduleController(
-            model: model, settings: settings, now: { clock }, calendar: { calendar }, scheduleWake: { _ in 0 }, cancelWake: { _ in 0 }, copyScheduledEvents: { [] }
+            model: model, settings: settings, now: { clock }, calendar: { calendar }, copyScheduledEvents: { [] }
         )
         await controller.refresh()
         #expect(model.tasks[0].pauseReason == .schedule)
@@ -108,84 +152,120 @@ import Testing
         #expect(model.tasks[1].status == .downloading)
     }
 
-    @Test func wakeFailureExplainsImpactAndSettingsChangeReplacesOnlyOwnEvent() async throws {
-        let defaults = try TemporaryDefaults(prefix: "TransferWake-")
+    private final class Power: PowerAssertionProviding {
+        var created = 0
+        var released: [UInt32] = []
+        func createAssertion(reason: String) -> UInt32? {
+            created += 1
+            return UInt32(created)
+        }
+        func releaseAssertion(_ id: UInt32) { released.append(id) }
+    }
+
+    @Test func scheduleAssertionCoversTenMinuteLeadAndReleasesAtEnd() async throws {
+        let defaults = try TemporaryDefaults(prefix: "TransferPower-")
+        defer { defaults.clean() }
+        let settings = SettingsModel(defaults: defaults.defaults)
+        #expect(!settings.preventSleepBeforeScheduleStart)
+        settings.transferScheduleEnabled = true
+        settings.preventSleepBeforeScheduleStart = true
+        #expect(SettingsModel(defaults: defaults.defaults).preventSleepBeforeScheduleStart)
+        #expect(SettingsModel.Key.preventSleepBeforeScheduleStart == "schedule.preventSleepBeforeStart")
+        var clock = try date("2026-10-16T00:49:59Z")
+        let calendar = calendar()
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let power = Power()
+        let controller = TransferScheduleController(
+            model: model, settings: settings, now: { clock }, calendar: { calendar },
+            powerAssertions: power, copyScheduledEvents: { [] }
+        )
+        await controller.refresh()
+        #expect(power.created == 0)
+        clock = try date("2026-10-16T00:50:00Z")
+        await controller.refresh()
+        #expect(power.created == 1)
+        clock = try date("2026-10-16T01:00:00Z")
+        await controller.refresh()
+        model.allowsSleepWhenDone = true
+        #expect(power.released.isEmpty)
+        clock = try date("2026-10-16T07:00:00Z")
+        await controller.refresh()
+        #expect(power.released == [1])
+        clock = try date("2026-10-17T01:00:00Z")
+        await controller.refresh()
+        #expect(power.created == 2)
+        settings.preventSleepBeforeScheduleStart = false
+        await controller.refresh()
+        #expect(power.released == [1, 2])
+        settings.preventSleepBeforeScheduleStart = true
+        await controller.refresh()
+        settings.transferScheduleEnabled = false
+        await controller.refresh()
+        #expect(power.released == [1, 2, 3])
+        controller.stop()
+        #expect(power.released == [1, 2, 3])
+    }
+
+    @Test func scheduleAndDownloadAssertionsReleaseIndependentlyAcrossMidnight() async throws {
+        let defaults = try TemporaryDefaults(prefix: "ScheduleAssertionOwnership-")
         defer { defaults.clean() }
         let settings = SettingsModel(defaults: defaults.defaults)
         settings.transferScheduleEnabled = true
-        let clock = try date("2026-10-16T00:00:00Z")
+        settings.transferScheduleStartTime = "22:00"
+        settings.transferScheduleEndTime = "07:00"
+        settings.transferScheduleWeekdays = [6]
+        settings.preventSleepBeforeScheduleStart = true
+        var clock = try date("2026-10-16T22:00:00Z")
         let calendar = calendar()
-        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
-        var calls: [Date] = []
-        var cancelled: [Date] = []
-        var result = kIOReturnNotPrivileged
+        let power = Power()
+        var task = MockData.tasks[0]
+        task.status = .downloading
+        let model = AppModel(tasks: [task], sleepPreventer: SleepPreventer(provider: power))
         let controller = TransferScheduleController(
             model: model, settings: settings, now: { clock }, calendar: { calendar },
-            scheduleWake: { calls.append($0); return result }, cancelWake: { cancelled.append($0); return 0 }, copyScheduledEvents: { [] }
+            powerAssertions: power, copyScheduledEvents: { [] }
         )
         await controller.refresh()
+        #expect(power.created == 2)
+        model.tasks[0].status = .completed
+        #expect(power.released == [1])
+        clock = try date("2026-10-17T06:59:59Z")
         await controller.refresh()
-        #expect(calls == [try date("2026-10-16T00:59:00Z")])
-        #expect(model.transferScheduleWakeIssue?.contains("权限") == true)
-        #expect(model.transferScheduleWakeIssue?.contains("下次唤醒后执行") == true)
-        result = 0
-        settings.transferScheduleStartTime = "02:00"
+        #expect(power.released == [1])
+        clock = try date("2026-10-17T07:00:00Z")
         await controller.refresh()
-        #expect(model.transferScheduleWakeIssue == nil)
-        #expect(calls.last == (try date("2026-10-16T01:59:00Z")))
-        settings.transferScheduleEnabled = false
-        await controller.refresh()
-        #expect(cancelled == [try date("2026-10-16T01:59:00Z")])
-        #expect(!model.isTransferScheduleActive)
+        #expect(power.released == [1, 2])
     }
 
-    @Test func startupAndScheduleChangesRemovePersistedOwnedPowerEvents() async throws {
+    @Test func startupOnlyCleansLegacyOwnedPowerEventsOnce() async throws {
         let defaults = try TemporaryDefaults(prefix: "TransferWakeRecovery-")
         defer { defaults.clean() }
         let settings = SettingsModel(defaults: defaults.defaults)
         let clock = try date("2026-10-16T00:00:00Z")
-        let calendar = calendar()
         let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
         typealias PowerEvent = TransferScheduleController.PowerEvent
         let owned = [
-            PowerEvent(date: clock.addingTimeInterval(600), owner: "com.cqagc.mulee", type: kIOPMAutoWake),
-            PowerEvent(date: clock.addingTimeInterval(1200), owner: "com.cqagc.mulee", type: kIOPMAutoWakeOrPowerOn)
+            PowerEvent(date: clock, owner: "com.cqagc.mulee", type: kIOPMAutoWake),
+            PowerEvent(date: clock, owner: "com.cqagc.mulee.schedule", type: kIOPMAutoWakeOrPowerOn)
         ]
-        let other = PowerEvent(date: clock.addingTimeInterval(600), owner: "example.other", type: kIOPMAutoWake)
-        var events = owned + [other]
+        let other = PowerEvent(date: clock, owner: "example.other", type: kIOPMAutoWake)
         var cancelled: [PowerEvent] = []
-        var scheduled: [Date] = []
+        var copies = 0
         let controller = TransferScheduleController(
-            model: model, settings: settings, now: { clock }, calendar: { calendar },
-            scheduleWake: { scheduled.append($0); return 0 }, cancelWake: { _ in 0 },
-            copyScheduledEvents: { events }, cancelPowerEvent: { event in
-                cancelled.append(event)
-                events.removeAll { $0 == event }
-                return 0
-            }
+            model: model, settings: settings, now: { clock },
+            copyScheduledEvents: { copies += 1; return owned + [other] },
+            cancelPowerEvent: { cancelled.append($0); return 0 }
         )
-        // 计划关闭的启动也必须回收上次异常退出留下的事件。
         await controller.refresh()
-        #expect(cancelled == owned)
-        #expect(events == [other])
-        #expect(scheduled.isEmpty)
-
         settings.transferScheduleEnabled = true
-        events.append(owned[0])
         await controller.refresh()
-        #expect(cancelled == owned + [owned[0]])
-        #expect(scheduled.count == 1)
-        events.append(owned[1])
         settings.transferScheduleStartTime = "02:00"
         await controller.refresh()
-        #expect(cancelled == owned + owned)
-        #expect(scheduled.count == 2)
-        events.append(owned[0])
         settings.transferScheduleEnabled = false
         await controller.refresh()
-        #expect(events == [other])
-        #expect(cancelled.count == 5)
         controller.stop()
+        #expect(cancelled == owned)
+        #expect(copies == 1)
     }
 
     @Test func coordinatorPausesAndResumesThroughTheExistingQueue() async throws {
@@ -201,7 +281,7 @@ import Testing
         await coordinator.start(options: EngineOptions(downloadDirectory: URL(filePath: "/tmp")))
         await coordinator.add(links: LinkParser.parse("https://example.com/file"), autoExtract: false)
         let controller = TransferScheduleController(
-            model: model, settings: settings, now: { clock }, calendar: { calendar }, scheduleWake: { _ in 0 }, cancelWake: { _ in 0 }, copyScheduledEvents: { [] }
+            model: model, settings: settings, now: { clock }, calendar: { calendar }, copyScheduledEvents: { [] }
         )
         await controller.refresh()
         #expect(await engine.pausedIDs.contains("task-1"))
@@ -254,7 +334,7 @@ import Testing
         await engine.setSnapshots([snapshot])
         await coordinator.start(options: EngineOptions(downloadDirectory: URL(filePath: "/tmp")))
         let controller = TransferScheduleController(
-            model: model, settings: settings, now: { clock }, calendar: { calendar }, scheduleWake: { _ in 0 }, cancelWake: { _ in 0 }, copyScheduledEvents: { [] }
+            model: model, settings: settings, now: { clock }, calendar: { calendar }, copyScheduledEvents: { [] }
         )
         await controller.refresh()
         model.tasks = EngineSnapshotMerger.merge(tasks: model.tasks, snapshots: [.bittorrent: [EngineTaskSnapshot(

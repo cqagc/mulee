@@ -17,6 +17,12 @@ struct NewTaskSheet: View {
         _needsSettingsDefaults = State(initialValue: draft == nil)
     }
 
+    private func recognitionMessage(_ row: SmartPasteParser.Row) -> String {
+        if row.isInfoHash { return String(localized: "已识别为磁力链接") }
+        if row.isTorrentFile { return String(localized: "已识别种子文件") }
+        return row.message
+    }
+
     var body: some View {
         @Bindable var draft = draft
 
@@ -59,7 +65,7 @@ struct NewTaskSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(draft.inputRows, id: \.line) { row in
-                        Text("第 \(row.line) 行：\(row.isInfoHash ? String(localized: "已识别为磁力链接") : row.message)")
+                        Text("第 \(row.line) 行：\(recognitionMessage(row))")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)

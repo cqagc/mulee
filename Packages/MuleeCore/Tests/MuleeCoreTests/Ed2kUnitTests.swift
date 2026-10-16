@@ -4,6 +4,27 @@ import Testing
 @testable import MuleeCore
 
 struct Ed2kUnitTests {
+    @Test("启动前在 App 进程检查下载目录访问，不能把权限等待留给 EC 超时")
+    func configurationRejectsUnreadableIncomingBeforeLaunching() throws {
+        let root = try Ed2kTestDirectory()
+        let downloads = root.url.appendingPathComponent("restricted-downloads")
+        try FileManager.default.createDirectory(at: downloads, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o300], ofItemAtPath: downloads.path)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: downloads.path)
+            try? root.remove()
+        }
+        let configuration = Ed2kConfiguration(
+            stateDirectory: root.url.appendingPathComponent("state"), port: 4712, password: "test",
+            options: EngineOptions(downloadDirectory: downloads), settings: Ed2kEngineSettings()
+        )
+
+        #expect(throws: EngineError.launchFailed(String(localized: "无法访问电驴下载目录，电驴任务暂时无法下载。请在 macOS 权限提示中允许访问，或在设置中更换保存目录后重试。", bundle: .module))) {
+            try configuration.write()
+        }
+        #expect(!FileManager.default.fileExists(atPath: configuration.url.path))
+    }
+
     @Test("映射使用 EC 实际端口，UDP 关闭标志按存在与否读取")
     func portMappings() throws {
         var preferences = ECTag.empty(ECCode.Tag.connectionPreferences, children: [

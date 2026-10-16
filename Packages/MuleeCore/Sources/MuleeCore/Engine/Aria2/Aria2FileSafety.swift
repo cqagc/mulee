@@ -134,9 +134,10 @@ public struct IncompleteHTTPTransfer: Codable, Sendable, Equatable {
     }
 
     public func cleanup() throws {
-        if FileManager.default.fileExists(atPath: directory.path) {
-            try FileManager.default.removeItem(at: directory)
-        }
+        // rmdir 只删除空目录；其他任务或未移动的文件始终保留。
+        let parent = directory.deletingLastPathComponent()
+        _ = rmdir(directory.path)
+        _ = rmdir(parent.path)
     }
 
     /// 解压和播放都不能把工作目录中的文件当成成品。

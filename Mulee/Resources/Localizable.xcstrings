@@ -9238,35 +9238,6 @@
         }
       }
     },
-    "将在开始前 1 分钟请求系统唤醒；系统关闭或 Mulee 已退出时无法执行计划。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将在开始前 1 分钟请求系统唤醒；系统关闭或 Mulee 已退出时无法执行计划。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mulee will ask the system to wake one minute before the start time. The schedule can’t run if the Mac is shut down or Mulee has quit."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "將在開始前 1 分鐘要求系統喚醒；系統關機或 Mulee 已結束時無法執行排程。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開始時刻の1分前にシステムのスリープ解除を要求します。Macがシステム終了している場合やMuleeが終了している場合は実行できません。"
-          }
-        }
-      }
-    },
     "尚无结果": {
       "extractionState": "manual",
       "localizations": {
@@ -16433,35 +16404,6 @@
         }
       }
     },
-    "此计划控制下载启停；网络设置中的「计划限速」只调整速度，两者可同时使用。Mulee 需要保持运行。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此计划控制下载启停；网络设置中的「计划限速」只调整速度，两者可同时使用。Mulee 需要保持运行。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This schedule starts and pauses downloads. “Scheduled speed limits” in Network settings only changes speeds; both can be used together. Mulee must stay running."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此排程控制下載啟停；網路設定中的「排程速度限制」只調整速度，兩者可同時使用。Mulee 必須保持執行。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このスケジュールはダウンロードの開始と一時停止を制御します。ネットワーク設定の「スケジュールによる速度制限」は速度のみを調整し、併用できます。Muleeを起動しておく必要があります。"
-          }
-        }
-      }
-    },
     "每日版": {
       "extractionState": "manual",
       "localizations": {
@@ -19101,64 +19043,6 @@
         }
       }
     },
-    "系统无法安排定时唤醒，无法在睡眠中启动下载；计划仍会在下次唤醒后执行。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "系统无法安排定时唤醒，无法在睡眠中启动下载；计划仍会在下次唤醒后执行。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The system couldn’t schedule a wake time, so downloads can’t start during sleep. The schedule will run after the next wake."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "系統無法安排定時喚醒，無法在睡眠中開始下載；排程仍會在下次喚醒後執行。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スリープ解除を予約できないため、スリープ中はダウンロードを開始できません。次回のスリープ解除後にスケジュールを実行します。"
-          }
-        }
-      }
-    },
-    "系统无法清除旧的定时唤醒，尚未安排新唤醒；请稍后重试，下载计划仍会在下次唤醒后执行。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "系统无法清除旧的定时唤醒，尚未安排新唤醒；请稍后重试，下载计划仍会在下次唤醒后执行。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The system couldn’t clear the previous wake time, so a new one hasn’t been scheduled. Try again later. The download schedule will still run after the next wake."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "系統無法清除舊的定時喚醒，尚未安排新的喚醒；請稍後再試，下載排程仍會在下次喚醒後執行。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "以前のスリープ解除予約を削除できないため、新しい予約は設定していません。しばらくしてからやり直してください。ダウンロードスケジュールは次回のスリープ解除後に実行します。"
-          }
-        }
-      }
-    },
     "系统未允许睡眠，请检查电源设置。": {
       "extractionState": "manual",
       "localizations": {
@@ -19184,35 +19068,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "システムがスリープを許可しませんでした。電源設定を確認してください。"
-          }
-        }
-      }
-    },
-    "系统未授予定时唤醒权限，无法在睡眠中启动下载；计划仍会在下次唤醒后执行。": {
-      "extractionState": "manual",
-      "localizations": {
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "系统未授予定时唤醒权限，无法在睡眠中启动下载；计划仍会在下次唤醒后执行。"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The system hasn’t allowed scheduled wake, so downloads can’t start during sleep. The schedule will run after the next wake."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "系統未授予定時喚醒權限，無法在睡眠中開始下載；排程仍會在下次喚醒後執行。"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スリープ解除の予約が許可されていないため、スリープ中はダウンロードを開始できません。次回のスリープ解除後にスケジュールを実行します。"
           }
         }
       }
@@ -24175,6 +24030,209 @@
           "stringUnit": {
             "state": "translated",
             "value": "デフォルトに戻す"
+          }
+        }
+      }
+    },
+    "按计划暂停": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按计划暂停"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused by schedule"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依排程暫停"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールにより一時停止"
+          }
+        }
+      }
+    },
+    "按计划暂停，%@ 自动继续": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按计划暂停，%@ 自动继续"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused by schedule; resumes at %@"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依排程暫停，%@ 自動繼續"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールにより一時停止、%@ に自動再開"
+          }
+        }
+      }
+    },
+    "计划开始前 10 分钟至结束时阻止空闲睡眠": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "计划开始前 10 分钟至结束时阻止空闲睡眠"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prevent idle sleep from 10 minutes before the schedule starts until it ends"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "從排程開始前 10 分鐘到結束時防止閒置睡眠"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始10分前から終了までアイドルスリープを防ぐ"
+          }
+        }
+      }
+    },
+    "计划只在电脑醒着时执行；系统关闭或 Mulee 已退出时无法执行计划。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "计划只在电脑醒着时执行；系统关闭或 Mulee 已退出时无法执行计划。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schedules run only while the Mac is awake. They cannot run when the Mac is shut down or Mulee has quit."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排程只在電腦喚醒時執行；系統關機或 Mulee 已結束時無法執行排程。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールはMacがスリープしていない間のみ実行されます。システムの終了後やMuleeの終了後は実行されません。"
+          }
+        }
+      }
+    },
+    "此计划控制下载启停；网络设置中的「计划限速」只调整速度，两者可同时使用。计划只在电脑醒着且 Mulee 保持运行时执行。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此计划控制下载启停；网络设置中的「计划限速」只调整速度，两者可同时使用。计划只在电脑醒着且 Mulee 保持运行时执行。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This schedule pauses and resumes downloads. Scheduled speed limits in Network settings only adjust speed; both can be used together. The Mac must be awake and Mulee must be running."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此排程控制下載啟停；網路設定中的「排程速度限制」只調整速度，兩者可同時使用。排程只在電腦喚醒且 Mulee 持續執行時生效。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このスケジュールはダウンロードを停止・再開します。ネットワーク設定の「スケジュール速度制限」は速度のみを調整し、両方を併用できます。Macがスリープせず、Muleeが実行されている間のみ実行されます。"
+          }
+        }
+      }
+    },
+    "暂时无法阻止电脑空闲睡眠；计划只在电脑醒着时执行。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时无法阻止电脑空闲睡眠；计划只在电脑醒着时执行。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to prevent idle sleep right now. Schedules run only while the Mac is awake."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫時無法防止電腦閒置睡眠；排程只在電腦喚醒時執行。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在、アイドルスリープを防げません。スケジュールはMacがスリープしていない間のみ実行されます。"
+          }
+        }
+      }
+    },
+    "已识别种子文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已识别种子文件"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrent file recognized"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已辨識種子檔"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrentファイルを認識しました"
           }
         }
       }

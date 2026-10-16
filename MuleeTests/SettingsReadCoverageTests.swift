@@ -13,7 +13,7 @@ import Testing
         for name in ["downloadRules", "sortIntoFolders", "publicTrackersEnabled", "trackerSubscriptions", "customTrackers", "blockLeechingClients",
                      "markIncomplete", "duplicateAction", "videoFormatChoiceBySite", "skipJunkFiles", "junkFilePatterns", "seedTimeLimitMinutes", "seedInactiveLimitMinutes",
                      "privateMinSeedMinutes", "ipBlocklistPath", "watchFolders", "watchAutoStart",
-                     "transferScheduleEnabled", "transferScheduleStartTime", "transferScheduleEndTime", "transferScheduleWeekdays"] {
+                     "preventSleepBeforeScheduleStart", "transferScheduleEnabled", "transferScheduleStartTime", "transferScheduleEndTime", "transferScheduleWeekdays"] {
             #expect(properties.contains(name))
         }
         let files = try #require(FileManager.default.enumerator(at: app, includingPropertiesForKeys: nil))

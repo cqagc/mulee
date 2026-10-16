@@ -15,6 +15,9 @@ struct NetworkStatusRow: View {
                 .foregroundStyle(.secondary)
             Spacer(minLength: 4)
             Text(value)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .help(value)
         }
         .accessibilityElement(children: .combine)
     }

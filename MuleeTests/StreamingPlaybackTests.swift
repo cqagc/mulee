@@ -4,6 +4,24 @@ import Testing
 @testable import Mulee
 
 @Suite @MainActor struct StreamingPlaybackTests {
+    @Test func completedFileEndsBufferingEvenWithoutContiguousProgress() {
+        let file = TorrentFileEntry(index: 0, path: "sample.mp4", size: 100_000_000, done: 100_000_000)
+        #expect(StreamingPlayback.bufferProgress(file: file) == 1)
+        var task = MockData.tasks[0]
+        task.status = .completed
+        #expect(!StreamingPlayback.showsBuffering(task: task, progress: 0.2))
+        task.status = .seeding
+        #expect(!StreamingPlayback.showsBuffering(task: task, progress: 0.2))
+    }
+
+    @Test func outOfOrderDownloadProgressUsesThePlaybackTarget() {
+        let size: Int64 = 100_000_000
+        let partialHead = TorrentFileEntry(index: 0, path: "sample.mp4", size: size, done: 87_000_000, contiguousDone: 2_500_000)
+        let bufferedHead = TorrentFileEntry(index: 0, path: "sample.mp4", size: size, done: 87_000_000, contiguousDone: 5_000_000)
+        #expect(StreamingPlayback.bufferProgress(file: partialHead) == 0.5)
+        #expect(StreamingPlayback.bufferProgress(file: bufferedHead) == 1)
+    }
+
     @Test(arguments: ["mp4", "mkv", "mov", "m4v", "webm", "avi", "ts", "flv", "MP4"])
     func videoExtensions(ext: String) {
         #expect(StreamingPlayback.isVideo("sample.\(ext)"))

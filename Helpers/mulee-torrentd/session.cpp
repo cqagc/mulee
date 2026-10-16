@@ -166,10 +166,13 @@ void Session::apply_download_mode(Torrent& torrent) {
             || priorities.at(static_cast<int>(index)) == lt::dont_download) continue;
         if (torrent.metadata.streaming_file >= 0) {
             if (static_cast<int>(index) != torrent.metadata.streaming_file) continue;
-            auto edge = std::max<std::int64_t>(1, (files.file_size(index) + 49) / 50);
+            auto size = files.file_size(index);
+            // 开头必须覆盖播放器的 20 MB 或 5% 阈值，避免只加速 2% 后长期等待。
+            auto head_bytes = std::min<std::int64_t>(20'000'000, size / 20 + (size % 20 != 0));
+            auto tail_bytes = std::max<std::int64_t>(1, size / 50 + (size % 50 != 0));
             auto first = info->map_file(index, 0, 1).piece;
-            auto head = info->map_file(index, edge - 1, 1).piece;
-            auto tail = info->map_file(index, files.file_size(index) - edge, 1).piece;
+            auto head = info->map_file(index, head_bytes - 1, 1).piece;
+            auto tail = info->map_file(index, size - tail_bytes, 1).piece;
             auto last = info->map_file(index, files.file_size(index) - 1, 1).piece;
             for (int piece = static_cast<int>(first); piece <= static_cast<int>(last); ++piece) {
                 if (piece > static_cast<int>(head) && piece < static_cast<int>(tail)) continue;

@@ -10,7 +10,9 @@ struct TaskInspectorView: View {
     var body: some View {
         if let task {
             let displayTask = task.kind == .bittorrent ? torrentModel.displayTask(task) : task
-            let presentation = TaskPresentation(task: displayTask, seedingAction: settings.seedingAction)
+            let presentation = TaskPresentation(
+                task: displayTask, seedingAction: settings.seedingAction, schedule: .init(settings: settings)
+            )
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -84,7 +86,8 @@ struct TaskInspectorView: View {
     private func playbackControls(_ task: DownloadTask) -> some View {
         let playback = StreamingPlayback.shared
         if task.deletedAt == nil {
-            if let progress = playback.buffering[task.id] {
+            if StreamingPlayback.showsBuffering(task: task, progress: playback.buffering[task.id]),
+               let progress = playback.buffering[task.id] {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("正在缓冲开头部分，完成后自动打开播放器")
                         .font(.caption)
@@ -93,7 +96,7 @@ struct TaskInspectorView: View {
                         .accessibilityValue(progress.formatted(.percent.precision(.fractionLength(0))))
                     Button("取消") { playback.cancel(task.id) }
                 }
-            } else if playback.playing.contains(task.id) {
+            } else if playback.playing.contains(task.id), ![.completed, .seeding].contains(task.status) {
                 Button("取消边下边播") { playback.cancel(task.id) }
             } else if StreamingPlayback.canPlay(task, files: torrentModel.files) {
                 Button("播放", systemImage: "play.fill") {

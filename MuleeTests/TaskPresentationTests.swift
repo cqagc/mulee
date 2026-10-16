@@ -12,6 +12,29 @@ import Testing
         return calendar
     }
 
+    @Test(arguments: [TaskStatus.paused, .queued])
+    func schedulePauseExplainsWhyItIsWaiting(status: TaskStatus) {
+        var task = MockData.tasks[0]
+        task.status = status
+        task.pauseReason = .schedule
+        let presentation = TaskPresentation(task: task)
+        #expect(presentation.statusTitle.contains("计划"))
+        #expect(presentation.statusSubtitle != "等待空位")
+        task.pauseReason = .diskSpace
+        task.status = .paused
+        #expect(TaskPresentation(task: task).statusTitle == "因磁盘空间不足已暂停")
+    }
+
+    @Test func schedulePauseUsesTheNextStartAcrossMidnight() throws {
+        var task = MockData.tasks[0]
+        task.status = .paused
+        task.pauseReason = .schedule
+        let schedule = TransferScheduleController.Configuration(startTime: "22:00", endTime: "07:00", weekdays: [6])
+        let now = try #require(ISO8601DateFormatter().date(from: "2026-10-17T08:00:00Z"))
+        let presentation = TaskPresentation(task: task, now: now, calendar: calendar, schedule: schedule)
+        #expect(presentation.statusTitle == "按计划暂停，22:00 自动继续")
+    }
+
     @Test func httpMatchesPrototype() throws {
         let task = try #require(MockData.tasks.first { $0.kind == .http && $0.status == .downloading })
         let presentation = TaskPresentation(task: task)

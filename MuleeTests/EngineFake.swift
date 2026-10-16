@@ -6,6 +6,7 @@ actor FakeEngine: DownloadEngine {
     private(set) var isRunning = false
     private(set) var stopCount = 0
     private(set) var addedLinks: [ParsedLink] = []
+    private(set) var queuedLinks: [ParsedLink] = []
     private(set) var directories: [URL?] = []
     private(set) var pausedIDs: [String] = []
     private(set) var resumedIDs: [String] = []
@@ -46,6 +47,13 @@ actor FakeEngine: DownloadEngine {
         addedLinks.append(link)
         directories.append(directory)
         return "task-\(addedLinks.count)"
+    }
+
+    func addQueued(link: ParsedLink, directory: URL?) async throws -> String {
+        queuedLinks.append(link)
+        let id = try await add(link: link, directory: directory)
+        try await pause(id)
+        return id
     }
 
     func pause(_ engineTaskID: String) async throws {

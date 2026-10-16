@@ -559,9 +559,9 @@ def incomplete_file_tests(binary, root):
     assert daemon.torrent(torrent_id)["is_finished"] is False
     params = {"id": torrent_id, "file_index": 1, "enabled": True}
     result = daemon.request("set_streaming", params)
-    # 第二个文件 128 个 piece，首尾各 2% 涉及 3 个 piece。
-    assert len(result["priority_pieces"]) == 6, result
-    assert result["priority_pieces"][:3] == [4, 5, 6]
+    # 开头优先范围必须覆盖播放阈值（5% 或 20 MB）；结尾保留 2%。
+    assert len(result["priority_pieces"]) == 10, result
+    assert result["priority_pieces"][:7] == list(range(4, 11))
     assert result["priority_pieces"][-3:] == [129, 130, 131]
     assert daemon.torrent(torrent_id)["sequential_download"] is True
     assert daemon.request("files", {"id": torrent_id})["files"][1]["priority"] == 7

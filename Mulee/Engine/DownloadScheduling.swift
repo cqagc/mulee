@@ -67,7 +67,7 @@ final class DownloadScheduling {
         busy = true
         defer { busy = false }
         let enginePaused = Set(model.activeTasks.filter { $0.status == .paused }.map(\.id))
-        for task in model.activeTasks {
+        for task in model.activeTasks where task.pauseReason == nil {
             if pauses.reason(for: task) == "queue", task.status == .paused {
                 if let index = model.tasks.firstIndex(where: { $0.id == task.id }) {
                     model.tasks[index].status = .queued
@@ -87,9 +87,9 @@ final class DownloadScheduling {
                 }
             }
         }
-        let admitted = GlobalConcurrencyPolicy.admitted(tasks: model.activeTasks, limit: options.maxConcurrentDownloads)
+        let admitted = GlobalConcurrencyPolicy.admitted(tasks: model.activeTasks.filter { $0.pauseReason == nil }, limit: options.maxConcurrentDownloads)
         // 先暂停超额任务，再释放名额，避免一次轮询内短暂恢复过多任务。
-        for task in model.activeTasks where GlobalConcurrencyPolicy.occupiesSlot(task) && !admitted.contains(task.id) {
+        for task in model.activeTasks where task.pauseReason == nil && GlobalConcurrencyPolicy.occupiesSlot(task) && !admitted.contains(task.id) {
             guard isCurrent(), let id = task.engineTaskID,
                   let engine = engines.first(where: { $0.kind == task.kind }) else { continue }
             guard pauses.reason(for: task) != "user",
@@ -155,12 +155,17 @@ final class DownloadScheduling {
             }
             previousOptions = options
         }
-        for task in model.activeTasks where admitted.contains(task.id) && isQueuePaused(task) {
+        for task in model.activeTasks where task.pauseReason == nil && admitted.contains(task.id) && isQueuePaused(task) {
             guard isCurrent(), let id = task.engineTaskID,
                   let engine = engines.first(where: { $0.kind == task.kind }) else { continue }
+            guard model.tasks.contains(where: { $0.id == task.id && $0.pauseReason == nil }) else { continue }
             do {
                 try await engine.resume(id)
                 guard isCurrent() else { return }
+                if let current = model.tasks.first(where: { $0.id == task.id }), current.pauseReason != nil {
+                    try await engine.pause(id)
+                    continue
+                }
                 if isQueuePaused(task) { pauses.set(nil, for: task) }
             } catch {
                 guard isCurrent() else { return }

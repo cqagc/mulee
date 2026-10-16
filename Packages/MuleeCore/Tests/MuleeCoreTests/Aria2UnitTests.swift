@@ -3,6 +3,26 @@ import Testing
 @testable import MuleeCore
 
 struct Aria2UnitTests {
+    @Test func unsafeStateDirectoryIsRejectedAndPermissionsAreRepaired() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let state = root.appendingPathComponent("state")
+        let target = root.appendingPathComponent("target")
+        try FileManager.default.createDirectory(at: target, withIntermediateDirectories: true)
+        try FileManager.default.createSymbolicLink(at: state, withDestinationURL: target)
+        let configuration = Aria2Configuration(
+            stateDirectory: state, port: 34567, secret: "test", options: EngineOptions(downloadDirectory: root)
+        )
+        #expect(throws: (any Error).self) { try configuration.write() }
+        #expect(!FileManager.default.fileExists(atPath: target.appendingPathComponent("aria2.conf").path))
+        try FileManager.default.removeItem(at: state)
+        try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.posixPermissions: 0o777], ofItemAtPath: state.path)
+        try configuration.write()
+        let attributes = try FileManager.default.attributesOfItem(atPath: state.path)
+        #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o700)
+    }
+
     @Test("手写 JSON 状态映射", arguments: [
         ("active", TaskStatus.downloading), ("waiting", .queued), ("paused", .paused),
         ("complete", .completed), ("error", .failed)

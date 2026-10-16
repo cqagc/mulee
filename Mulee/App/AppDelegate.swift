@@ -6,7 +6,10 @@ import MuleeCore
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let updates = AppUpdateController.shared
-    var openURLRouter: OpenURLRouter?
+    var openURLRouter: OpenURLRouter? {
+        didSet { drainPendingOpenURLs() }
+    }
+    private var pendingOpenURLs: [[URL]] = []
     private var servicesProvider: DownloadServicesProvider?
     private var settingsRuntime: SettingsRuntime?
     private var diskReserveMonitor: DiskReserveMonitor?
@@ -25,13 +28,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var hasReplied = false
     private let shutdownProgress = ShutdownProgressController()
 
+    func application(_ application: NSApplication, open urls: [URL]) {
+        pendingOpenURLs.append(urls)
+        drainPendingOpenURLs()
+    }
+
+    func application(_ sender: NSApplication, openFiles filenames: [String]) {
+        application(sender, open: filenames.map { URL(filePath: $0) })
+        sender.reply(toOpenOrPrint: .success)
+    }
+
+    private func drainPendingOpenURLs() {
+        guard let openURLRouter else { return }
+        let pending = pendingOpenURLs
+        pendingOpenURLs.removeAll()
+        for urls in pending { openURLRouter.open(urls) }
+    }
+
     func configure(model: AppModel, settings: SettingsModel, usesSampleData: Bool) {
         openURLRouter = OpenURLRouter(model: model, settings: settings)
         servicesProvider = DownloadServicesProvider(router: openURLRouter)
         self.model = model
         self.settings = settings
         let intentActions = MuleeIntentActions(model: model)
-        AppDependencyManager.shared.add(dependency: intentActions)
+        // 系统可能在后台队列解析依赖；异步 Sendable 工厂不会捕获主线程隔离的同步自动闭包。
+        let intentProvider: @Sendable () async -> MuleeIntentActions = { intentActions }
+        AppDependencyManager.shared.add(dependency: intentProvider)
         updates.installation.hasActiveTransfers = { [weak model] in
             guard let model else { return false }
             return model.hasActiveTransfers || model.tasks.contains { [.queued, .waitingForSources].contains($0.status) }

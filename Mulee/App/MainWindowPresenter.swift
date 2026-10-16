@@ -14,11 +14,13 @@ struct MainWindowPresenter: ViewModifier {
     }
 
     private func present() {
+        NSApp.activate()
         if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "mulee-main" }) {
+            if window.isMiniaturized { window.deminiaturize(nil) }
             window.makeKeyAndOrderFront(nil)
+            window.attachedSheet?.makeKeyAndOrderFront(nil)
         } else {
             openWindow(id: "main")
         }
-        NSApp.activate()
     }
 }

@@ -21,6 +21,7 @@ import Testing
         #expect(try Data(contentsOf: target) == Data("payload".utf8))
         #expect(!FileManager.default.fileExists(atPath: file.path))
         try restored.cleanup()
+        #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent(".mulee-incomplete").path))
         #expect(!FileManager.default.fileExists(atPath: restored.directory.path))
         #expect(try restored.finishMove(from: file) == target)
     }

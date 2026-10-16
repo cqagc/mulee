@@ -9,16 +9,19 @@ struct TaskPresentation {
     let task: DownloadTask
     let now: Date
     let calendar: Calendar
+    let schedule: TransferScheduleController.Configuration?
     let seedingAction: SettingsModel.SeedingAction
 
     init(
         task: DownloadTask, now: Date = .now, calendar: Calendar = .current,
-        seedingAction: SettingsModel.SeedingAction = .throttle
+        seedingAction: SettingsModel.SeedingAction = .throttle,
+        schedule: TransferScheduleController.Configuration? = nil
     ) {
         self.task = task
         self.now = now
         self.calendar = calendar
         self.seedingAction = seedingAction
+        self.schedule = schedule
     }
 
     var typeLabel: String {
@@ -107,8 +110,20 @@ struct TaskPresentation {
         return String(localized: "\(percent) · 已收到 \(Self.bytes(task.receivedBytes))，剩余 \(Self.bytes(max(0, total - task.receivedBytes)))")
     }
 
+    var schedulePauseTitle: String? {
+        guard task.pauseReason == .schedule || (task.status == .queued && schedule?.enabled == true
+            && schedule?.isValid == true && schedule?.isActive(at: now, calendar: calendar) == false) else { return nil }
+        if let next = schedule?.nextStart(after: now, calendar: calendar) {
+            return String(localized: "按计划暂停，\(time(next)) 自动继续")
+        }
+        return String(localized: "按计划暂停")
+    }
+
     var statusTitle: String {
-        switch task.status {
+        if [.paused, .queued].contains(task.status), task.pauseReason != .diskSpace, let schedulePauseTitle {
+            return schedulePauseTitle
+        }
+        return switch task.status {
         case .downloading: Self.rate(task.downloadRate)
         case .waitingForSources: String(localized: "等待来源")
         case .postProcessing: String(localized: "处理中")
@@ -123,7 +138,8 @@ struct TaskPresentation {
     }
 
     var statusSubtitle: String {
-        switch task.status {
+        if [.paused, .queued].contains(task.status), schedulePauseTitle != nil { return "" }
+        return switch task.status {
         case .downloading: task.estimatedTimeRemaining.map { String(localized: "剩 \(Self.duration($0, remaining: true))") } ?? String(localized: "正在下载")
         case .waitingForSources: longTail.map { String(localized: "已挂 \(days(since: $0.waitingSince)) 天") } ?? String(localized: "耐心等待")
         case .postProcessing: String(localized: "即将完成")

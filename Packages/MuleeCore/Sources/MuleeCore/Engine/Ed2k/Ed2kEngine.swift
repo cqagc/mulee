@@ -262,7 +262,12 @@ public actor Ed2kEngine: DownloadEngine {
                     try await Task.sleep(for: .milliseconds(100))
                 }
             }
-            guard ready, child.isRunning else { throw EngineError.launchFailed(String(localized: "等待电驴 EC 就绪超时或进程提前退出（30 秒）", bundle: .module)) }
+            guard child.isRunning else {
+                throw EngineError.launchFailed(String(localized: "电驴引擎在连接就绪前退出，电驴任务暂时无法下载。请检查保存目录权限和引擎日志后重试。", bundle: .module))
+            }
+            guard ready else {
+                throw EngineError.launchFailed(String(localized: "电驴引擎启动超过 30 秒，电驴任务暂时无法下载。若有文件夹访问提示，请先允许访问，再重试；仍失败时请查看引擎日志。", bundle: .module))
+            }
             self.configuration = configuration
             self.settings = settings
             categories.removeAll()
@@ -296,9 +301,14 @@ public actor Ed2kEngine: DownloadEngine {
         monitor = nil
         let rpc = client
         client = nil
-        // SIGTERM 是 amuled 的保存并退出路径；避免关机请求断连被误判为失败。
         let ownedProcess = process
-        if let ownedProcess { await ownedProcess.finish() }
+        if let ownedProcess {
+            if let rpc {
+                // 正常退出先通知 EC；macOS 事件循环未退出时再用等价的保存信号兜底。
+                _ = try? await Task { try await rpc.request(ECPacket(opcode: ECCode.Op.shutdown)) }.value
+            }
+            await ownedProcess.finish(waitForExit: .milliseconds(250))
+        }
         process = nil
         await rpc?.disconnect()
         do {

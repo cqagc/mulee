@@ -6,6 +6,19 @@ import Testing
 
 @Suite(.serialized, .enabled(if: Aria2IntegrationFixture.binaryAvailable))
 struct Aria2IntegrationTests {
+    @Test func downloadedFilesFollowTheNormalUmask() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            try await fixture.engine.start(options: fixture.options)
+            let id = try await fixture.engine.add(link: fixture.link("permissions.bin"), directory: nil)
+            let completed = try await fixture.waitFor(id) { $0.status == .completed }
+            let file = try #require(completed.savePath)
+            let attributes = try FileManager.default.attributesOfItem(atPath: file.path)
+            #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o644)
+            let state = try FileManager.default.attributesOfItem(atPath: fixture.state.path)
+            #expect((state[.posixPermissions] as? NSNumber)?.intValue == 0o700)
+        }
+    }
+
     @Test func redirectedDownloadsNeverForwardCredentials() async throws {
         try await Aria2IntegrationFixture.withFixture { fixture in
             let destination = try Aria2HTTPServer(payload: fixture.payload)
@@ -183,6 +196,7 @@ struct Aria2IntegrationTests {
             let rpc = try fixture.rpc()
             for _ in 0..<2 {
                 let _: String = try await rpc.call("aria2.saveSession")
+                _ = try await fixture.engine.snapshots()
                 let file = fixture.state.appendingPathComponent("aria2.session")
                 let attributes = try FileManager.default.attributesOfItem(atPath: file.path)
                 #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)

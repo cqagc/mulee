@@ -34,6 +34,17 @@ final class StreamingPlayback {
         return min(20_000_000, size / 20 + (size % 20 == 0 ? 0 : 1))
     }
 
+    static func bufferProgress(file: TorrentFileEntry) -> Double {
+        if file.size > 0, file.done >= file.size { return 1 }
+        let threshold = bufferThreshold(size: file.size)
+        return threshold > 0 ? min(1, Double(file.contiguousDone ?? 0) / Double(threshold)) : 0
+    }
+
+    static func showsBuffering(task: DownloadTask, progress: Double?) -> Bool {
+        progress != nil && ![.completed, .seeding, .failed, .engineUnavailable].contains(task.status)
+            && task.deletedAt == nil
+    }
+
     static func preferredPlayer(installed: Set<String>) -> String? {
         playerBundleIDs.first { installed.contains($0) }
     }
@@ -86,17 +97,23 @@ final class StreamingPlayback {
                     while !Task.isCancelled {
                         guard let current = try await engine.files(id).first(where: { $0.index == selected.index }) else { break }
                         let threshold = Self.bufferThreshold(size: current.size)
-                        let contiguous = current.contiguousDone ?? 0
+                        let progress = Self.bufferProgress(file: current)
+                        let finished = current.size > 0 && current.done >= current.size
+                        if finished {
+                            self.buffering[task.id] = nil
+                            self.playing.remove(task.id)
+                        }
                         if !opened {
-                            self.buffering[task.id] = threshold > 0 ? min(1, Double(contiguous) / Double(threshold)) : 0
-                            if threshold > 0 && contiguous >= threshold, let url = Self.fileURL(task: task, file: current) {
+                            if !finished { self.buffering[task.id] = progress }
+                            if threshold > 0 && progress >= 1, let url = Self.fileURL(task: task, file: current) {
                                 try Task.checkCancellation()
                                 try await self.open(url, logicalName: current.path)
                                 opened = true
                                 self.buffering[task.id] = nil
-                                self.playing.insert(task.id)
+                                if !finished { self.playing.insert(task.id) }
                             }
                         }
+                        if finished { break }
                         if try await engine.taskInfo(id).isFinished { break }
                         try await Task.sleep(for: .seconds(1))
                     }

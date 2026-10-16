@@ -10,11 +10,11 @@ struct Aria2Process: Sendable {
     init(binary: URL, configuration: Aria2Configuration, onExit: @escaping @Sendable (UUID) -> Void) throws {
         let process = Process()
         self.process = process
-        // aria2 会把请求头写进 session，并以临时文件改名保存；子进程独立的
-        // umask 保证每次新建 session 都是 0600，不改变多线程 App 的全局 umask。
-        // exec 保持同一 PID，因此现有 SIGINT 退出与进度保存流程不变。
-        process.executableURL = URL(fileURLWithPath: "/bin/sh")
-        process.arguments = ["-c", "umask 077; exec \"$@\"", "mulee-aria2", binary.path] + configuration.arguments
+        // 下载成品继承用户 umask；敏感状态由独立的 0700 目录保护。
+        try configuration.prepareStateDirectory()
+        try configuration.protectStateFiles()
+        process.executableURL = binary
+        process.arguments = configuration.arguments
         var environment = ProcessInfo.processInfo.environment
         environment["LANG"] = "en_US.UTF-8"
         environment["LC_ALL"] = "en_US.UTF-8"

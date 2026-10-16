@@ -120,7 +120,16 @@ struct Ed2kConfiguration: Sendable {
 
     func write() throws {
         _ = try managedValues()
-        for directory in [stateDirectory, temporaryDirectory, options.downloadDirectory] {
+        // 已存在的目录仅 mkdir 不一定触发 TCC；先由 App 读取目录，授权等待不占子进程的 EC 启动期限。
+        do {
+            try FileManager.default.createDirectory(
+                at: options.downloadDirectory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]
+            )
+            _ = try FileManager.default.contentsOfDirectory(atPath: options.downloadDirectory.path)
+        } catch {
+            throw EngineError.launchFailed(String(localized: "无法访问电驴下载目录，电驴任务暂时无法下载。请在 macOS 权限提示中允许访问，或在设置中更换保存目录后重试。", bundle: .module))
+        }
+        for directory in [stateDirectory, temporaryDirectory] {
             try FileManager.default.createDirectory(
                 at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700]
             )

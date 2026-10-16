@@ -12,7 +12,9 @@ struct TaskListView: View {
 
         List(selection: $model.selectedTaskID) {
             ForEach(tasks) { task in
-                TaskRowView(presentation: TaskPresentation(task: task, seedingAction: settings.seedingAction))
+                TaskRowView(presentation: TaskPresentation(
+                    task: task, seedingAction: settings.seedingAction, schedule: .init(settings: settings)
+                ))
                     .equatable()
                     .tag(task.id)
                     .listRowInsets(EdgeInsets(top: 9, leading: 10, bottom: 9, trailing: 10))
