@@ -12,6 +12,10 @@ struct TorrentdConfigureParameters: Codable, Sendable {
     let diskCacheBytes: Int64
     let blockedClients: [String]
 
+    let skipJunkFiles: Bool
+    let junkFilePatterns: [String]
+    let ipBlocklistPath: String
+
     init(options: EngineOptions, settings: TorrentEngineSettings) {
         // 仅控制写入队列，辅助进程将其限制在 1–256 MiB。
         downloadDir = options.downloadDirectory.path
@@ -26,5 +30,8 @@ struct TorrentdConfigureParameters: Codable, Sendable {
         encryption = settings.encryption
         diskCacheBytes = settings.diskCacheBytes
         blockedClients = settings.blockedClients
+        skipJunkFiles = settings.skipJunkFiles
+        junkFilePatterns = settings.junkFilePatterns
+        ipBlocklistPath = settings.ipBlocklistPath
     }
 }

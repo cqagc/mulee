@@ -115,7 +115,7 @@ struct TaskPresentation {
         case .extracting: String(localized: "解压中")
         case .seeding: "↑ \(Self.rate(task.uploadRate))"
         case .completed: extractionStatus ?? String(localized: "已完成")
-        case .paused: String(localized: "已暂停")
+        case .paused: task.pauseReason == .diskSpace ? String(localized: "因磁盘空间不足已暂停") : String(localized: "已暂停")
         case .failed: String(localized: "需要处理")
         case .queued: String(localized: "排队中")
         case .engineUnavailable: String(localized: "引擎未接入")

@@ -139,6 +139,8 @@ Session::Session(Protocol& protocol, Persistence& persistence)
     filter.add_rule(lt::make_address("0.0.0.0"), lt::make_address("255.255.255.255"), global);
     filter.add_rule(lt::make_address("::"), lt::make_address("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"), global);
     session_.set_peer_class_filter(filter);
+    ip_filters_ = persistence_.load_filters();
+    apply_ip_filters(ip_filters_);
 }
 
 void Session::prepare(lt::add_torrent_params& params,
@@ -186,7 +188,9 @@ void Session::restore() {
         }
         handle.set_max_connections(per_torrent_connections);
         auto inserted = torrents_.emplace(id, Torrent{handle, persistence_.load_meta(id), params.peers, count});
+        apply_junk_filter(inserted.first->second);
         apply_download_mode(inserted.first->second);
+        refresh_trackers(inserted.first->second);
     }
     // Ensure the listener exists before announcing readiness.
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
@@ -235,7 +239,23 @@ void Session::alerts() {
     session_.pop_alerts(&pending);
     for (auto* alert : pending) {
         try {
-            if (auto* saved = lt::alert_cast<lt::save_resume_data_alert>(alert)) {
+            if (auto* moved = lt::alert_cast<lt::storage_moved_alert>(alert)) {
+                if (moved->handle == storage_handle_) storage_pending_ = 0;
+            } else if (auto* failed = lt::alert_cast<lt::storage_moved_failed_alert>(alert)) {
+                if (failed->handle == storage_handle_) {
+                    storage_pending_ = 0;
+                    storage_error_ = failed->error.message();
+                    storage_error_code_ = failed->error == boost::system::errc::file_exists ? "conflict" : "io_error";
+                }
+            } else if (auto* renamed = lt::alert_cast<lt::file_renamed_alert>(alert)) {
+                if (renamed->handle == storage_handle_) storage_pending_ = 0;
+            } else if (auto* failed = lt::alert_cast<lt::file_rename_failed_alert>(alert)) {
+                if (failed->handle == storage_handle_) {
+                    storage_pending_ = 0;
+                    storage_error_ = failed->error.message();
+                    storage_error_code_ = failed->error == boost::system::errc::file_exists ? "conflict" : "io_error";
+                }
+            } else if (auto* saved = lt::alert_cast<lt::save_resume_data_alert>(alert)) {
                 auto pending_save = pending_resume_.find(saved->handle);
                 if (pending_save != pending_resume_.end() && --pending_save->second == 0)
                     pending_resume_.erase(pending_save);
@@ -243,6 +263,7 @@ void Session::alerts() {
                 if (auto* torrent = find(saved->handle)) {
                     auto id = torrent_id(saved->handle.info_hashes());
                     auto params = saved->params;
+                    if (saved->handle == export_handle_) export_resume_ = params;
                     // Keep explicit magnet x.pe hints even if the peer disconnected
                     // during pause/shutdown and libtorrent omitted it from its list.
                     for (const auto& peer : torrent->bootstrap_peers) {
@@ -256,12 +277,14 @@ void Session::alerts() {
                 auto pending_save = pending_resume_.find(failed->handle);
                 if (pending_save != pending_resume_.end() && --pending_save->second == 0)
                     pending_resume_.erase(pending_save);
+                if (failed->handle == export_handle_) export_error_ = failed->error.message();
                 persistence_.log(failed->message());
                 if (stopping_) throw std::runtime_error("Cannot save resume data at shutdown");
             } else if (auto* metadata = lt::alert_cast<lt::metadata_received_alert>(alert)) {
                 if (auto* torrent = find(metadata->handle)) {
+                    apply_junk_filter(*torrent);
                     protocol_.send({{"event", "metadata_received"}, {"id", torrent_id(metadata->handle.info_hashes())},
-                        {"name", metadata->handle.status().name}});
+                        {"name", metadata->handle.status().name}, {"skipped_files", torrent->metadata.skipped_files}});
                     apply_download_mode(*torrent);
                     save(*torrent);
                 }
@@ -282,9 +305,16 @@ void Session::alerts() {
                     {"message", error->error.message()}});
                 persistence_.log(error->message());
             } else if (auto* error = lt::alert_cast<lt::tracker_error_alert>(alert)) {
-                if (auto* torrent = find(error->handle))
+                if (auto* torrent = find(error->handle)) {
                     torrent->last_tracker_error = error->error.message() + ": " + error->failure_reason();
+                    // 跳过宣告是本机网络接口的决定，不能记成 tracker 连续失败。
+                    if (error->error != lt::errors::announce_skipped)
+                        tracker_result(*torrent, error->tracker_url(), torrent->last_tracker_error, 0, true);
+                }
                 persistence_.log(error->message());
+            } else if (auto* reply = lt::alert_cast<lt::tracker_reply_alert>(alert)) {
+                if (auto* torrent = find(reply->handle))
+                    tracker_result(*torrent, reply->tracker_url(), "OK", reply->num_peers, false);
             } else if (auto* mapped = lt::alert_cast<lt::portmap_alert>(alert)) {
                 port_mapping_alert(mapped->mapping, mapped->map_transport, mapped->external_port,
                     mapped->map_protocol, mapped->local_address.to_string(), "");
@@ -393,6 +423,7 @@ void Session::poll() {
         clear_extra_port_mapping_handles();
     }
     update_extra_port_mappings();
+    for (auto& entry : torrents_) refresh_trackers(entry.second);
     auto now = std::chrono::steady_clock::now();
     if (now - last_stats_request_ >= std::chrono::seconds(1)) {
         session_.post_session_stats();

@@ -49,6 +49,12 @@ struct SpeedLimitSection: View {
                     }
                 }
             }
+            Toggle("在按流量计费或低数据模式网络下自动启用慢速模式", isOn: $model.slowModeOnExpensive)
+            TextField("慢速模式下载上限（MB/s）", value: $model.slowModeDownloadMBps, format: .number)
+            TextField("慢速模式上传上限（MB/s）", value: $model.slowModeUploadMBps, format: .number)
+            Text("慢速模式与当前全局或计划限速取较小值；0 表示不限速。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             LabeledContent {
                 HStack {
                     Slider(value: $model.diskCacheMB, in: SettingsModel.diskCacheRange, step: 32) {

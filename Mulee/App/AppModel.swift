@@ -10,6 +10,8 @@ final class AppModel {
         didSet {
             extractionCoordinator?.tasksDidChange()
             updateSleepPrevention()
+            notificationService?.tasksDidChange()
+            whenAllDoneController?.refresh()
             historyStore?.scheduleSave(tasks: tasks) { [weak self] issue in
                 self?.taskHistoryIssue = issue
             }
@@ -22,6 +24,18 @@ final class AppModel {
         didSet { updateSleepPrevention() }
     }
     var isScheduledLimitActive = false
+    var isSlowModeActive = false
+    var slowModeReason: String?
+    var diskReserveWarnings: [DiskReserveMonitor.Warning] = []
+    var notificationPermissionDenied = false
+    var whenAllDoneAction: WhenAllDoneAction = .none
+    var whenAllDoneSecondsRemaining: Int?
+    var isPerformingWhenAllDone = false
+    @ObservationIgnored var userPausedTaskIDs: Set<DownloadTask.ID> = []
+    @ObservationIgnored weak var diskReserveMonitor: DiskReserveMonitor?
+    @ObservationIgnored weak var notificationService: NotificationService?
+    @ObservationIgnored weak var whenAllDoneController: WhenAllDoneController?
+    @ObservationIgnored weak var slowModeController: SlowModeController?
     var mainWindowRequest = 0
     @ObservationIgnored weak var settingsRuntime: SettingsRuntime?
     var bitTorrent: BitTorrentController?
@@ -102,6 +116,7 @@ final class AppModel {
 
     /// 打开「新建下载」面板，可选预填文本。
     func showNewTask(prefill text: String = "") {
+        whenAllDoneController?.userDidInteract()
         mainWindowRequest += 1
         if !text.isEmpty {
             let separator = pendingNewTaskText.isEmpty || pendingNewTaskText.hasSuffix("\n") ? "" : "\n"
@@ -125,6 +140,11 @@ final class AppModel {
     }
 
     func pause(_ id: DownloadTask.ID) {
+        userPausedTaskIDs.insert(id)
+        whenAllDoneController?.userDidInteract()
+        if let index = tasks.firstIndex(where: { $0.id == id }) {
+            tasks[index].pauseReason = nil
+        }
         if let coordinator {
             Task { await coordinator.pause(id) }
             return
@@ -134,6 +154,11 @@ final class AppModel {
     }
 
     func resume(_ id: DownloadTask.ID) {
+        userPausedTaskIDs.remove(id)
+        whenAllDoneController?.userDidInteract()
+        if let index = tasks.firstIndex(where: { $0.id == id }) {
+            tasks[index].pauseReason = nil
+        }
         if let coordinator {
             Task { await coordinator.resume(id) }
             return
@@ -143,6 +168,7 @@ final class AppModel {
     }
 
     func remove(_ id: DownloadTask.ID) {
+        whenAllDoneController?.userDidInteract()
         if let task = tasks.first(where: { $0.id == id }), [.bittorrent, .ed2k].contains(task.kind), coordinator != nil {
             BitTorrentRemoval.confirm(task: task, model: self)
             return
@@ -169,6 +195,7 @@ final class AppModel {
     }
 
     func removeRecord(_ id: DownloadTask.ID) {
+        userPausedTaskIDs.remove(id)
         tasks.removeAll { $0.id == id }
         if selectedTaskID == id {
             selectedTaskID = nil

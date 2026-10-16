@@ -42,6 +42,30 @@ import Testing
         #expect(BitTorrentEngineConfiguration.configuration(from: settings).seedingAction == .slowDown)
     }
 
+    @Test("BT 新设置默认值、持久化和引擎映射")
+    func managementSettings() throws {
+        let temporaryDefaults = try TemporaryDefaults(prefix: "BitTorrentManagement.")
+        defer { temporaryDefaults.clean() }
+        let settings = SettingsModel(defaults: temporaryDefaults.defaults)
+        #expect(settings.skipJunkFiles)
+        #expect(settings.junkFilePatterns == TorrentEngineSettings.defaultJunkFilePatterns)
+        #expect(settings.seedTimeLimitMinutes == 0 && settings.seedInactiveLimitMinutes == 0)
+        #expect(settings.privateMinSeedMinutes == 0 && settings.ipBlocklistPath.isEmpty)
+        settings.skipJunkFiles = false
+        settings.junkFilePatterns = ["*.url"]
+        settings.seedTimeLimitMinutes = 120
+        settings.seedInactiveLimitMinutes = 30
+        settings.privateMinSeedMinutes = 60
+        settings.ipBlocklistPath = "/tmp/fixture-blocklist.dat"
+        settings.seedingAction = .remove
+        let restored = SettingsModel(defaults: temporaryDefaults.defaults)
+        let configuration = BitTorrentEngineConfiguration.configuration(from: restored)
+        #expect(!configuration.skipJunkFiles && configuration.junkFilePatterns == ["*.url"])
+        #expect(configuration.seedTimeLimitMinutes == 120 && configuration.seedInactiveLimitMinutes == 30)
+        #expect(configuration.privateMinSeedMinutes == 60 && configuration.ipBlocklistPath == settings.ipBlocklistPath)
+        #expect(configuration.seedingAction == .remove)
+    }
+
     @Test("端口推导三态、连接历史与入站优先")
     func reachability() {
         let start = Date(timeIntervalSince1970: 1000)

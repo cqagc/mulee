@@ -2,4 +2,5 @@
 public enum TorrentSeedingAction: String, Codable, Sendable, Hashable {
     case stop
     case slowDown
+    case remove
 }

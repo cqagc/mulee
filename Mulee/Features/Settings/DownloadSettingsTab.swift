@@ -34,6 +34,14 @@ struct DownloadSettingsTab: View {
                     }
                 }
             }
+            Section("磁盘保护") {
+                Toggle("保留磁盘可用空间", isOn: $model.diskReserveEnabled)
+                Stepper("保护容量：\(model.diskReserveGB) GB", value: $model.diskReserveGB, in: 1...500)
+                    .disabled(!model.diskReserveEnabled)
+                Text("达到保护容量时暂停该磁盘的下载；空间恢复到保护容量以上 1 GB 后，只恢复因磁盘空间暂停的任务。解压前也会检查。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .formStyle(.grouped)
         .fileImporter(isPresented: $isChoosingFolder, allowedContentTypes: [.folder], onCompletion: folderChosen)

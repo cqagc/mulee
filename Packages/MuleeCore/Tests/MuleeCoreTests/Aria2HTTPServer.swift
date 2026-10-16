@@ -11,6 +11,7 @@ actor Aria2HTTPServer {
     private var failure: NWError?
     private var ready = false
     private(set) var rangeRequests = 0
+    private(set) var receivedHeaders: [[String: String]] = []
     private var stopped = false
 
     init(payload: Data) throws {
@@ -96,6 +97,21 @@ actor Aria2HTTPServer {
         let first = lines.first?.split(separator: " ") ?? []
         guard first.count >= 2 else { throw URLError(.badServerResponse) }
         let path = String(first[1])
+        let headers = Dictionary(lines.dropFirst().compactMap { line -> (String, String)? in
+            guard let colon = line.firstIndex(of: ":") else { return nil }
+            return (String(line[..<colon]).lowercased(), String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces))
+        }, uniquingKeysWith: { _, new in new })
+        receivedHeaders.append(headers)
+        for code in [401, 403, 410] where path == "/status-\(code).bin" {
+            try await send(Data("HTTP/1.1 \(code) Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8), on: connection)
+            return
+        }
+        if path == "/page.bin" {
+            let body = "<!doctype html><html>Login</html>"
+            try await send(Data("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n".utf8), on: connection)
+            if first[0] != "HEAD" { try await send(Data(body.utf8), on: connection) }
+            return
+        }
         if path == "/missing.bin" {
             try await send(Data("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8), on: connection)
             return
@@ -116,7 +132,7 @@ actor Aria2HTTPServer {
         let status = range == nil ? "200 OK" : "206 Partial Content"
         var header = "HTTP/1.1 \(status)\r\nContent-Length: \(upper - lower + 1)\r\nAccept-Ranges: bytes\r\n"
         if range != nil { header += "Content-Range: bytes \(lower)-\(upper)/\(payload.count)\r\n" }
-        header += "Content-Type: application/octet-stream\r\nConnection: close\r\n\r\n"
+        header += "ETag: \"payload-v1\"\r\nContent-Type: application/octet-stream\r\nConnection: close\r\n\r\n"
         try await send(Data(header.utf8), on: connection)
         if first[0] == "HEAD" { return }
         var offset = lower

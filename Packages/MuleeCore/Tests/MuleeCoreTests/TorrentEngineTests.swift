@@ -27,7 +27,7 @@ import Testing
         try await TorrentFixtures.withEngine(fake: fake) { engine, root in
             try await engine.start(options: EngineOptions(downloadDirectory: root))
             await fake.setResult("list", .object(["torrents": .array([TorrentFixtures.task([
-                "is_private": .bool(true)
+                "is_private": .bool(true), "seed_time_seconds": .integer(120), "seed_inactive_seconds": .integer(20)
             ])])]))
             let info = try await engine.taskInfo(TorrentFixtures.id)
             #expect(info.numPeers == 3)
@@ -37,6 +37,7 @@ import Testing
             #expect(info.ratio == 0.5)
             #expect(info.isPrivate)
             #expect(info.hasMetadata)
+            #expect(info.seedTimeSeconds == 120 && info.seedInactiveSeconds == 20)
             #expect(info.uploadLimit == 0)
             await #expect(throws: TorrentErrorDescriptions.error(for: "not_found")) {
                 try await engine.taskInfo("missing")
@@ -115,6 +116,109 @@ import Testing
         }
     }
 
+    @Test("管理 API 参数、状态解析、过滤反馈和错误映射")
+    func managementAPIs() async throws {
+        let fake = TorrentFakeTransport()
+        try await TorrentFixtures.withEngine(fake: fake) { engine, root in
+            try await engine.start(options: EngineOptions(downloadDirectory: root))
+            var settings = TorrentEngineSettings()
+            settings.skipJunkFiles = false
+            settings.junkFilePatterns = ["*.url"]
+            settings.ipBlocklistPath = "/tmp/test.dat"
+            try await engine.configure(settings)
+            #expect(await fake.sent.last?.parameters["skip_junk_files"] == .bool(false))
+            #expect(await fake.sent.last?.parameters["junk_file_patterns"] == .array([.string("*.url")]))
+            #expect(await fake.sent.last?.parameters["ip_blocklist_path"] == .string("/tmp/test.dat"))
+            await fake.setResult("add", .object([
+                "id": .string(TorrentFixtures.id), "name": .string("Fixture"), "duplicate": .bool(false),
+                "skipped_files": .array([.object(["index": .integer(1), "path": .string("Fixture/ad.url")])])
+            ]))
+            let added = try await engine.addWithResult(link: TorrentFixtures.magnet, directory: root)
+            #expect(added.skippedFiles?.first?.path == "Fixture/ad.url")
+            try await engine.moveStorage(added.id, to: root, conflict: .keep)
+            #expect(await fake.sent.last?.parameters["conflict"] == .string("keep"))
+            await fake.setError("move_storage", code: "conflict")
+            await #expect(throws: TorrentErrorDescriptions.error(for: "conflict")) {
+                try await engine.moveStorage(added.id, to: root)
+            }
+            try await engine.renameFile(added.id, path: "Fixture", to: "Renamed")
+            #expect(await fake.sent.last?.parameters["new_path"] == .string("Renamed"))
+            try await engine.forceRecheck(added.id)
+            #expect(await fake.sent.last?.method == "force_recheck")
+            try await engine.forceReannounce(added.id)
+            #expect(await fake.sent.last?.method == "force_reannounce")
+            let tracker = TorrentTracker(url: "https://tracker.invalid/announce", tier: 3, subscription: true)
+            try await engine.setTrackers(added.id, trackers: [tracker])
+            #expect(await fake.sent.last?.parameters["trackers"] == .array([.object([
+                "url": .string(tracker.url), "tier": .integer(3), "subscription": .bool(true)
+            ])]))
+            await fake.setResult("trackers", .object(["trackers": .array([.object([
+                "url": .string(tracker.url), "tier": .integer(3), "subscription": .bool(true),
+                "status": .string("disabled"), "last_result": .string("timeout"), "peers": .integer(0), "disabled_until": .integer(1000)
+            ])])]))
+            #expect(try await engine.trackers(added.id).first?.disabledUntil == 1000)
+            await fake.setResult("peers", .object(["peers": .array([.object([
+                "address": .string("192.0.2.10"), "port": .integer(6881), "client": .string("Mulee"),
+                "progress": .double(0.5), "download_rate": .integer(123), "upload_rate": .integer(45),
+                "sources": .array([.string("tracker"), .string("pex")]), "connection": .string("utp")
+            ])])]))
+            let peer = try #require(try await engine.peers(added.id).first)
+            #expect(peer.connection == "utp" && peer.sources == ["tracker", "pex"] && peer.downloadRate == 123)
+            try await engine.banIP(peer.address)
+            #expect(await fake.sent.last?.parameters["ip"] == .string("192.0.2.10"))
+            await fake.setResult("import_ip_blocklist", .object(["blocked_ranges": .integer(2)]))
+            #expect(try await engine.importIPBlocklist(from: root).blockedRanges == 2)
+            let output = root.appending(path: "fixture.torrent")
+            for method in ["create_torrent", "export_torrent"] {
+                await fake.setResult(method, .object(["path": .string(output.path), "id": .string(added.id)]))
+            }
+            #expect(try await engine.createTorrent(from: root, to: output, isPrivate: true, trackers: [tracker.url], comment: "Fixture").id == added.id)
+            #expect(await fake.sent.last?.parameters["private"] == .bool(true))
+            #expect(await fake.sent.last?.parameters["comment"] == .string("Fixture"))
+            #expect(try await engine.exportTorrent(added.id, to: output).path == output.path)
+        }
+    }
+
+    @Test("手填公共 tracker 与订阅来源分别下发")
+    func trackerProvenance() async throws {
+        let fake = TorrentFakeTransport()
+        try await TorrentFixtures.withEngine(fake: fake) { engine, root in
+            try await engine.start(options: EngineOptions(downloadDirectory: root))
+            let manual = "https://manual.invalid/announce"
+            let subscribed = "https://subscription.invalid/announce"
+            await engine.configurePublicTrackers([manual, subscribed], subscriptionURLs: [subscribed])
+            await fake.setResult("list", .object(["torrents": .array([TorrentFixtures.task()])]))
+            await fake.setResult("add_trackers", .object(["added": .integer(1), "total": .integer(2)]))
+            _ = try await engine.snapshots()
+            let additions = await fake.sent.filter { $0.method == "add_trackers" }
+            #expect(additions.count == 2)
+            #expect(additions.first?.parameters["subscription"] == .bool(false))
+            #expect(additions.last?.parameters["subscription"] == .bool(true))
+        }
+    }
+
+    @Test("时间策略删除任务保留文件，未完成时不会删除")
+    func timedRemoval() async throws {
+        let fake = TorrentFakeTransport()
+        let settings = TorrentEngineSettings(seedingAction: .remove, seedTimeLimitMinutes: 1)
+        try await TorrentFixtures.withEngine(fake: fake, settings: settings) { engine, root in
+            try await engine.start(options: EngineOptions(downloadDirectory: root))
+            await fake.setResult("list", .object(["torrents": .array([TorrentFixtures.task([
+                "seed_time_seconds": .integer(60), "ratio": .double(0.1)
+            ])])]))
+            #expect(try await engine.snapshots().isEmpty)
+            #expect(await fake.sent.last?.method == "remove")
+            #expect(await fake.sent.last?.parameters["delete_files"] == .bool(false))
+            #expect(await engine.consumePolicyRemovals() == [TorrentFixtures.id])
+            #expect(await engine.consumePolicyRemovals().isEmpty)
+            await fake.setResult("list", .object(["torrents": .array([TorrentFixtures.task([
+                "seed_time_seconds": .integer(600), "state": .string("checking"), "ratio": .double(2)
+            ])])]))
+            _ = try await engine.snapshots()
+            #expect(await fake.sent.last?.method == "list")
+        }
+    }
+
     @Test("ready 前不发请求，ready 超时回收进程")
     func readyTimeout() async throws {
         let fake = TorrentFakeTransport(sendsReady: false)
@@ -147,7 +251,10 @@ import Testing
                 "download_limit": .integer(1234), "upload_limit": .integer(5678),
                 "max_active_downloads": .integer(3), "max_active_seeds": .integer(7),
                 "dht": .bool(false), "lsd": .bool(false), "port_mapping": .bool(false), "encryption": .string("require"),
-                "disk_cache_bytes": .integer(16 * 1_024 * 1_024), "blocked_clients": .array([])
+                "disk_cache_bytes": .integer(16 * 1_024 * 1_024), "blocked_clients": .array([]),
+                "skip_junk_files": .bool(true),
+                "junk_file_patterns": .array(TorrentEngineSettings.defaultJunkFilePatterns.map(TorrentdValue.string)),
+                "ip_blocklist_path": .string("")
             ])
             options.uploadLimit = 999
             try await engine.apply(options: options)

@@ -31,7 +31,8 @@ struct TorrentStatusMapper: Sendable {
                 fileCount: value.fileCount, selectedFileCount: value.selectedFileCount,
                 peerCount: value.numPeers, shareRatio: value.ratio
             ),
-            completedAt: value.completedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+            completedAt: value.completedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) },
+            writeDirectories: [URL(fileURLWithPath: value.savePath)]
         )
     }
 }

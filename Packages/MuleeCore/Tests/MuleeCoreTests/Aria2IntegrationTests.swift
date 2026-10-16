@@ -6,6 +6,133 @@ import Testing
 
 @Suite(.serialized, .enabled(if: Aria2IntegrationFixture.binaryAvailable))
 struct Aria2IntegrationTests {
+    @Test("真实请求携带来源、UA、Cookie、建议文件名和校验值")
+    func browserContextAndChecksum() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            try await fixture.engine.start(options: fixture.options)
+            let digest = SHA256.hash(data: fixture.payload).map { String(format: "%02x", $0) }.joined()
+            let checksum = try #require(DownloadChecksum(algorithm: .sha256, digest: digest))
+            let id = try await fixture.engine.add(
+                link: fixture.link("payload.bin"), directory: nil,
+                context: DownloadRequestContext(
+                    referer: URL(string: "https://example.org/page"), userAgent: "Browser/1",
+                    suggestedFilename: "suggested.bin", headers: ["X-Download": "context"], cookie: "session=test-only"
+                ), checksum: checksum
+            )
+            let completed = try await fixture.waitFor(id) { $0.status == .completed }
+            #expect(completed.savePath?.lastPathComponent == "suggested.bin")
+            let headers = await fixture.server.receivedHeaders
+            #expect(headers.contains { $0["referer"] == "https://example.org/page" && $0["user-agent"] == "Browser/1"
+                && $0["cookie"] == "session=test-only" && $0["x-download"] == "context" })
+        }
+    }
+
+    @Test("真实 HEAD 预检识别大小、ETag、网页与失效链接")
+    func resourceProbe() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            guard case .http(let url, _, _) = try fixture.link("payload.bin") else { return }
+            let identity = try await HTTPResourceProbe.inspect(url)
+            #expect(identity.size == Int64(fixture.payload.count))
+            #expect(identity.etag == "\"payload-v1\"")
+            let page = url.deletingLastPathComponent().appendingPathComponent("page.bin")
+            await #expect(throws: HTTPDownloadFailure.webPage) { try await HTTPResourceProbe.inspect(page) }
+            let expired = url.deletingLastPathComponent().appendingPathComponent("status-403.bin")
+            await #expect(throws: HTTPDownloadFailure.expiredLink) { try await HTTPResourceProbe.inspect(expired) }
+        }
+    }
+
+    @Test("换链通过 changeUri 保留路径与分块并继续下载")
+    func changeURIResumesSameFile() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            try await fixture.engine.start(options: fixture.options)
+            let id = try await fixture.engine.add(link: fixture.link("slow-original.bin"), directory: nil)
+            _ = try await fixture.waitFor(id) { $0.receivedBytes > 131_072 }
+            try await fixture.engine.pause(id)
+            let paused = try await fixture.waitFor(id) { $0.status == .paused }
+            guard case .http(let url, _, _) = try fixture.link("replacement.bin") else { return }
+            let replaced = try await fixture.engine.replaceURI(id, with: url, context: .init(), checksum: nil)
+            #expect(replaced == id)
+            try await fixture.engine.resume(replaced)
+            let completed = try await fixture.waitFor(replaced) { $0.status == .completed }
+            #expect(completed.savePath == paused.savePath)
+            let path = try #require(completed.savePath)
+            #expect(SHA256.hash(data: try Data(contentsOf: path)) == SHA256.hash(data: fixture.payload))
+            #expect(await fixture.server.rangeRequests > 0)
+        }
+    }
+
+    @Test("停态任务换链重建 GID 并从原控制文件续传")
+    func stoppedTaskReplacement() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            try await fixture.engine.start(options: fixture.options)
+            let id = try await fixture.engine.add(link: fixture.link("slow-stopped.bin"), directory: nil)
+            let active = try await fixture.waitFor(id) { $0.receivedBytes > 131_072 }
+            let rpc = try fixture.rpc()
+            let _: String = try await rpc.call("aria2.forceRemove", [.string(id)])
+            let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+            var status: Aria2RPCModels.Status = try await rpc.call("aria2.tellStatus", [.string(id)])
+            while status.status != "removed", ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(25))
+                status = try await rpc.call("aria2.tellStatus", [.string(id)])
+            }
+            #expect(status.status == "removed")
+            guard case .http(let url, _, _) = try fixture.link("replacement.bin") else { return }
+            let newID = try await fixture.engine.replaceURI(id, with: url, context: .init(), checksum: nil)
+            #expect(newID != id)
+            try await fixture.engine.resume(newID)
+            let completed = try await fixture.waitFor(newID) { $0.status == .completed }
+            #expect(completed.savePath == active.savePath)
+            #expect(await fixture.server.rangeRequests > 0)
+        }
+    }
+
+    @Test("aria2 校验失败以明确错误结束")
+    func checksumMismatch() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            try await fixture.engine.start(options: fixture.options)
+            let checksum = try #require(DownloadChecksum.parse(String(repeating: "0", count: 64)))
+            let id = try await fixture.engine.add(link: fixture.link("payload.bin"), directory: nil, context: .init(), checksum: checksum)
+            let failed = try await fixture.waitFor(id) { $0.status == .failed }
+            #expect(failed.errorMessage?.contains("校验值不一致") == true)
+        }
+    }
+
+    @Test("带 Cookie 的会话及周期性重建会话始终为 0600")
+    func cookieSessionPermissions() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            try await fixture.engine.start(options: fixture.options)
+            let id = try await fixture.engine.add(
+                link: fixture.link("slow-cookie.bin"), directory: nil,
+                context: DownloadRequestContext(cookie: "session=test-only"), paused: true
+            )
+            let rpc = try fixture.rpc()
+            for _ in 0..<2 {
+                let _: String = try await rpc.call("aria2.saveSession")
+                let file = fixture.state.appendingPathComponent("aria2.session")
+                let attributes = try FileManager.default.attributesOfItem(atPath: file.path)
+                #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
+                #expect(try String(contentsOf: file, encoding: .utf8).contains("Cookie: session=test-only"))
+            }
+            #expect(try await fixture.engine.snapshots().contains { $0.engineTaskID == id })
+        }
+    }
+
+    @Test("清除 HTTP 校验值保留暂停状态且不再执行旧校验")
+    func clearsChecksum() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            try await fixture.engine.start(options: fixture.options)
+            let checksum = try #require(DownloadChecksum.parse(String(repeating: "0", count: 64)))
+            let id = try await fixture.engine.add(
+                link: fixture.link("payload.bin"), directory: nil, context: .init(), checksum: checksum, paused: true
+            )
+            let updatedID = try await fixture.engine.setChecksum(id, checksum: nil)
+            #expect(updatedID != id)
+            _ = try await fixture.waitFor(updatedID) { $0.status == .paused }
+            try await fixture.engine.resume(updatedID)
+            _ = try await fixture.waitFor(updatedID) { $0.status == .completed }
+        }
+    }
+
     @Test("真实下载 SHA256 一致，目录覆盖及完成文件移入废纸篓")
     func downloadAndTrash() async throws {
         try await Aria2IntegrationFixture.withFixture { fixture in

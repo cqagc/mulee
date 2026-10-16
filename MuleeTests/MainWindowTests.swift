@@ -111,7 +111,7 @@ import Testing
         let identifiers = chrome.toolbarDefaultItemIdentifiers(chrome.toolbar)
         #expect(identifiers == [
             MainWindowToolbar.sidebar, .sidebarTrackingSeparator, .flexibleSpace,
-            MainWindowToolbar.newTask, MainWindowToolbar.toggleAll, MainWindowToolbar.speed,
+            MainWindowToolbar.newTask, MainWindowToolbar.toggleAll, MainWindowToolbar.slowMode, MainWindowToolbar.speed,
             MainWindowToolbar.inspector, .inspectorTrackingSeparator, MainWindowToolbar.search,
         ])
         var items: [NSToolbarItem] = []

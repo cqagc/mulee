@@ -2,6 +2,13 @@ import Foundation
 
 /// 下载列表里的一个任务。值类型，由引擎层更新后整体替换。
 public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
+    public enum PauseReason: String, Sendable, Hashable, Codable {
+        case diskSpace
+    }
+
+    /// 可选字段使旧版历史仍可解码；用户暂停不会被磁盘恢复逻辑接管。
+    public var pauseReason: PauseReason?
+    public var writeDirectories: [URL]?
     public let id: UUID
     /// 显示名（通常是文件名或视频标题）。
     public var name: String
@@ -27,6 +34,13 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
     public var sourceLink: String
     /// 浏览器提供的来源页面；旧任务记录没有此字段时为 nil。
     public var sourcePageURL: URL?
+    /// 历史中的上下文不包含 Cookie；有 Cookie 时按本任务 ID 从钥匙串读取。
+    public var requestContext: DownloadRequestContext?
+    public var hasRequestCookie: Bool?
+    public var httpIdentity: HTTPResourceIdentity?
+    public var httpValidationError: String?
+    public var checksum: DownloadChecksum?
+    public var checksumVerification: ChecksumVerification?
     /// 引擎内部的任务标识（例如 aria2 的 GID）；还没交给引擎时为 nil。
     public var engineTaskID: String?
     /// 文件在磁盘上的完整路径；引擎还没确定文件名时为 nil。

@@ -105,7 +105,11 @@ final class NewTaskModel {
         // TODO: 把逐任务画质和字幕选项传给视频引擎；当前使用全局设置。
         var expandedContexts = contexts
         for item in links {
-            for entry in item.selectedVideoEntries { expandedContexts[entry.link] = contexts[item.link] }
+            var context = contexts[item.link] ?? NewTaskContext()
+            context.requestContext = item.requestContext
+            context.checksum = item.checksum
+            expandedContexts[item.link] = context
+            for entry in item.selectedVideoEntries { expandedContexts[entry.link] = context }
         }
         model.addTasks(
             from: downloadLinks, autoExtract: autoExtract, directory: saveDirectory,
@@ -130,7 +134,10 @@ final class NewTaskModel {
     private func parseInput() {
         let previousLinks = Dictionary(uniqueKeysWithValues: links.map { ($0.id, $0) })
         links = parser(inputText).map { link in
-            previousLinks[link] ?? NewTaskLinkModel(link: link, metadataProvider: metadataProvider)
+            let item = previousLinks[link] ?? NewTaskLinkModel(link: link, metadataProvider: metadataProvider)
+            item.requestContext = contexts[link]?.requestContext ?? .init()
+            if previousLinks[link] == nil { item.checksumText = contexts[link]?.checksum?.aria2Value ?? "" }
+            return item
         }
     }
 }

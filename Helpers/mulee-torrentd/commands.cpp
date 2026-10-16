@@ -2,6 +2,13 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <fstream>
+#include <sstream>
+#include <fnmatch.h>
+#include <libtorrent/create_torrent.hpp>
+#include <libtorrent/ip_filter.hpp>
+#include <libtorrent/peer_info.hpp>
+#include <libtorrent/write_resume_data.hpp>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -132,6 +139,28 @@ json::object Session::configure(const json::object& params) {
             if (std::find(blocked.begin(), blocked.end(), rule) == blocked.end()) blocked.push_back(rule);
         }
     }
+    bool skip_junk = params.contains("skip_junk_files") ? bool_param(params, "skip_junk_files") : true;
+    auto patterns = junk_patterns_;
+    if (auto value = params.if_contains("junk_file_patterns")) {
+        if (!value->is_array() || value->as_array().size() > 256)
+            throw RequestError("invalid_params", "junk_file_patterns must contain at most 256 patterns");
+        patterns.clear();
+        for (const auto& item : value->as_array()) {
+            if (!item.is_string() || item.as_string().empty() || item.as_string().size() > 1024)
+                throw RequestError("invalid_params", "Invalid junk pattern");
+            patterns.emplace_back(item.as_string());
+        }
+    }
+    auto filters = ip_filters_;
+    if (params.contains("ip_blocklist_path")) {
+        auto path = string_param(params, "ip_blocklist_path");
+        filters["imported"] = path.empty() ? json::array{} : read_blocklist(absolute_path(path));
+    }
+    apply_ip_filters(filters);
+    persistence_.save_filters(filters);
+    ip_filters_ = std::move(filters);
+    skip_junk_files_ = skip_junk;
+    junk_patterns_ = std::move(patterns);
     fs::create_directories(directory);
     if (port == 0 || port != listen_port()) port = available_port(port);
     lt::settings_pack settings;
@@ -272,6 +301,22 @@ json::object Session::add(const json::object& params) {
         if (auto values = params.if_contains("file_priorities"))
             add.file_priorities = priorities(*values, add.ti->num_files());
     }
+    metadata.junk_pending = skip_junk_files_ && !params.contains("file_priorities");
+    metadata.junk_patterns = junk_patterns_;
+    if (metadata.junk_pending && add.ti) {
+        const auto& files = add.ti->files();
+        add.file_priorities.assign(add.ti->num_files(), lt::default_priority);
+        for (auto index : files.file_range()) {
+            auto name = fs::path(files.file_path(index)).filename().string();
+            if (std::any_of(junk_patterns_.begin(), junk_patterns_.end(), [&](const auto& pattern) {
+                return fnmatch(pattern.c_str(), name.c_str(), FNM_CASEFOLD) == 0;
+            })) {
+                add.file_priorities[static_cast<int>(index)] = lt::dont_download;
+                metadata.skipped_files.push_back(json::object{{"index", static_cast<int>(index)}, {"path", files.file_path(index)}});
+            }
+        }
+        metadata.junk_pending = false;
+    }
     auto id = torrent_id(add.info_hashes);
     auto duplicate = torrents_.find(id);
     if (duplicate != torrents_.end()) {
@@ -284,7 +329,7 @@ json::object Session::add(const json::object& params) {
         }
         save(duplicate->second);
         auto name = handle.status().name;
-        return {{"id", id}, {"name", name.empty() ? id : name}, {"duplicate", true}};
+        return {{"id", id}, {"name", name.empty() ? id : name}, {"duplicate", true}, {"skipped_files", duplicate->second.metadata.skipped_files}};
     }
     fs::create_directories(path);
     add.save_path = path;
@@ -312,13 +357,14 @@ json::object Session::add(const json::object& params) {
         throw;
     }
     auto name = handle.status().name;
-    return {{"id", id}, {"name", name.empty() ? id : name}, {"duplicate", false}};
+    return {{"id", id}, {"name", name.empty() ? id : name}, {"duplicate", false}, {"skipped_files", metadata.skipped_files}};
 }
 
 json::object Session::add_trackers(Torrent& torrent, const json::object& params) {
     auto info = torrent.handle.torrent_file();
     if (!info) throw RequestError("metadata_pending", "Retry after torrent metadata is available");
     if (info->priv()) throw RequestError("private_torrent", "Cannot append trackers to a private torrent");
+    bool subscription = params.contains("subscription") ? bool_param(params, "subscription") : false;
     const auto& urls = required(params, "urls");
     if (!urls.is_array() || urls.as_array().size() > 50)
         throw RequestError("invalid_params", "urls must contain at most 50 tracker URLs");
@@ -334,10 +380,14 @@ json::object Session::add_trackers(Torrent& torrent, const json::object& params)
             || (scheme != "http" && scheme != "https" && scheme != "udp")
             || std::any_of(url.begin(), url.end(), [](unsigned char c) { return c <= 32 || c == 127; }))
             throw RequestError("invalid_params", "Expected an HTTP, HTTPS or UDP tracker URL");
+        if (torrent.metadata.tracker_state.contains(url)) continue;
         if (std::none_of(trackers.begin(), trackers.end(), [&](const auto& entry) { return entry.url == url; })
             && std::find(additions.begin(), additions.end(), url) == additions.end()) additions.push_back(url);
     }
-    if (!additions.empty() && trackers.size() + additions.size() > 50)
+    std::size_t suspended = 0;
+    for (const auto& entry : torrent.metadata.tracker_state)
+        if (entry.value().as_object().at("disabled_until").as_int64() > unix_time()) ++suspended;
+    if (!additions.empty() && trackers.size() + suspended + additions.size() > 50)
         throw RequestError("tracker_limit", "Torrent tracker limit is 50");
     // A separate, unused tier avoids changing the original tracker's failover group.
     int tier = 0;
@@ -348,15 +398,466 @@ json::object Session::add_trackers(Torrent& torrent, const json::object& params)
         lt::announce_entry tracker(url);
         tracker.tier = static_cast<std::uint8_t>(tier);
         torrent.handle.add_tracker(tracker);
+        if (subscription) torrent.metadata.tracker_state[url] = json::object{
+            {"tier", tier}, {"subscription", true}, {"failures", 0}, {"disabled_until", 0},
+            {"last_result", ""}, {"peers", 0}};
     }
     if (!additions.empty()) {
         torrent.last_diagnostics = {};
         save(torrent);
     }
-    return {{"added", additions.size()}, {"total", trackers.size() + additions.size()}};
+    return {{"added", additions.size()}, {"total", trackers.size() + suspended + additions.size()}};
+}
+
+
+void Session::apply_junk_filter(Torrent& torrent) {
+    auto info = torrent.handle.torrent_file();
+    if (!info || !torrent.metadata.junk_pending) return;
+    auto values = torrent.handle.get_file_priorities();
+    const auto& files = info->files();
+    for (auto index : files.file_range()) {
+        auto name = fs::path(files.file_path(index)).filename().string();
+        if (std::any_of(torrent.metadata.junk_patterns.begin(), torrent.metadata.junk_patterns.end(), [&](const auto& pattern) {
+            return fnmatch(pattern.c_str(), name.c_str(), FNM_CASEFOLD) == 0;
+        })) {
+            values.at(static_cast<int>(index)) = lt::dont_download;
+            torrent.metadata.skipped_files.push_back(json::object{{"index", static_cast<int>(index)}, {"path", files.file_path(index)}});
+        }
+    }
+    torrent.metadata.junk_pending = false;
+    torrent.handle.prioritize_files(values);
+    persistence_.save_meta(torrent_id(torrent.handle.info_hashes()), torrent.metadata);
+}
+
+void Session::wait_storage() {
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(300);
+    while (storage_pending_ > 0 && std::chrono::steady_clock::now() < deadline) {
+        session_.wait_for_alert(std::chrono::milliseconds(25));
+        alerts();
+    }
+    if (storage_pending_ > 0) throw RequestError("io_error", "Storage operation timed out; inspect task state before retrying");
+    if (!storage_error_.empty()) throw RequestError(storage_error_code_, storage_error_);
+}
+
+namespace {
+std::string trim(std::string value) {
+    auto first = value.find_first_not_of(" \t\r\n");
+    return first == std::string::npos ? "" : value.substr(first, value.find_last_not_of(" \t\r\n") - first + 1);
+}
+
+void validate_relative(const std::string& value) {
+    fs::path path(value);
+    if (value.empty() || path.is_absolute()) throw RequestError("invalid_params", "Expected a relative file path");
+    for (const auto& part : path)
+        if (part == ".." || part == "." || part.empty()) throw RequestError("invalid_params", "Unsafe file path");
+}
+
+lt::address block_address(std::string value, lt::error_code& error) {
+    value = trim(std::move(value));
+    if (value.find(':') != std::string::npos) return lt::make_address(value, error);
+    // DAT 常用补零的十进制 IPv4，不能交给地址解析器当作八进制或非法地址。
+    std::string normalized;
+    std::size_t start = 0;
+    for (int i = 0; i < 4; ++i) {
+        auto end = value.find('.', start);
+        if ((i < 3 && end == std::string::npos) || (i == 3 && end != std::string::npos))
+            return lt::make_address(value, error);
+        auto part = value.substr(start, end == std::string::npos ? end : end - start);
+        if (part.empty() || part.size() > 3 || part.find_first_not_of("0123456789") != std::string::npos)
+            return lt::make_address(value, error);
+        int octet = std::stoi(part);
+        if (octet > 255) return lt::make_address(value, error);
+        if (i > 0) normalized += ".";
+        normalized += std::to_string(octet);
+        if (i < 3) start = end + 1;
+    }
+    return lt::make_address(normalized, error);
+}
+
+void validate_tracker(const std::string& url) {
+    lt::error_code error;
+    auto parsed = lt::parse_url_components(url, error);
+    const auto& scheme = std::get<0>(parsed);
+    if (url.size() > 2048 || error || std::get<2>(parsed).empty()
+        || (scheme != "http" && scheme != "https" && scheme != "udp")
+        || std::any_of(url.begin(), url.end(), [](unsigned char c) { return c <= 32 || c == 127; }))
+        throw RequestError("invalid_params", "Expected an HTTP, HTTPS or UDP tracker URL");
+}
+}
+
+json::array Session::read_blocklist(const std::string& path) {
+    if (!fs::is_regular_file(path) || fs::file_size(path) > 64 * 1024 * 1024)
+        throw RequestError("io_error", "Cannot read blocklist, or blocklist exceeds 64 MiB");
+    std::ifstream input(path);
+    if (!input) throw RequestError("io_error", "Cannot open blocklist");
+    json::array result;
+    std::string line;
+    int line_number = 0;
+    while (std::getline(input, line)) {
+        ++line_number;
+        line = trim(line);
+        if (line.empty() || line.front() == '#' || line.front() == ';') continue;
+        auto comma = line.find(',');
+        std::string range;
+        bool block = true;
+        if (comma != std::string::npos) {
+            auto next = line.find(',', comma + 1);
+            if (next == std::string::npos) throw RequestError("invalid_params", "Invalid DAT line " + std::to_string(line_number));
+            auto level = trim(line.substr(comma + 1, next - comma - 1));
+            if (level.empty() || level.find_first_not_of("0123456789") != std::string::npos || level.size() > 3)
+                throw RequestError("invalid_params", "Invalid DAT level");
+            block = std::stoi(level) < 127;
+            range = trim(line.substr(0, comma));
+        } else {
+            auto colon = line.find(':');
+            if (colon == std::string::npos) throw RequestError("invalid_params", "Invalid P2P line " + std::to_string(line_number));
+            range = trim(line.substr(colon + 1));
+        }
+        auto dash = range.find('-');
+        if (dash == std::string::npos) throw RequestError("invalid_params", "Missing IP range");
+        lt::error_code first_error, last_error;
+        auto first = block_address(range.substr(0, dash), first_error);
+        auto last = block_address(range.substr(dash + 1), last_error);
+        if (first_error || last_error || first.is_v4() != last.is_v4() || last < first)
+            throw RequestError("invalid_params", "Invalid IP range on line " + std::to_string(line_number));
+        if (block) result.push_back(json::object{{"first", first.to_string()}, {"last", last.to_string()}});
+    }
+    if (input.bad()) throw RequestError("io_error", "Cannot read blocklist");
+    return result;
+}
+
+void Session::apply_ip_filters(const json::object& filters) {
+    lt::ip_filter filter;
+    if (auto values = filters.if_contains("imported")) {
+        for (const auto& value : values->as_array()) {
+            const auto& range = value.as_object();
+            filter.add_rule(lt::make_address(string_param(range, "first")),
+                lt::make_address(string_param(range, "last")), lt::ip_filter::blocked);
+        }
+    }
+    if (auto values = filters.if_contains("banned")) {
+        for (const auto& value : values->as_array()) {
+            auto address = lt::make_address(std::string(value.as_string()));
+            filter.add_rule(address, address, lt::ip_filter::blocked);
+        }
+    }
+    // IP 访问控制与现有的全局带宽 peer class 分开，避免覆盖限速规则。
+    session_.set_ip_filter(filter);
+    session_.get_settings();
+}
+
+void Session::refresh_trackers(Torrent& torrent) {
+    auto trackers = torrent.handle.trackers();
+    bool changed = false;
+    for (auto& entry : torrent.metadata.tracker_state) {
+        auto& state = entry.value().as_object();
+        auto until = state.at("disabled_until").as_int64();
+        if (until == 0) continue;
+        auto found = std::find_if(trackers.begin(), trackers.end(), [&](const auto& tracker) { return tracker.url == entry.key(); });
+        if (until > unix_time()) {
+            if (found != trackers.end()) { trackers.erase(found); changed = true; }
+        } else {
+            if (found == trackers.end()) {
+                lt::announce_entry tracker(std::string(entry.key()));
+                tracker.tier = static_cast<std::uint8_t>(state.at("tier").as_int64());
+                trackers.push_back(tracker);
+                changed = true;
+            }
+            state["disabled_until"] = 0;
+            state["failures"] = 0;
+            persistence_.save_meta(torrent_id(torrent.handle.info_hashes()), torrent.metadata);
+        }
+    }
+    if (changed) { torrent.handle.replace_trackers(trackers); save(torrent); }
+}
+
+void Session::tracker_result(Torrent& torrent, const std::string& url, const std::string& result, int peers, bool failed) {
+    auto info = torrent.handle.torrent_file();
+    auto value = torrent.metadata.tracker_state.if_contains(url);
+    if (!value) {
+        auto trackers = torrent.handle.trackers();
+        auto found = std::find_if(trackers.begin(), trackers.end(), [&](const auto& entry) { return entry.url == url; });
+        if (found == trackers.end()) return;
+        torrent.metadata.tracker_state[url] = json::object{{"tier", found->tier}, {"subscription", false},
+            {"failures", 0}, {"disabled_until", 0}, {"last_result", ""}, {"peers", 0}};
+        value = torrent.metadata.tracker_state.if_contains(url);
+    }
+    auto& state = value->as_object();
+    state["last_result"] = result;
+    state["peers"] = peers;
+    auto failures = failed ? state.at("failures").as_int64() + 1 : 0;
+    state["failures"] = failures;
+    if (failed && failures >= 3 && info && !info->priv() && state.at("subscription").as_bool()
+        && state.at("disabled_until").as_int64() == 0) {
+        state["disabled_until"] = unix_time() + 24 * 60 * 60;
+        refresh_trackers(torrent);
+    }
+    persistence_.save_meta(torrent_id(torrent.handle.info_hashes()), torrent.metadata);
+}
+
+json::object Session::tracker_list(Torrent& torrent) {
+    refresh_trackers(torrent);
+    json::array result;
+    for (const auto& entry : torrent.handle.trackers()) {
+        bool working = false, failed = false;
+        std::string message;
+        int peers = 0;
+        for (const auto& endpoint : entry.endpoints) {
+            for (const auto& hash : endpoint.info_hashes) {
+                working = working || (hash.start_sent && !hash.last_error && hash.fails == 0);
+                failed = failed || bool(hash.last_error) || hash.fails > 0;
+                if (!hash.message.empty()) message = hash.message;
+                else if (hash.last_error) message = hash.last_error.message();
+                peers = std::max(peers, std::max(0, hash.scrape_complete) + std::max(0, hash.scrape_incomplete));
+            }
+        }
+        auto stored = torrent.metadata.tracker_state.if_contains(entry.url);
+        if (stored) {
+            const auto& state = stored->as_object();
+            message = string_param(state, "last_result");
+            peers = static_cast<int>(state.at("peers").as_int64());
+        }
+        result.push_back(json::object{{"url", entry.url}, {"tier", entry.tier},
+            {"status", working ? "working" : failed ? "failed" : "pending"},
+            {"last_result", message}, {"peers", peers}, {"disabled_until", 0},
+            {"subscription", stored ? stored->as_object().at("subscription").as_bool() : false}});
+    }
+    for (const auto& entry : torrent.metadata.tracker_state) {
+        const auto& state = entry.value().as_object();
+        if (state.at("disabled_until").as_int64() <= unix_time()) continue;
+        result.push_back(json::object{{"url", entry.key()}, {"tier", state.at("tier")}, {"status", "disabled"},
+            {"last_result", state.at("last_result")}, {"peers", state.at("peers")},
+            {"disabled_until", state.at("disabled_until")}, {"subscription", state.at("subscription")}});
+    }
+    return {{"trackers", result}};
+}
+
+json::object Session::manage(const std::string& method, const json::object& params) {
+    if (method == "ban_ip") {
+        lt::error_code error;
+        auto address = lt::make_address(string_param(params, "ip"), error);
+        if (error) throw RequestError("invalid_params", "Expected an IP address");
+        auto filters = ip_filters_;
+        if (!filters.contains("banned")) filters["banned"] = json::array{};
+        auto& banned = filters.at("banned").as_array();
+        json::value value(address.to_string());
+        if (std::find(banned.begin(), banned.end(), value) == banned.end()) banned.push_back(value);
+        persistence_.save_filters(filters);
+        apply_ip_filters(filters);
+        ip_filters_ = std::move(filters);
+        return {};
+    }
+    if (method == "import_ip_blocklist") {
+        auto ranges = read_blocklist(absolute_path(string_param(params, "path")));
+        auto filters = ip_filters_;
+        filters["imported"] = ranges;
+        persistence_.save_filters(filters);
+        apply_ip_filters(filters);
+        ip_filters_ = std::move(filters);
+        return {{"blocked_ranges", ranges.size()}};
+    }
+    if (method == "create_torrent") {
+        auto source = fs::path(absolute_path(string_param(params, "path"))).lexically_normal();
+        auto destination = absolute_path(string_param(params, "output"));
+        bool private_torrent = bool_param(params, "private");
+        const auto& trackers = required(params, "trackers");
+        if (!trackers.is_array() || trackers.as_array().size() > 50)
+            throw RequestError("invalid_params", "Expected at most 50 trackers");
+        for (const auto& url : trackers.as_array()) {
+            if (!url.is_string()) throw RequestError("invalid_params", "Expected tracker URL");
+            validate_tracker(std::string(url.as_string()));
+        }
+        if (!fs::exists(source) || fs::is_symlink(source) || (!fs::is_directory(source) && !fs::is_regular_file(source)))
+            throw RequestError("io_error", "Expected a file or directory");
+        if (fs::exists(destination)) throw RequestError("conflict", "Destination already exists");
+        if (fs::is_directory(source)) {
+            for (const auto& entry : fs::recursive_directory_iterator(source))
+                if (entry.is_symlink()) throw RequestError("invalid_params", "Symbolic links cannot be included");
+        }
+        lt::file_storage files;
+        lt::add_files(files, source.string());
+        if (files.num_files() == 0) throw RequestError("invalid_params", "Source contains no files");
+        lt::create_torrent creator(files, 0); // 不传 v1_only/v2_only，生成自动分块的混合种子。
+        creator.set_priv(private_torrent);
+        int tier = 0;
+        for (const auto& url : trackers.as_array()) creator.add_tracker(std::string(url.as_string()), tier++);
+        if (params.contains("comment")) creator.set_comment(string_param(params, "comment").c_str());
+        lt::error_code error;
+        lt::set_piece_hashes(creator, source.parent_path().string(), error);
+        if (error) throw RequestError("io_error", error.message());
+        auto buffer = creator.generate_buf();
+        persistence_.write_torrent(destination, buffer);
+        lt::torrent_info info(lt::span<char const>(buffer), error, lt::from_span);
+        if (error) throw RequestError("invalid_torrent", error.message());
+        return {{"path", destination}, {"id", torrent_id(info.info_hashes())}};
+    }
+    auto& torrent = find(params);
+    auto& handle = torrent.handle;
+    if (method == "trackers") return tracker_list(torrent);
+    if (method == "set_trackers") {
+        const auto& values = required(params, "trackers");
+        if (!values.is_array() || values.as_array().size() > 50)
+            throw RequestError("invalid_params", "Expected at most 50 trackers");
+        std::vector<lt::announce_entry> trackers;
+        json::object states;
+        for (const auto& value : values.as_array()) {
+            if (!value.is_object()) throw RequestError("invalid_params", "Expected tracker object");
+            const auto& item = value.as_object();
+            auto url = string_param(item, "url");
+            validate_tracker(url);
+            int tier = int_param(item, "tier", 255);
+            if (std::any_of(trackers.begin(), trackers.end(), [&](const auto& entry) { return entry.url == url; }))
+                throw RequestError("invalid_params", "Duplicate tracker URL");
+            lt::announce_entry entry(url);
+            entry.tier = static_cast<std::uint8_t>(tier);
+            trackers.push_back(entry);
+            bool subscription = item.contains("subscription") ? bool_param(item, "subscription") : false;
+            auto existing = torrent.metadata.tracker_state.if_contains(url);
+            states[url] = existing ? *existing : json::value(json::object{
+                {"subscription", subscription}, {"tier", tier}, {"failures", 0},
+                {"disabled_until", 0}, {"last_result", ""}, {"peers", 0}});
+            states[url].as_object()["tier"] = tier;
+            states[url].as_object()["subscription"] = subscription;
+            if (!subscription) states[url].as_object()["disabled_until"] = 0;
+        }
+        torrent.metadata.tracker_state = std::move(states);
+        handle.replace_trackers(trackers);
+        refresh_trackers(torrent);
+        save(torrent);
+        persistence_.save_meta(string_param(params, "id"), torrent.metadata);
+        return {};
+    }
+    if (method == "peers") {
+        std::vector<lt::peer_info> peers;
+        handle.get_peer_info(peers);
+        json::array result;
+        for (const auto& peer : peers) {
+            json::array sources;
+            if (peer.source & lt::peer_info::tracker) sources.push_back("tracker");
+            if (peer.source & lt::peer_info::dht) sources.push_back("dht");
+            if (peer.source & lt::peer_info::pex) sources.push_back("pex");
+            if (peer.source & lt::peer_info::lsd) sources.push_back("lsd");
+            if (peer.source & lt::peer_info::incoming) sources.push_back("incoming");
+            result.push_back(json::object{{"address", peer.ip.address().to_string()}, {"port", peer.ip.port()},
+                {"client", peer.client}, {"progress", static_cast<double>(peer.progress)},
+                {"download_rate", peer.payload_down_speed}, {"upload_rate", peer.payload_up_speed},
+                {"sources", sources}, {"connection", (peer.flags & lt::peer_info::utp_socket) ? "utp" : "tcp"}});
+        }
+        return {{"peers", result}};
+    }
+    if (method == "force_recheck" || method == "force_reannounce") {
+        if (method == "force_recheck") handle.force_recheck();
+        else handle.force_reannounce(0, -1, lt::torrent_handle::ignore_min_interval);
+        save(torrent);
+        return {};
+    }
+    auto info = handle.torrent_file();
+    if (!info) throw RequestError("metadata_pending", "Retry after torrent metadata is available");
+    if (method == "export_torrent") {
+        auto output = absolute_path(string_param(params, "output"));
+        // v2 完整哈希树只在 resume data 中，不能用 torrent_file() 直接往返导出。
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+        while (pending_resume_.count(handle) && std::chrono::steady_clock::now() < deadline) {
+            session_.wait_for_alert(std::chrono::milliseconds(25));
+            alerts();
+        }
+        if (pending_resume_.count(handle)) throw RequestError("io_error", "Pending resume save timed out");
+        export_handle_ = handle;
+        export_resume_.reset();
+        export_error_.clear();
+        save(torrent);
+        while (!export_resume_ && export_error_.empty() && std::chrono::steady_clock::now() < deadline) {
+            session_.wait_for_alert(std::chrono::milliseconds(25));
+            alerts();
+        }
+        export_handle_ = {};
+        if (!export_error_.empty()) throw RequestError("io_error", export_error_);
+        if (!export_resume_) throw RequestError("io_error", "Export resume save timed out");
+        auto add = std::move(*export_resume_);
+        export_resume_.reset();
+        add.trackers.clear();
+        add.tracker_tiers.clear();
+        // 保留原始 info 和 v2 piece layers，同时使用编辑后的 tracker。
+        for (const auto& tracker : handle.trackers()) {
+            add.trackers.push_back(tracker.url);
+            add.tracker_tiers.push_back(tracker.tier);
+        }
+        auto buffer = lt::write_torrent_file_buf(add, {});
+        persistence_.write_torrent(output, buffer);
+        return {{"path", output}, {"id", torrent_id(info->info_hashes())}};
+    }
+    storage_handle_ = handle;
+    storage_error_.clear();
+    storage_error_code_ = "io_error";
+    storage_pending_ = 0;
+    if (method == "move_storage") {
+        auto path = absolute_path(string_param(params, "path"));
+        auto conflict = string_param(params, "conflict");
+        if (conflict != "fail" && conflict != "keep" && conflict != "overwrite")
+            throw RequestError("invalid_params", "conflict must be fail, keep or overwrite");
+        if (fs::path(path).lexically_normal() == fs::path(handle.status().save_path).lexically_normal()) return {};
+        if (conflict == "fail") {
+            for (auto index : info->files().file_range())
+                if (fs::exists(fs::path(path) / info->files().file_path(index)))
+                    throw RequestError("conflict", "Destination contains a torrent file");
+        }
+        fs::create_directories(path);
+        auto original_flags = handle.flags();
+        auto restore_activity = [&] {
+            if (original_flags & lt::torrent_flags::auto_managed) handle.set_flags(lt::torrent_flags::auto_managed);
+            if (!(original_flags & lt::torrent_flags::paused)) handle.resume();
+        };
+        if (conflict == "keep") {
+            // 接管目标文件前先停写，校验后再恢复，避免覆盖选择保留的内容。
+            handle.unset_flags(lt::torrent_flags::auto_managed);
+            handle.pause();
+        }
+        storage_pending_ = 1;
+        handle.move_storage(path, conflict == "fail" ? lt::move_flags_t::fail_if_exist
+            : conflict == "keep" ? lt::move_flags_t::dont_replace : lt::move_flags_t::always_replace_files);
+        try { wait_storage(); } catch (...) {
+            if (conflict == "keep") restore_activity();
+            throw;
+        }
+        if (conflict == "keep") {
+            handle.force_recheck();
+            restore_activity();
+        }
+    } else if (method == "rename_file") {
+        auto from = string_param(params, "path");
+        auto to = string_param(params, "new_path");
+        validate_relative(from);
+        validate_relative(to);
+        std::vector<std::pair<lt::file_index_t, std::string>> changes;
+        for (auto index : info->files().file_range()) {
+            auto name = info->files().file_path(index);
+            if (name == from || name.compare(0, from.size() + 1, from + "/") == 0) {
+                auto replacement = to + name.substr(from.size());
+                auto destination = fs::path(handle.status().save_path) / replacement;
+                if (replacement != name && fs::exists(destination)) throw RequestError("conflict", "Rename destination exists");
+                for (auto other : info->files().file_range())
+                    if (other != index && info->files().file_path(other) == replacement)
+                        throw RequestError("conflict", "Rename collides with another torrent file");
+                changes.emplace_back(index, replacement);
+            }
+        }
+        if (changes.empty()) throw RequestError("not_found", "File or folder not found");
+        if (from == to) return {};
+        for (const auto& change : changes) {
+            storage_pending_ = 1;
+            handle.rename_file(change.first, change.second);
+            wait_storage();
+        }
+    }
+    save(torrent);
+    return {};
 }
 
 json::object Session::execute(const std::string& method, const json::object& params) {
+    if (method == "move_storage" || method == "rename_file" || method == "force_recheck"
+        || method == "force_reannounce" || method == "trackers" || method == "set_trackers"
+        || method == "peers" || method == "ban_ip" || method == "import_ip_blocklist"
+        || method == "create_torrent" || method == "export_torrent") return manage(method, params);
     if (method == "configure") return configure(params);
     if (method == "set_extra_port_mappings") return set_extra_port_mappings(params);
     if (method == "add") return add(params);
@@ -364,6 +865,15 @@ json::object Session::execute(const std::string& method, const json::object& par
         json::array result;
         for (auto& entry : torrents_) {
             auto status = entry.second.handle.status();
+            auto& metadata = entry.second.metadata;
+            auto duration = status.finished_duration.count();
+            auto payload = status.all_time_upload + status.all_time_download;
+            // 只累计活跃且已完成的时间，重启和暂停不会丢失已有不活跃计数。
+            if (payload != metadata.last_payload_total || !status.is_finished)
+                metadata.seed_inactive_seconds = 0;
+            else metadata.seed_inactive_seconds += std::max<std::int64_t>(0, duration - metadata.last_finished_duration);
+            metadata.last_finished_duration = duration;
+            metadata.last_payload_total = payload;
             if (status.has_metadata && status.is_finished) {
                 mark_completed(entry.second);
             } else if (status.has_metadata && !entry.second.metadata.completed_at.is_null()

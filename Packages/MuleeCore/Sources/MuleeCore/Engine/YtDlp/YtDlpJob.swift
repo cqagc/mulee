@@ -24,7 +24,8 @@ struct YtDlpJob: Codable, Sendable {
             receivedBytes: progress?.receivedBytes ?? receivedBytes,
             downloadRate: status == .downloading ? (progress?.rate ?? 0) : 0,
             uploadRate: 0, status: status, connections: status == .downloading ? 1 : 0,
-            savePath: savePath, sourceURL: url, errorMessage: errorMessage
+            savePath: savePath, sourceURL: url, errorMessage: errorMessage,
+            writeDirectories: [directory]
         )
     }
 }

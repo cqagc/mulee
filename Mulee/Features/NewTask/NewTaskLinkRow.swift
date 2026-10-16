@@ -44,6 +44,7 @@ struct NewTaskLinkRow: View {
             if item.link.kind == .video {
                 NewTaskVideoOptionsView(item: item)
             }
+            NewTaskChecksumView(item: item)
         }
     }
 }

@@ -23,6 +23,11 @@ final class DownloadCoordinator {
     private var revisions: [TaskKind: Int] = [:]
     private var excludedTaskIDs: [TaskKind: Set<String>] = [:]
     private var isPolling = false
+    private var checksumJobs: [UUID: Task<Void, Never>] = [:]
+    private var checkedCompletions: Set<UUID> = []
+    private var replacingHTTPTasks: Set<UUID> = []
+    private var checkedHTTPFiles: Set<URL> = []
+    private var httpFileIssues: [URL: String] = [:]
     private let scheduling: DownloadScheduling
 
     init(
@@ -157,6 +162,8 @@ final class DownloadCoordinator {
 
     func stop() async {
         generation = nil
+        for job in checksumJobs.values { job.cancel() }
+        checksumJobs.removeAll()
         model.bitTorrent?.stop()
         model.ed2k?.stop()
         waitingVideoLinks.removeAll()
@@ -207,9 +214,17 @@ final class DownloadCoordinator {
                 snapshots[kind]?.removeAll { model.excludedVideoTaskIDs.contains($0.engineTaskID) }
             }
         }
+        if let http = snapshots[.http] {
+            snapshots[.http] = await validateHTTPCompletions(http)
+            guard generation == token else { return }
+            snapshots = snapshots.filter { kind, _ in
+                pendingAdds[kind, default: 0] == 0 && revisions[kind, default: 0] == snapshotRevisions[kind]
+            }
+        }
         model.tasks = EngineSnapshotMerger.merge(
             tasks: model.tasks, snapshots: snapshots, now: .now, videoConfiguration: videoConfiguration
         )
+        checkCompletedFiles()
         if let selected = model.selectedTaskID, !model.tasks.contains(where: { $0.id == selected }) {
             model.selectedTaskID = nil
         }
@@ -223,11 +238,19 @@ final class DownloadCoordinator {
         links: [ParsedLink], autoExtract: Bool, directory: URL? = nil,
         filePriorities: [ParsedLink: [Int]] = [:],
         torrentDownloadModes: [ParsedLink: (sequentialDownload: Bool, firstLastPriority: Bool)] = [:],
-        videoEntries: [ParsedLink: YtDlpPlaylistEntry] = [:]
+        videoEntries: [ParsedLink: YtDlpPlaylistEntry] = [:],
+        requestContexts: [ParsedLink: DownloadRequestContext] = [:],
+        checksums: [ParsedLink: DownloadChecksum] = [:]
     ) async {
         var insertionIndex = 0
         for link in links {
             var task = DownloadTask(link: link, autoExtract: autoExtract)
+            task.requestContext = requestContexts[link]?.withoutCookie
+            task.checksum = checksums[link]
+            if link.kind == .http, let name = requestContexts[link]?.suggestedFilename {
+                task.name = name
+                task.fileExtension = URL(fileURLWithPath: name).pathExtension
+            }
             if let entry = videoEntries[link] { task.name = entry.taskTitle }
             if let detail = videoConfiguration.detail(for: link) {
                 task.detail = detail
@@ -250,7 +273,36 @@ final class DownloadCoordinator {
                 pendingAdds[link.kind, default: 0] += 1
                 do {
                     let queued = shouldQueueNewTask()
-                    if let torrent = engine as? TorrentEngine {
+                    if let http = engine as? Aria2Engine {
+                        let context = requestContexts[link] ?? DownloadRequestContext()
+                        try context.validate()
+                        if case .http(let url, _, _) = link {
+                            let name = context.suggestedFilename ?? url.lastPathComponent
+                            if !name.isEmpty, name != "/" {
+                                task.savePath = (directory ?? latestOptions?.downloadDirectory)?.appendingPathComponent(name)
+                            }
+                        }
+                        if let cookie = context.requestCookie {
+                            try await DownloadRequestCookieStore.shared.save(cookie, taskID: task.id)
+                            task.hasRequestCookie = true
+                        }
+                        if case .http(let url, _, _) = link, ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
+                            do {
+                                task.httpIdentity = try await HTTPResourceProbe.inspect(
+                                    url, context: context, expectsHTML: ["html", "htm"].contains(url.pathExtension.lowercased())
+                                )
+                            } catch let failure as HTTPDownloadFailure {
+                                throw failure
+                            } catch is CancellationError {
+                                throw CancellationError()
+                            } catch {
+                                // 预检网络失败时仍让 aria2 执行其重试策略；换链时必须取得可比对身份。
+                            }
+                        }
+                        task.engineTaskID = try await http.add(
+                            link: link, directory: directory, context: context, checksum: task.checksum, paused: queued
+                        )
+                    } else if let torrent = engine as? TorrentEngine {
                         let mode = torrentDownloadModes[link]
                         let id = try await torrent.add(
                             link: link, directory: directory, filePriorities: filePriorities[link], paused: queued || mode != nil
@@ -301,6 +353,217 @@ final class DownloadCoordinator {
 
     func resume(_ id: DownloadTask.ID) async {
         await perform(id, action: .resume)
+    }
+
+    func setChecksum(_ id: UUID, checksum: DownloadChecksum?) async throws {
+        guard let task = model.tasks.first(where: { $0.id == id }) else { return }
+        if task.kind == .http, let engineID = task.engineTaskID,
+           ![.completed, .failed].contains(task.status), let engine = engine(for: .http) as? Aria2Engine {
+            pendingAdds[.http, default: 0] += 1
+            defer {
+                pendingAdds[.http, default: 0] -= 1
+                revisions[.http, default: 0] += 1
+            }
+            let updatedID = try await engine.setChecksum(engineID, checksum: checksum)
+            guard model.tasks.contains(where: { $0.id == id }) else {
+                if updatedID != engineID { try await engine.remove(updatedID, deleteFiles: false) }
+                return
+            }
+            if updatedID != engineID, let index = model.tasks.firstIndex(where: { $0.id == id }) {
+                excludeFromSnapshots(task)
+                model.tasks[index].engineTaskID = updatedID
+                if task.status != .paused {
+                    model.tasks[index].status = .queued
+                    scheduling.queue(model.tasks[index])
+                }
+            }
+        }
+        guard let index = model.tasks.firstIndex(where: { $0.id == id }) else { return }
+        checksumJobs[id]?.cancel()
+        checksumJobs[id] = nil
+        checkedCompletions.remove(id)
+        model.tasks[index].checksum = checksum
+        model.tasks[index].checksumVerification = nil
+        checkCompletedFiles()
+        await refreshScheduling(sample: false)
+    }
+
+    func replaceHTTPLink(_ id: UUID, newURL: URL, restartFromScratch: Bool = false) async throws {
+        guard let task = model.tasks.first(where: { $0.id == id }), task.kind == .http,
+              let http = engine(for: .http) as? Aria2Engine else { throw EngineError.notRunning }
+        guard replacingHTTPTasks.insert(id).inserted else { return }
+        defer { replacingHTTPTasks.remove(id) }
+        let token = generation
+        var context = task.requestContext ?? DownloadRequestContext()
+        let previous = URL(string: task.sourceLink)
+        let sameOrigin = previous?.host == newURL.host && previous?.scheme == newURL.scheme && previous?.port == newURL.port
+        if sameOrigin, task.hasRequestCookie == true {
+            context.cookie = try await DownloadRequestCookieStore.shared.load(taskID: id)
+        } else if !sameOrigin {
+            // 用户换到别的网站时，不把原网站的登录凭据发过去。
+            context = context.withoutCookie
+            context.headers = context.headers.filter { !["authorization", "proxy-authorization"].contains($0.key.lowercased()) }
+        }
+        let identity = try await HTTPResourceProbe.inspect(
+            newURL, context: context, expectsHTML: task.httpIdentity?.contentType == "text/html"
+                || ["html", "htm"].contains(task.savePath?.pathExtension.lowercased() ?? "")
+        )
+        if !restartFromScratch {
+            let original = task.httpIdentity ?? HTTPResourceIdentity(size: task.totalBytes)
+            try original.validateReplacement(identity)
+        }
+        guard generation == token, !Task.isCancelled,
+              model.tasks.contains(where: { $0.id == id && $0.engineTaskID == task.engineTaskID && $0.checksum == task.checksum }) else {
+            throw CancellationError()
+        }
+        pendingAdds[.http, default: 0] += 1
+        revisions[.http, default: 0] += 1
+        defer {
+            pendingAdds[.http, default: 0] -= 1
+            revisions[.http, default: 0] += 1
+        }
+        let engineID: String
+        if let oldID = task.engineTaskID {
+            engineID = try await http.replaceURI(oldID, with: newURL, context: context, checksum: task.checksum, restartFromScratch: restartFromScratch)
+        } else {
+            if let file = task.savePath { context.suggestedFilename = file.lastPathComponent }
+            engineID = try await http.add(
+                link: .http(url: newURL, decodedFromThunder: false, original: newURL.absoluteString),
+                directory: task.savePath?.deletingLastPathComponent(), context: context, checksum: task.checksum, paused: true
+            )
+        }
+        guard generation == token, let index = model.tasks.firstIndex(where: { $0.id == id }) else {
+            try await http.remove(engineID, deleteFiles: false)
+            return
+        }
+        if let oldID = task.engineTaskID, oldID != engineID { excludeFromSnapshots(task) }
+        model.tasks[index].engineTaskID = engineID
+        model.tasks[index].sourceLink = newURL.absoluteString
+        model.tasks[index].requestContext = context.withoutCookie
+        model.tasks[index].httpIdentity = identity
+        model.tasks[index].httpValidationError = nil
+        model.tasks[index].checksumVerification = nil
+        model.tasks[index].errorMessage = nil
+        model.tasks[index].completedAt = nil
+        model.tasks[index].status = .queued
+        if restartFromScratch { model.tasks[index].receivedBytes = 0 }
+        if let file = task.savePath {
+            checkedHTTPFiles.remove(file)
+            httpFileIssues[file] = nil
+        }
+        checksumJobs[id]?.cancel()
+        checksumJobs[id] = nil
+        checkedCompletions.remove(id)
+        scheduling.queue(model.tasks[index])
+        if !sameOrigin, task.hasRequestCookie == true {
+            model.tasks[index].hasRequestCookie = false
+            try await DownloadRequestCookieStore.shared.delete(taskID: id)
+        }
+        await refreshScheduling(sample: false)
+    }
+
+    /// 在发布完成状态前识别登录页，避免把网页当成成品发通知或交给解压。
+    private func validateHTTPCompletions(_ snapshots: [EngineTaskSnapshot]) async -> [EngineTaskSnapshot] {
+        var result = snapshots
+        let htmlTaskIDs = Set(model.tasks.filter { $0.kind == .http && $0.httpIdentity?.contentType == "text/html" }.compactMap(\.engineTaskID))
+        for index in result.indices where result[index].status == .completed {
+            guard let file = result[index].savePath,
+                  !["html", "htm"].contains(file.pathExtension.lowercased()) else { continue }
+            if htmlTaskIDs.contains(result[index].engineTaskID) { continue }
+            if !checkedHTTPFiles.contains(file) {
+                do {
+                    try await HTTPResourceProbe.validateDownloadedFile(file)
+                    checkedHTTPFiles.insert(file)
+                } catch let failure as HTTPDownloadFailure {
+                    checkedHTTPFiles.insert(file)
+                    httpFileIssues[file] = failure.localizedDescription
+                } catch {
+                    // 文件可能正被移动；下一次快照重试，不凭读取失败推断网页。
+                }
+            }
+            if let issue = httpFileIssues[file] {
+                result[index].status = .failed
+                result[index].errorMessage = issue
+            }
+        }
+        return result
+    }
+
+    /// 所有引擎共用完成后的流式校验，不阻塞轮询或主线程。
+    private func checkCompletedFiles() {
+        let currentIDs = Set(model.tasks.map(\.id))
+        for id in checksumJobs.keys where !currentIDs.contains(id) {
+            checksumJobs[id]?.cancel()
+            checksumJobs[id] = nil
+        }
+        checkedCompletions.formIntersection(currentIDs)
+        for index in model.tasks.indices {
+            if let issue = model.tasks[index].httpValidationError {
+                model.tasks[index].status = .failed
+                model.tasks[index].errorMessage = issue
+            }
+        }
+        for task in model.tasks where [.completed, .seeding].contains(task.status)
+            || (task.kind == .http && task.status == .failed && task.checksum != nil
+                && (task.errorMessage?.contains("校验值不一致") == true
+                    || task.totalBytes.map { $0 > 0 && task.receivedBytes >= $0 } == true)) {
+            guard let file = task.savePath, !checkedCompletions.contains(task.id), checksumJobs[task.id] == nil else { continue }
+            if let result = task.checksumVerification, result.actual != nil, result.expected == task.checksum {
+                checkedCompletions.insert(task.id)
+                continue
+            }
+            let id = task.id
+            let token = generation
+            checksumJobs[id] = Task { [weak self] in
+                var expected = task.checksum
+                var verification: ChecksumVerification?
+                do {
+                    if expected == nil { expected = try await ChecksumVerifier.discover(for: file) }
+                    if let expected { verification = try await ChecksumVerifier.verify(file: file, expected: expected) }
+                } catch is CancellationError {
+                    return
+                } catch {
+                    if let expected {
+                        verification = ChecksumVerification(expected: expected, errorMessage: "无法读取文件进行校验，请检查文件是否仍在原位置。")
+                    }
+                }
+                guard let self, !Task.isCancelled, self.generation == token else { return }
+                self.checksumJobs[id] = nil
+                guard let index = self.model.tasks.firstIndex(where: { $0.id == id && $0.savePath == file && $0.checksum == task.checksum }) else { return }
+                self.checkedCompletions.insert(id)
+                self.model.tasks[index].checksum = expected
+                self.model.tasks[index].checksumVerification = verification
+                if file.pathExtension.lowercased() == "sha256" || file.lastPathComponent == "SHA256SUMS" {
+                    // 校验清单可能比成品晚下完；清单完成后让同目录的成品再识别一次。
+                    for other in self.model.tasks where other.id != id && other.checksum == nil
+                        && other.savePath?.deletingLastPathComponent() == file.deletingLastPathComponent() {
+                        self.checkedCompletions.remove(other.id)
+                    }
+                }
+            }
+        }
+    }
+
+    func diskProtectionDirectory(for id: DownloadTask.ID) -> URL? {
+        waitingVideoLinks[id]?.directory ?? latestOptions?.downloadDirectory
+    }
+
+    /// 磁盘保护使用独立入口，不能把用户原本暂停的任务标为可自动恢复。
+    func pauseForDiskSpace(_ id: DownloadTask.ID) async {
+        guard let task = model.tasks.first(where: { $0.id == id }),
+              [.downloading, .queued, .waitingForSources, .postProcessing].contains(task.status) else { return }
+        await pause(id)
+        guard let index = model.tasks.firstIndex(where: { $0.id == id }), model.tasks[index].status == .paused,
+              !model.userPausedTaskIDs.contains(id) else { return }
+        model.tasks[index].pauseReason = .diskSpace
+    }
+
+    func resumeAfterDiskSpace(_ id: DownloadTask.ID) async {
+        guard let index = model.tasks.firstIndex(where: { $0.id == id }),
+              model.tasks[index].status == .paused, model.tasks[index].pauseReason == .diskSpace else { return }
+        await resume(id)
+        guard let current = model.tasks.firstIndex(where: { $0.id == id }), model.tasks[current].status != .paused else { return }
+        model.tasks[current].pauseReason = nil
     }
 
     func remove(_ id: DownloadTask.ID, deleteFiles: Bool = false) async {
@@ -425,6 +688,15 @@ final class DownloadCoordinator {
                         throw error
                     }
                 case .resume:
+                    if engine is Aria2Engine, let identity = task.httpIdentity,
+                       let url = URL(string: task.sourceLink), ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
+                        var context = task.requestContext ?? DownloadRequestContext()
+                        if task.hasRequestCookie == true {
+                            context.cookie = try await DownloadRequestCookieStore.shared.load(taskID: id)
+                        }
+                        let current = try await HTTPResourceProbe.inspect(url, context: context, expectsHTML: identity.contentType == "text/html")
+                        try identity.validateReplacement(current)
+                    }
                     scheduling.userResume(task)
                     if let total = task.totalBytes, total > 0, task.receivedBytes >= total {
                         try await engine.resume(engineTaskID)
@@ -436,6 +708,11 @@ final class DownloadCoordinator {
                 revisions[task.kind, default: 0] += 1
             } catch {
                 setError(EngineStatusPresentation.errorMessage(error), for: id)
+                if let failure = error as? HTTPDownloadFailure,
+                   let index = model.tasks.firstIndex(where: { $0.id == id }) {
+                    model.tasks[index].httpValidationError = failure.localizedDescription
+                    model.tasks[index].status = .failed
+                }
                 return
             }
         }

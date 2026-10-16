@@ -65,25 +65,116 @@ public actor Aria2Engine: DownloadEngine {
     }
 
     public func add(link: ParsedLink, directory: URL?) async throws -> String {
-        try await add(link: link, directory: directory, paused: false)
+        try await add(link: link, directory: directory, context: .init(), paused: false)
     }
 
     public func addQueued(link: ParsedLink, directory: URL?) async throws -> String {
-        try await add(link: link, directory: directory, paused: true)
+        try await add(link: link, directory: directory, context: .init(), paused: true)
     }
 
-    private func add(link: ParsedLink, directory: URL?, paused: Bool) async throws -> String {
+    public func add(
+        link: ParsedLink, directory: URL?, context: DownloadRequestContext,
+        checksum: DownloadChecksum? = nil, paused: Bool = false
+    ) async throws -> String {
         let client = try runningClient()
         guard case .http(let url, _, _) = link,
               let scheme = url.scheme?.lowercased(), ["http", "https", "ftp"].contains(scheme) else {
             throw EngineError.unsupportedLink
         }
         var params: [Aria2RPCValue] = [.array([.string(url.absoluteString)])]
-        var values: [String: Aria2RPCValue] = [:]
+        var values = try Aria2RequestOptions.values(context: context, checksum: checksum)
         if let directory { values["dir"] = .string(directory.path) }
         if paused { values["pause"] = .string("true") }
         if !values.isEmpty { params.append(.object(values)) }
         return try await client.call("aria2.addUri", params)
+    }
+
+    /// 保留任务路径与控制文件，停态 GID 先重建为暂停任务，再用 changeUri 换链。
+    public func replaceURI(
+        _ engineTaskID: String, with url: URL, context: DownloadRequestContext,
+        checksum: DownloadChecksum?, restartFromScratch: Bool = false
+    ) async throws -> String {
+        let client = try runningClient()
+        var status = try await taskStatus(engineTaskID, using: client)
+        guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
+              url.host != nil, url.user == nil, url.password == nil else { throw EngineError.unsupportedLink }
+        if ["active", "waiting"].contains(status.status) {
+            try await pause(engineTaskID)
+            let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+            repeat {
+                status = try await taskStatus(engineTaskID, using: client)
+                if ["paused", "error", "complete", "removed"].contains(status.status) { break }
+                guard ContinuousClock.now < deadline else { throw EngineError.invalidResponse("等待暂停下载超时") }
+                try await Task.sleep(for: .milliseconds(25))
+            } while true
+        }
+        var context = context
+        if let path = status.files?.first?.path, !path.isEmpty {
+            context.suggestedFilename = URL(fileURLWithPath: path).lastPathComponent
+        }
+        var values = try Aria2RequestOptions.values(context: context, checksum: checksum)
+        if let directory = status.dir { values["dir"] = .string(directory) }
+        values["pause"] = .string("true")
+        values["auto-file-renaming"] = .string("false")
+        values["continue"] = .string(restartFromScratch ? "false" : "true")
+        let previousURIs = status.files?.first?.uris?.map(\.uri) ?? []
+        var id = engineTaskID
+        if restartFromScratch {
+            try await remove(engineTaskID, deleteFiles: true)
+            return try await client.call("aria2.addUri", [.array([.string(url.absoluteString)]), .object(values)])
+        }
+        if ["error", "complete", "removed"].contains(status.status) {
+            // aria2 的 changeUri 不接受 stopped 结果；同路径加载 .aria2 分块进度。
+            let old = previousURIs.first ?? url.absoluteString
+            id = try await client.call("aria2.addUri", [.array([.string(old)]), .object(values)])
+            do {
+                let _: String = try await client.call("aria2.removeDownloadResult", [.string(engineTaskID)])
+            } catch {
+                try? await remove(id, deleteFiles: false)
+                throw error
+            }
+        } else {
+            try await pause(id)
+            var updated = try Aria2RequestOptions.values(context: context, checksum: checksum)
+            updated.removeValue(forKey: "out")
+            updated["header"] = updated["header"] ?? .string("")
+            updated["referer"] = updated["referer"] ?? .string("")
+            let _: String = try await client.call("aria2.changeOption", [.string(id), .object(updated)])
+        }
+        let changed: [Int] = try await client.call("aria2.changeUri", [
+            .string(id), .integer(1), .array(previousURIs.map(Aria2RPCValue.string)),
+            .array([.string(url.absoluteString)]), .integer(0)
+        ])
+        guard changed.count == 2, changed[1] == 1 else {
+            throw EngineError.invalidResponse("无法替换下载链接")
+        }
+        return id
+    }
+
+    public func setChecksum(_ engineTaskID: String, checksum: DownloadChecksum?) async throws -> String {
+        let client = try runningClient()
+        guard let checksum else {
+            let options: [String: String] = try await client.call("aria2.getOption", [.string(engineTaskID)])
+            guard let previous = options["checksum"], !previous.isEmpty else { return engineTaskID }
+            let status = try await taskStatus(engineTaskID, using: client)
+            guard let uri = status.files?.first?.uris?.first?.uri else { throw EngineError.unsupportedLink }
+            var updated = options.mapValues(Aria2RPCValue.string)
+            updated.removeValue(forKey: "checksum")
+            updated.removeValue(forKey: "gid")
+            updated["pause"] = .string("true")
+            updated["continue"] = .string("true")
+            updated["auto-file-renaming"] = .string("false")
+            if let path = status.files?.first?.path, !path.isEmpty {
+                updated["out"] = .string(URL(fileURLWithPath: path).lastPathComponent)
+            }
+            // aria2 不接受空 checksum；清除时按原路径重建暂停任务，保留分块文件。
+            try await remove(engineTaskID, deleteFiles: false)
+            return try await client.call("aria2.addUri", [.array([.string(uri)]), .object(updated)])
+        }
+        let _: String = try await client.call("aria2.changeOption", [
+            .string(engineTaskID), .object(["checksum": .string(checksum.aria2Value)])
+        ])
+        return engineTaskID
     }
 
     public func pause(_ engineTaskID: String) async throws {
@@ -118,7 +209,15 @@ public actor Aria2Engine: DownloadEngine {
             // forceRemove schedules removal. Wait until it enters the stopped results.
             let deadline = ContinuousClock.now.advanced(by: .seconds(2))
             repeat {
-                status = try await taskStatus(engineTaskID, using: client)
+                do {
+                    status = try await taskStatus(engineTaskID, using: client)
+                } catch let error as EngineError {
+                    // 尚未启动的暂停任务直接从 waiting 队列移除，不产生 stopped 结果。
+                    // GID 在成功 forceRemove 后消失同样表示移除完成；传输错误仍向上传递。
+                    guard case .rpc(let code, _) = error, code == 1 else { throw error }
+                    if deleteFiles { try Aria2FileSafety.trashFiles(for: status) }
+                    return
+                }
                 if ["complete", "error", "removed"].contains(status.status) { break }
                 guard ContinuousClock.now < deadline else {
                     throw EngineError.rpc(code: 1, message: String(localized: "等待 aria2 移除任务超时", bundle: .module))

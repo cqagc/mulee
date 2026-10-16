@@ -471,7 +471,12 @@ public actor Ed2kEngine: DownloadEngine {
                 return Int(value)
             }.min()
             if let current = history?.records[hash] {
-                result.append(try Ed2kStatusMapper.snapshot(tag: tag, record: current, rank: rank, now: now))
+                var snapshot = try Ed2kStatusMapper.snapshot(tag: tag, record: current, rank: rank, now: now)
+                snapshot.writeDirectories = [current.directory]
+                if snapshot.status != .completed, let temporary = configuration?.temporaryDirectory {
+                    snapshot.writeDirectories?.append(temporary)
+                }
+                result.append(snapshot)
             }
         }
         for tag in shared.tags where tag.name == ECCode.Tag.knownFile {

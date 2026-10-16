@@ -10,7 +10,9 @@ import Testing
         // Top-level settings, including newly added properties without persistence observers.
         let properties = source.matches(of: #/(?m)^    var (\w+)(?::|[ \t]*=)/#).map { String($0.1) }
         #expect(properties.count >= 36)
-        for name in ["publicTrackersEnabled", "trackerSubscriptions", "customTrackers", "blockLeechingClients"] {
+        for name in ["publicTrackersEnabled", "trackerSubscriptions", "customTrackers", "blockLeechingClients",
+                     "skipJunkFiles", "junkFilePatterns", "seedTimeLimitMinutes", "seedInactiveLimitMinutes",
+                     "privateMinSeedMinutes", "ipBlocklistPath"] {
             #expect(properties.contains(name))
         }
         let files = try #require(FileManager.default.enumerator(at: app, includingPropertiesForKeys: nil))

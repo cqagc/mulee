@@ -47,11 +47,15 @@ final class SettingsRuntime {
 
     func refresh() {
         let date = now()
+        model.slowModeController?.refresh()
+        model.whenAllDoneController?.settingsDidChange()
+        model.whenAllDoneController?.refresh()
+        model.notificationService?.flushCompletionsIfDue()
         clipboard.setEnabled(settings.watchClipboard)
         model.preventsSleepWhileDownloading = settings.preventSleep
         model.allowsSleepWhenDone = settings.allowSleepWhenDone
         model.isScheduledLimitActive = ScheduledSpeedLimit.isActive(settings: settings, now: date)
-        let options = EngineOptionsMapper.options(from: settings, now: date)
+        let options = EngineOptionsMapper.options(from: settings, now: date, slowMode: model.isSlowModeActive)
         if options != previousOptions {
             previousOptions = options
             applyOptions(options)

@@ -16,8 +16,8 @@ struct SettingsSyncModifier: ViewModifier {
             .onChange(of: settings.watchClipboard) {
                 model.settingsRuntime?.refresh()
             }
-            .onChange(of: EngineOptionsMapper.options(from: settings)) {
-                model.coordinator?.apply(options: EngineOptionsMapper.options(from: settings))
+            .onChange(of: EngineOptionsMapper.options(from: settings, slowMode: model.isSlowModeActive)) {
+                model.coordinator?.apply(options: EngineOptionsMapper.options(from: settings, slowMode: model.isSlowModeActive))
             }
             .onChange(of: BitTorrentEngineConfiguration.configuration(from: settings)) {
                 model.bitTorrent?.configure(BitTorrentEngineConfiguration.configuration(from: settings))

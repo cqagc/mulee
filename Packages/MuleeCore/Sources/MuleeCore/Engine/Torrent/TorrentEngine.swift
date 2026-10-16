@@ -13,7 +13,9 @@ public actor TorrentEngine: DownloadEngine {
     private let requestTimeout: Duration
     private let restartBackoff: Duration
     private var publicTrackers: [String] = []
+    private var subscribedPublicTrackers = Set<String>()
     private var trackerRevision = UUID()
+    private var policyRemovals = Set<String>()
     private var trackerDeliveries: [String: UUID] = [:]
     private var extraPortMappings = ExtraPortMappings()
     private var settings: TorrentEngineSettings
@@ -149,6 +151,13 @@ public actor TorrentEngine: DownloadEngine {
     }
 
     public func add(link: ParsedLink, directory: URL?, filePriorities: [Int]?, paused: Bool = false) async throws -> String {
+        try await addWithResult(link: link, directory: directory, filePriorities: filePriorities, paused: paused).id
+    }
+
+    /// 添加任务并返回垃圾文件过滤结果；显式 filePriorities 优先于自动过滤。
+    public func addWithResult(
+        link: ParsedLink, directory: URL?, filePriorities: [Int]? = nil, paused: Bool = false
+    ) async throws -> TorrentdAddResult {
         let client = try await runningClient()
         var params = TorrentdAddParameters(savePath: directory?.path, paused: paused, source: link.original)
         var temporary: URL?
@@ -180,8 +189,11 @@ public actor TorrentEngine: DownloadEngine {
             throw EngineError.unsupportedLink
         }
         let result: TorrentdAddResult = try await client.call("add", params)
-        if !result.duplicate { trackerDeliveries[result.id] = nil }
-        return result.id
+        if !result.duplicate {
+            trackerDeliveries[result.id] = nil
+            policyRemovals.remove(result.id)
+        }
+        return result
     }
 
     public func pause(_ engineTaskID: String) async throws {
@@ -215,7 +227,8 @@ public actor TorrentEngine: DownloadEngine {
             uploadLimit: task.uploadLimit, hasMetadata: task.hasMetadata,
             isFinished: task.canApplySeedingPolicy,
             sequentialDownload: task.sequentialDownload ?? false,
-            firstLastPriority: task.firstLastPriority ?? false, diagnostics: task.diagnostics
+            firstLastPriority: task.firstLastPriority ?? false, diagnostics: task.diagnostics,
+            seedTimeSeconds: task.seedTimeSeconds ?? 0, seedInactiveSeconds: task.seedInactiveSeconds ?? 0
         )
     }
 
@@ -248,16 +261,104 @@ public actor TorrentEngine: DownloadEngine {
         return try await client.call("add_trackers", TorrentdTrackersParameters(id: id, urls: urls))
     }
 
+    /// 等待存储移动完成；fail 遇到同名文件时返回 conflict 错误。
+    public func moveStorage(_ id: String, to directory: URL, conflict: TorrentStorageConflict = .fail) async throws {
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call(
+            "move_storage", TorrentdMoveParameters(id: id, path: directory.path, conflict: conflict), timeout: .seconds(310)
+        )
+    }
+
+    /// 重命名一个相对文件路径或整个目录前缀，等待磁盘操作完成。
+    public func renameFile(_ id: String, path: String, to newPath: String) async throws {
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call(
+            "rename_file", TorrentdRenameParameters(id: id, path: path, newPath: newPath), timeout: .seconds(310)
+        )
+    }
+
+    /// 重新校验所存数据。
+    public func forceRecheck(_ id: String) async throws {
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call("force_recheck", TorrentdIDParameters(id: id))
+    }
+
+    /// 立即向 tracker 重新宣告。
+    public func forceReannounce(_ id: String) async throws {
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call("force_reannounce", TorrentdIDParameters(id: id))
+    }
+
+    /// 包含自动停用条目的 tracker 状态。
+    public func trackers(_ id: String) async throws -> [TorrentTrackerStatus] {
+        let client = try await runningClient()
+        let result: TorrentdTrackerList = try await client.call("trackers", TorrentdIDParameters(id: id))
+        return result.trackers
+    }
+
+    /// 完整替换 tracker 列表，支持添加、编辑和删除；保留未编辑订阅条目的停用期。
+    public func setTrackers(_ id: String, trackers: [TorrentTracker]) async throws {
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call("set_trackers", TorrentdSetTrackersParameters(id: id, trackers: trackers))
+    }
+
+    /// 返回当前连接的节点列表。
+    public func peers(_ id: String) async throws -> [TorrentPeer] {
+        let client = try await runningClient()
+        let result: TorrentdPeerList = try await client.call("peers", TorrentdIDParameters(id: id))
+        return result.peers
+    }
+
+    /// 持久封禁一个 IPv4 或 IPv6 地址。
+    public func banIP(_ address: String) async throws {
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call("ban_ip", TorrentdBanParameters(ip: address))
+    }
+
+    /// 导入 P2P / DAT 黑名单，保留用户手动封禁的 IP。
+    public func importIPBlocklist(from file: URL) async throws -> TorrentBlocklistResult {
+        let client = try await runningClient()
+        return try await client.call("import_ip_blocklist", TorrentdPathParameters(path: file.path))
+    }
+
+    /// 从文件或目录制作分块大小自动选择的 v1+v2 混合种子。
+    public func createTorrent(
+        from source: URL, to output: URL, isPrivate: Bool = false, trackers: [String] = [], comment: String? = nil
+    ) async throws -> TorrentFileResult {
+        let client = try await runningClient()
+        return try await client.call("create_torrent", TorrentdCreateParameters(
+            path: source.path, output: output.path, private: isPrivate, trackers: trackers, comment: comment
+        ), timeout: .seconds(3600))
+    }
+
+    /// 导出保留原始 info hash 的种子；磁力任务必须先获取元数据。
+    public func exportTorrent(_ id: String, to output: URL) async throws -> TorrentFileResult {
+        let client = try await runningClient()
+        return try await client.call("export_torrent", TorrentdExportParameters(id: id, output: output.path), timeout: .seconds(30))
+    }
+
+    /// 返回磁力取得元数据后自动跳过的文件，也适用于本地种子。
+    public func skippedFiles(_ id: String) async throws -> [TorrentSkippedFile] {
+        let client = try await runningClient()
+        let result: TorrentdListResult = try await client.call("list", TorrentdEmpty())
+        guard let task = result.torrents.first(where: { $0.id == id }) else {
+            throw TorrentErrorDescriptions.error(for: "not_found")
+        }
+        return task.skippedFiles ?? []
+    }
+
     public func sessionStatus() async throws -> TorrentSessionStatus {
         let client = try await runningClient()
         return try await client.call("session_status", TorrentdEmpty())
     }
 
     /// 空列表关闭自动追加；更改列表或重新开启后，现有公共任务也会重新检查。
-    public func configurePublicTrackers(_ urls: [String]) {
+    public func configurePublicTrackers(_ urls: [String], subscriptionURLs: [String]? = nil) {
         let validated = Array(PublicTrackerList.parse(urls.joined(separator: "\n")).prefix(50))
-        guard validated != publicTrackers else { return }
+        let subscribed = Set(PublicTrackerList.parse((subscriptionURLs ?? urls).joined(separator: "\n"))).intersection(validated)
+        guard validated != publicTrackers || subscribed != subscribedPublicTrackers else { return }
         publicTrackers = validated
+        subscribedPublicTrackers = subscribed
         trackerRevision = UUID()
         trackerDeliveries.removeAll()
     }
@@ -265,13 +366,19 @@ public actor TorrentEngine: DownloadEngine {
     public func snapshots() async throws -> [EngineTaskSnapshot] {
         let client = try await runningClient()
         let result: TorrentdListResult = try await client.call("list", TorrentdEmpty())
+        var removedIDs = Set<String>()
         for torrent in result.torrents {
             let action = SeedingPolicy.action(
                 ratio: torrent.ratio, isFinished: torrent.canApplySeedingPolicy, isPrivate: torrent.isPrivate,
-                paused: torrent.paused, uploadLimit: torrent.uploadLimit, settings: settings
+                paused: torrent.paused, uploadLimit: torrent.uploadLimit, settings: settings,
+                seedTimeSeconds: torrent.seedTimeSeconds ?? 0, seedInactiveSeconds: torrent.seedInactiveSeconds ?? 0
             )
             switch action {
             case .none: break
+            case .remove:
+                try await remove(torrent.id, deleteFiles: false)
+                removedIDs.insert(torrent.id)
+                policyRemovals.insert(torrent.id)
             case .pause:
                 let _: TorrentdEmpty = try await client.call("pause", TorrentdIDParameters(id: torrent.id))
             case .setUploadLimit(let limit):
@@ -282,10 +389,17 @@ public actor TorrentEngine: DownloadEngine {
         }
         let currentIDs = Set(result.torrents.map(\.id))
         trackerDeliveries = trackerDeliveries.filter { currentIDs.contains($0.key) }
-        for torrent in result.torrents where torrent.hasMetadata && !torrent.isPrivate {
+        for torrent in result.torrents where torrent.hasMetadata && !torrent.isPrivate && !removedIDs.contains(torrent.id) {
             await appendPublicTrackers(to: torrent.id, using: client)
         }
-        return result.torrents.map(TorrentStatusMapper.snapshot)
+        return result.torrents.filter { !removedIDs.contains($0.id) }.map(TorrentStatusMapper.snapshot)
+    }
+
+    /// 取走本会话由做种策略删除的任务标识，供 App 同步移除历史记录。
+    public func consumePolicyRemovals() -> Set<String> {
+        let removed = policyRemovals
+        policyRemovals.removeAll()
+        return removed
     }
 
     private func appendPublicTrackers(to id: String, using rpc: TorrentdClient) async {
@@ -296,9 +410,11 @@ public actor TorrentEngine: DownloadEngine {
         var remaining = publicTrackers
         var count = remaining.count
         while count > 0, trackerRevision == revision, sessionID == session, !Task.isCancelled {
+            let subscription = subscribedPublicTrackers.contains(remaining[0])
+            count = min(count, remaining.prefix { subscribedPublicTrackers.contains($0) == subscription }.count)
             do {
                 let result: TorrentTrackerAdditionResult = try await rpc.call(
-                    "add_trackers", TorrentdTrackersParameters(id: id, urls: Array(remaining.prefix(count)))
+                    "add_trackers", TorrentdTrackersParameters(id: id, urls: Array(remaining.prefix(count)), subscription: subscription)
                 )
                 remaining.removeFirst(count)
                 count = min(remaining.count, max(0, 50 - result.total))

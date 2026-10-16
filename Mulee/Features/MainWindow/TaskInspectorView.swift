@@ -35,6 +35,8 @@ struct TaskInspectorView: View {
                         BitTorrentInspectorView(task: task, model: torrentModel)
                     }
                     PostDownloadCard(presentation: presentation)
+                    if task.kind == .http { HTTPTaskActionsView(task: task).id(task.id) }
+                    TaskChecksumView(task: task).id(task.id)
                 }
                 .padding(18)
             }

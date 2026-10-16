@@ -25,7 +25,7 @@ struct Aria2StatusMapper: Sendable {
             uploadRate: Int64(value.uploadSpeed ?? "0") ?? 0,
             status: status, connections: Int(value.connections ?? "0") ?? 0,
             savePath: path, sourceURL: source,
-            errorMessage: status == .failed ? Aria2ErrorDescriptions.message(for: value.errorCode) : nil
+            errorMessage: status == .failed ? Aria2ErrorDescriptions.message(for: value.errorCode, detail: value.errorMessage) : nil
         )
     }
 }

@@ -110,6 +110,21 @@ Metadata Persistence::load_meta(const std::string& id) {
             metadata.sequential_download = value->as_bool();
         if (auto value = object.if_contains("first_last_priority"); value && value->is_bool())
             metadata.first_last_priority = value->as_bool();
+        if (auto value = object.if_contains("junk_pending"); value && value->is_bool())
+            metadata.junk_pending = value->as_bool();
+        if (auto value = object.if_contains("junk_patterns"); value && value->is_array())
+            for (const auto& pattern : value->as_array())
+                if (pattern.is_string()) metadata.junk_patterns.emplace_back(pattern.as_string());
+        if (auto value = object.if_contains("skipped_files"); value && value->is_array())
+            metadata.skipped_files = value->as_array();
+        if (auto value = object.if_contains("tracker_state"); value && value->is_object())
+            metadata.tracker_state = value->as_object();
+        for (const auto& field : {std::make_pair("seed_inactive_seconds", &metadata.seed_inactive_seconds),
+            std::make_pair("last_finished_duration", &metadata.last_finished_duration),
+            std::make_pair("last_payload_total", &metadata.last_payload_total)}) {
+            if (auto value = object.if_contains(field.first); value && value->is_int64() && value->as_int64() >= 0)
+                *field.second = value->as_int64();
+        }
         auto completed = object.if_contains("completed_at");
         if (completed && (completed->is_null() || completed->is_int64())) metadata.completed_at = *completed;
     } catch (const std::exception& error) {
@@ -146,7 +161,10 @@ void Persistence::atomic_write(const fs::path& destination, const char* data, st
 void Persistence::save_meta(const std::string& id, const Metadata& metadata) {
     auto text = json::serialize(json::object{{"source", metadata.source}, {"added_at", metadata.added_at},
         {"completed_at", metadata.completed_at}, {"sequential_download", metadata.sequential_download},
-        {"first_last_priority", metadata.first_last_priority}});
+        {"first_last_priority", metadata.first_last_priority}, {"junk_pending", metadata.junk_pending},
+        {"junk_patterns", json::value_from(metadata.junk_patterns)}, {"skipped_files", metadata.skipped_files},
+        {"tracker_state", metadata.tracker_state}, {"seed_inactive_seconds", metadata.seed_inactive_seconds},
+        {"last_finished_duration", metadata.last_finished_duration}, {"last_payload_total", metadata.last_payload_total}});
     atomic_write(directory_ / "meta" / (id + ".json"), text.data(), text.size());
 }
 
@@ -195,6 +213,24 @@ lt::session_params Persistence::load_dht() {
 void Persistence::save_dht(const lt::session_params& params) {
     auto buffer = lt::write_session_params_buf(params, lt::session_handle::save_dht_state);
     atomic_write(directory_ / "dht.state", buffer.data(), buffer.size());
+}
+
+json::object Persistence::load_filters() {
+    auto path = directory_ / "ip-filters.json";
+    if (!fs::exists(path)) return {};
+    std::ifstream input(path);
+    std::string text((std::istreambuf_iterator<char>(input)), {});
+    return json::parse(text).as_object();
+}
+
+void Persistence::save_filters(const json::object& filters) {
+    auto text = json::serialize(filters);
+    atomic_write(directory_ / "ip-filters.json", text.data(), text.size());
+}
+
+void Persistence::write_torrent(const fs::path& path, const std::vector<char>& buffer) {
+    if (fs::exists(path)) throw RequestError("conflict", "Destination already exists");
+    atomic_write(path, buffer.data(), buffer.size());
 }
 
 void Persistence::remove(const std::string& id) {

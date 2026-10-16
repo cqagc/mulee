@@ -60,7 +60,8 @@ actor TorrentdClient {
     func call<Parameters: Encodable & Sendable, Result: Decodable & Sendable>(
         _ method: String,
         _ params: Parameters,
-        as type: Result.Type = Result.self
+        as type: Result.Type = Result.self,
+        timeout: Duration? = nil
     ) async throws -> Result {
         guard active, ready else { throw EngineError.notRunning }
         nextID += 1
@@ -70,11 +71,12 @@ actor TorrentdClient {
         var data = try encoder.encode(TorrentdRequest(id: id, method: method, params: params))
         data.append(10)
         let requestData = data
+        let callTimeout = timeout ?? requestTimeout
         let value: TorrentdValue = try await withTaskCancellationHandler {
             try Task.checkCancellation()
             return try await withCheckedThrowingContinuation { continuation in
-                let timer = Task { [weak self, requestTimeout] in
-                    do { try await Task.sleep(for: requestTimeout) } catch { return }
+                let timer = Task { [weak self] in
+                    do { try await Task.sleep(for: callTimeout) } catch { return }
                     await self?.fail(id, error: EngineError.rpc(code: -1, message: String(localized: "BT 引擎响应超时", bundle: .module)))
                 }
                 pending[id] = TorrentdPending(continuation: continuation, timeout: timer)

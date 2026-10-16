@@ -17,6 +17,7 @@ enum EngineSnapshotMerger {
                   [.downloading, .queued, .paused].contains(task.status) else { return task }
             var task = task
             task.status = .failed
+            task.pauseReason = nil
             task.errorMessage = String(localized: "上次退出前的进度没能恢复，可以重新下载")
             task.downloadRate = 0
             task.uploadRate = 0
@@ -59,10 +60,20 @@ enum EngineSnapshotMerger {
                 task.fileExtension = pathExtension.isEmpty ? nil : pathExtension
                 task.totalBytes = snapshot.totalBytes
                 task.receivedBytes = snapshot.receivedBytes
+                let isExtractionPause = task.pauseReason == .diskSpace && task.postDownload.extractionState == .queued
+                if !isExtractionPause, [.completed, .seeding, .failed].contains(snapshot.status) {
+                    task.pauseReason = nil
+                }
                 task.downloadRate = snapshot.downloadRate
                 task.uploadRate = snapshot.uploadRate
-                task.status = snapshot.status
+                if task.pauseReason == .diskSpace {
+                    task.downloadRate = 0
+                    task.uploadRate = 0
+                }
+                // 引擎快照可能仍在报告旧状态，保护原因由应用持有。
+                task.status = task.pauseReason == .diskSpace ? .paused : snapshot.status
                 task.savePath = snapshot.savePath
+                if let directories = snapshot.writeDirectories { task.writeDirectories = directories }
                 task.errorMessage = snapshot.errorMessage
                 if kind == .http {
                     task.detail = .http(connections: snapshot.connections)

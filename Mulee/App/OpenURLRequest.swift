@@ -9,6 +9,7 @@ struct OpenURLRequest {
     var links: [ParsedLink]
     var sourcePageURL: URL?
     var password: String?
+    var requestContext = DownloadRequestContext()
 
     static func parse(_ url: URL, detectPagePassword: Bool) -> Self? {
         guard url.absoluteString.utf8.count <= maximumBytes else { return nil }
@@ -32,10 +33,19 @@ struct OpenURLRequest {
             }
             let referrer = items.first { $0.name == "referrer" }?.value.flatMap(URL.init(string:))
             let source = referrer.flatMap { url in
-                ["http", "https"].contains(url.scheme?.lowercased() ?? "") && url.host != nil ? url : nil
+                ["http", "https"].contains(url.scheme?.lowercased() ?? "") && url.host != nil
+                    && url.user == nil && url.password == nil ? url : nil
             }
             let text = items.first { $0.name == "text" }?.value ?? ""
-            return Self(links: links, sourcePageURL: source, password: pagePassword(in: text, enabled: detectPagePassword))
+            let context = DownloadRequestContext(
+                referer: source, userAgent: items.first { $0.name == "ua" }?.value,
+                suggestedFilename: items.first { $0.name == "filename" }?.value
+            )
+            guard (try? context.validate()) != nil else { return nil }
+            return Self(
+                links: links, sourcePageURL: source, password: pagePassword(in: text, enabled: detectPagePassword),
+                requestContext: context
+            )
         }
         guard url.isFileURL ? url.pathExtension.lowercased() == "torrent"
             : ["magnet", "ed2k", "thunder"].contains(url.scheme?.lowercased() ?? "") else { return nil }

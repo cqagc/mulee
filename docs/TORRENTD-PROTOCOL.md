@@ -28,7 +28,7 @@ mulee-torrentd --state-dir <目录>
 响应（torrentd → App），`id` 与请求相同，二选一：
 
 ```json
-{"id": 7, "result": {"id": "dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c", "name": "Big Buck Bunny", "duplicate": false}}
+{"id": 7, "result": {"id": "dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c", "name": "Mulee fixture", "duplicate": false, "skipped_files": []}}
 {"id": 7, "error": {"code": "invalid_params", "message": "magnet 和 torrent_file 必须二选一"}}
 ```
 
@@ -36,7 +36,7 @@ mulee-torrentd --state-dir <目录>
 
 ```json
 {"event": "ready", "version": "0.1.0", "libtorrent": "2.0.15", "listen_port": 6881}
-{"event": "metadata_received", "id": "<torrent id>", "name": "..."}
+{"event": "metadata_received", "id": "<torrent id>", "name": "...", "skipped_files": []}
 {"event": "finished", "id": "<torrent id>"}
 {"event": "torrent_error", "id": "<torrent id>", "message": "..."}
 {"event": "fatal", "message": "..."}
@@ -44,7 +44,7 @@ mulee-torrentd --state-dir <目录>
 
 事件只是提示，App 以 `list` 的结果为准；丢失事件不影响正确性。
 
-错误码 `code`：`invalid_request`（JSON 无法解析或缺 method）、`unknown_method`、`invalid_params`、`not_found`（任务不存在）、`invalid_torrent`（种子文件或磁力链接无效）、`io_error`、`internal`。`message` 给开发者看，可以是英文。
+错误码 `code`：`invalid_request`（JSON 无法解析或缺 method）、`unknown_method`、`invalid_params`、`not_found`（任务不存在）、`invalid_torrent`（种子文件或磁力链接无效）、`io_error`、`metadata_pending`（元数据尚未取得）、`private_torrent`（禁止向私有种子自动追加 tracker）、`tracker_limit`、`conflict`（目标已有同名文件）、`internal`。`message` 给开发者看，可以是英文。
 
 数字一律是 JSON 整数（字节数、速度用字节 / 秒），比率用浮点；时间用 Unix 秒（整数）；路径是绝对 POSIX 路径。
 
@@ -54,7 +54,7 @@ mulee-torrentd --state-dir <目录>
 
 ### `configure`
 
-整体下发全局设置。启动后 App 会立即发一次，之后设置变化时整体重发。所有字段必填。
+整体下发全局设置。启动后 App 会立即发一次，之后设置变化时整体重发。除标记可选的字段外均必填。
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
@@ -68,6 +68,9 @@ mulee-torrentd --state-dir <目录>
 | `lsd` | bool | 本地发现 |
 | `port_mapping` | bool | UPnP + NAT-PMP |
 | `encryption` | string | `"prefer"`（默认，允许明文）/ `"require"` / `"disable"` |
+| `skip_junk_files` | bool? | 默认 true；添加任务时匹配文件名并设置优先级 0 |
+| `junk_file_patterns` | [string]? | 通配列表，最多 256 项、每项 1–1024 字节，大小写不敏感 |
+| `ip_blocklist_path` | string? | P2P / DAT 文件绝对路径；空串清除导入范围，保留手动封禁；省略保留当前导入范围 |
 
 结果：`{"listen_port": <实际端口>}`。端口被占用时自动改用随机端口并在结果里如实返回。
 
@@ -82,7 +85,9 @@ mulee-torrentd --state-dir <目录>
 | `source` | string? | 用户粘贴的原始链接或文件路径，`list` 原样返回 |
 | `file_priorities` | [int]? | 只对 `torrent_file` 有效：每个文件的优先级（0 = 不下载，4 = 默认），长度必须等于文件数，否则 `invalid_params` |
 
-结果：`{"id": "...", "name": "...", "duplicate": bool}`。任务已存在时不报错，返回已有任务且 `duplicate: true`（磁力链接新带来的 tracker 合并进去）。
+结果：`{"id": "...", "name": "...", "duplicate": bool, "skipped_files": [{"index": 1, "path": "目录/广告.txt"}]}`。任务已存在时不报错，返回已有任务且 `duplicate: true`（公开种子的磁力链接新带来的 tracker 合并进去；私有或尚无元数据时返回明确错误）。
+
+默认通配清单：`*.url`、`*.lnk`、`*padding_file*`、`_____padding_file_*`、`*.!ut`、`*最新地址*.txt`、`*广告*.txt`、`*最新地址*.html`、`*广告*.html`、`*.mht`。显式 `file_priorities` 表示用户已确认的选择，优先于自动过滤；之后也可通过 `set_file_priorities` 勾回。磁力任务先返回空的 `skipped_files`，取得元数据后按添加时的规则过滤，`metadata_received` 事件附带 `skipped_files`，且 `list` 持续返回该结果。
 
 ### `pause` / `resume`
 
@@ -126,6 +131,10 @@ mulee-torrentd --state-dir <目录>
 | `added_at` | int | Unix 秒 |
 | `completed_at` | int? | 选中文件全部完成的时间；未完成为 null |
 | `eta` | int? | 预计剩余秒数；无法估计为 null |
+| `is_finished` | bool | 所选内容全部完成，且不在校验、元数据或错误状态 |
+| `seed_time_seconds` | int | libtorrent 累计 finished_duration，计入选择性下载，暂停时间不计入 |
+| `seed_inactive_seconds` | int | 没有 payload 活动的累计活跃做种秒数，暂停不增加，发生上传/下载或重新变为未完成时清零 |
+| `skipped_files` | [object] | 添加时自动跳过的 index/path，保留供界面展示 |
 
 `state` 取值：
 
@@ -152,6 +161,60 @@ mulee-torrentd --state-dir <目录>
 
 参数 `{"id": "...", "limit": <字节/秒，0 不限>}`。结果 `{}`。用于做种策略「到 1:1 后降速」。
 
+### `move_storage`
+
+参数 `{"id": "...", "path": "/tmp/target", "conflict": "fail"}`，结果 `{}`。`conflict` 必填：`fail` 遇到目标同名文件返回 `conflict`（Swift 映射为 `EngineError.rpc(code: 11, ...)`），由调用方询问用户后重试；`keep` 保留目标文件并重新校验；`overwrite` 覆盖目标文件。映射到 libtorrent `fail_if_exist` / `dont_replace` / `always_replace_files`。等磁盘完成通知才回复，磁盘失败返回 `io_error`；操作等待上限 300 秒，超时后应先回读状态。`fail` 沿用 libtorrent 的预检查语义，不承诺阻止其他进程在检查后的竞争写入。
+
+### `rename_file`
+
+参数 `{"id": "...", "path": "目录/原名.bin", "new_path": "目录/新名.bin"}`，结果 `{}`。两个路径均相对保存目录，禁止绝对路径及 `.` / `..` 分量。匹配单文件或目录前缀，逐个等待 libtorrent 重命名确认；不存在返回 `not_found`，目标冲突返回 `conflict`。目录含多个文件时若中途磁盘失败，已完成的重命名不会回滚，调用方应重新读取 `files`。
+
+### `force_recheck` / `force_reannounce`
+
+参数 `{"id": "..."}`，结果 `{}`。分别排入强制校验、立即重新宣告；宣告忽略 tracker 最小间隔。校验进度由 `list` 读取，结果回复表示指令已提交。
+
+### `trackers` / `set_trackers` / `add_trackers`
+
+`trackers` 参数 `{"id": "..."}`，结果：
+
+```json
+{
+  "trackers": [
+    {
+      "url": "https://tracker.invalid/announce",
+      "tier": 0,
+      "status": "pending",
+      "last_result": "",
+      "peers": 0,
+      "subscription": true,
+      "disabled_until": 0
+    }
+  ]
+}
+```
+
+`status` 为 `pending` / `working` / `failed` / `disabled`。`peers` 为最后一次宣告返回的节点数；尚无响应时为 0。`disabled_until` 为 Unix 秒，0 表示启用。
+
+`set_trackers` 参数 `{"id": "...", "trackers": [{"url": "https://tracker.invalid/announce", "tier": 0, "subscription": false}]}`，结果 `{}`。完整替换列表，实现添加、编辑和删除，空列表清空；最多 50 个唯一 URL，tier 为 0–255。支持 HTTP/HTTPS/UDP，整批校验通过才修改。未编辑的订阅 URL 保留失败计数和停用期限；改为手动条目可解除订阅停用。
+
+`add_trackers` 参数 `{"id": "...", "urls": ["https://tracker.invalid/announce"], "subscription": true}`，结果 `{"added": 1, "total": 1}`。`subscription` 默认 false，公共列表自动追加时设为 true；去重追加到独立 tier，最多 50 个（含停用条目）。尚无元数据返回 `metadata_pending`；私有种子返回 `private_torrent`。重复追加不会绕过停用期限。
+
+来自订阅的公共 tracker 连续失败 **3 次**后从 libtorrent 活动列表移除 **24 小时**，成功响应清零计数；其他 tracker 和私有种子不会自动停用。到期自动放回原 tier。停用记录、计数、最后结果和节点数随任务元数据持久化。
+
+### `peers` / `ban_ip` / `import_ip_blocklist`
+
+`peers` 参数 `{"id": "..."}`，结果 `{"peers": [{"address": "192.0.2.10", "port": 6881, "client": "Mulee", "progress": 0.5, "download_rate": 1024, "upload_rate": 512, "sources": ["tracker", "pex"], "connection": "tcp"}]}`。`sources` 可含 tracker/dht/pex/lsd/incoming；`connection` 为 tcp/utp。
+
+`ban_ip` 参数 `{"ip": "192.0.2.10"}`，结果 `{}`，支持 IPv4/IPv6，重复封禁幂等。使用 libtorrent `ip_filter` 断开和阻止连接，保留原有 peer class 带宽过滤。
+
+`import_ip_blocklist` 参数 `{"path": "/tmp/fixture.dat"}`，结果 `{"blocked_ranges": 2}`。读取不超过 64 MiB 的 UTF-8 P2P 文本 `名称:起始IP-结束IP` 或 DAT `起始IP - 结束IP , level , 名称`；空行、`#` / `;` 注释忽略，DAT 仅 level < 127 屏蔽。地址或区间有误整批拒绝，保留旧规则。导入替换之前导入的范围，保留手动封禁。规则跨重启恢复。
+
+### `create_torrent` / `export_torrent`
+
+`create_torrent` 参数 `{"path": "/tmp/source", "output": "/tmp/fixture.torrent", "private": false, "trackers": ["https://tracker.invalid/announce"], "comment": "可选备注"}`。输入为文件或目录；制作 v1+v2 混合种子，分块大小自动，每个 tracker 单独 tier；最多 50 个 tracker。不允许符号链接，输出已存在返回 `conflict`。计算文件哈希后原子写入，结果 `{"path": "/tmp/fixture.torrent", "id": "<info hash>"}`。
+
+`export_torrent` 参数 `{"id": "...", "output": "/tmp/export.torrent"}`，结果同上。从 resume data 导出，保留 info hash 和 v2 piece layers，以及当前启用的 tracker 列表。磁力未取得元数据返回 `metadata_pending`；v2 尚未取得完整 piece layers 时返回 `io_error`，待哈希可用后重试。已有输出返回 `conflict`。
+
 ### `session_status`
 
 参数 `{}`。结果：
@@ -172,7 +235,8 @@ mulee-torrentd --state-dir <目录>
 ## 持久化
 
 - `<state-dir>/resume/<id>.resume`：libtorrent `write_resume_data_buf` 的结果（含元数据、tracker、文件优先级、累计上传下载、暂停状态）。任务状态变化后 30 秒内、以及退出时保存；先写临时文件再原子改名。
-- `<state-dir>/meta/<id>.json`：Mulee 自己的附加信息 `{"source": ..., "added_at": ..., "completed_at": ...}`。
+- `<state-dir>/meta/<id>.json`：Mulee 自己的附加信息（来源、添加/完成时间、下载模式、垃圾过滤待处理状态及结果、tracker 失败和停用记录、不活跃做种计数）。
+- `<state-dir>/ip-filters.json`：手动封禁 `banned` 与导入范围 `imported`，以 0600 权限原子保存；不与 peer class 规则共用。
 - 启动时读到损坏的 resume 文件：跳过并移到 `<state-dir>/broken/`，写日志，不影响其他任务。
 
 ## 默认的 libtorrent 设置
@@ -195,4 +259,10 @@ mulee-torrentd --state-dir <目录>
 | `finished` 且未暂停 | `completed` |
 | `error` | `failed` |
 
-做种策略在 App 端执行（每次轮询）：`ratio >= 1` 且不是「私有种子且设置为私有种子不按分享率停」时，设置为「停止」则发 `pause`，设置为「降速」则发 `set_upload_limit` 51200（只在当前值不同时发）。
+做种策略仍在 Swift `TorrentEngine.snapshots()` 每次轮询时执行。必须 `has_metadata && is_finished`，状态为 seeding/finished，所选文件数和所选字节数均大于 0，所选内容全部完成，才允许动作；恢复校验和扩大文件选择期间不触发。
+
+新增设置及默认值：`bt.skipJunkFiles=true`、`bt.junkFilePatterns=上述内置清单`、`bt.seedTimeLimitMinutes=0`、`bt.seedInactiveLimitMinutes=0`、`bt.privateMinSeedMinutes=0`、`bt.ipBlocklistPath=""`。三个时长键单位为分钟，0 表示不限/无最低要求；时间条件由 Swift 执行，不作为 daemon configure 字段。
+
+分享率达到 1（私有种子的 ratio 豁免只影响该条件）、做种时长达到非零上限、不活跃时长达到非零上限，任一满足即可触发。私有种子未达到最低做种时长之前，所有动作均不触发。`bt.seedingAction` 保留 stop/throttle，新增 remove：分别发 `pause`、`set_upload_limit` 51200、`remove(delete_files=false)`。删除后的任务从快照排除，并通过 `consumePolicyRemovals()` 交给 `BitTorrentController` 同步移除 App 记录。
+
+Swift API：`TorrentEngineSettings.isJunkFile(path:)` 与 daemon 使用相同通配规则，供添加面板预选；`addWithResult` 返回 `TorrentdAddResult`（含 skippedFiles），`skippedFiles` 可读取磁力过滤结果；`moveStorage`、`renameFile`、`forceRecheck`、`forceReannounce`、`trackers`、`setTrackers`、`peers`、`banIP`、`importIPBlocklist`、`createTorrent`、`exportTorrent` 与上述命令对应。既有 add 返回任务 ID 的语义保持不变。

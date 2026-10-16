@@ -122,6 +122,10 @@ json::object serialize_torrent(const std::string& id, const Torrent& torrent) {
             && status.state != lt::torrent_status::checking_resume_data && !status.errc},
         {"sequential_download", torrent.metadata.sequential_download},
         {"first_last_priority", torrent.metadata.first_last_priority},
+        {"skipped_files", torrent.metadata.skipped_files},
+        // finished_duration 包含选择性下载完成后的做种时间，seeding_duration 不包含。
+        {"seed_time_seconds", status.finished_duration.count()},
+        {"seed_inactive_seconds", torrent.metadata.seed_inactive_seconds},
         {"max_connections", torrent.handle.max_connections()}, {"diagnostics", diagnostics},
         {"has_metadata", status.has_metadata}, {"state", state}, {"paused", user_paused}, {"queued", queued},
         {"total_wanted", status.has_metadata ? status.total_wanted : 0},

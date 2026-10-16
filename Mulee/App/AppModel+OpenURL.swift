@@ -16,7 +16,8 @@ extension AppModel {
                     let previousIDs = Set(tasks.map(\.id))
                     await coordinator.add(
                         links: [link], autoExtract: autoExtract, directory: directory,
-                        filePriorities: filePriorities, torrentDownloadModes: torrentDownloadModes, videoEntries: videoEntries
+                        filePriorities: filePriorities, torrentDownloadModes: torrentDownloadModes, videoEntries: videoEntries,
+                        requestContexts: contexts.mapValues(\.requestContext), checksums: contexts.compactMapValues(\.checksum)
                     )
                     for index in tasks.indices where !previousIDs.contains(tasks[index].id) && tasks[index].sourceLink == link.original {
                         tasks[index].sourcePageURL = contexts[link]?.sourcePageURL
@@ -30,6 +31,12 @@ extension AppModel {
             var task = DownloadTask(link: link, autoExtract: autoExtract)
             if let entry = videoEntries[link] { task.name = "P\(entry.index) \(entry.title)" }
             task.sourcePageURL = contexts[link]?.sourcePageURL
+            task.requestContext = contexts[link]?.requestContext.withoutCookie
+            task.checksum = contexts[link]?.checksum
+            if link.kind == .http, let name = contexts[link]?.requestContext.suggestedFilename {
+                task.name = name
+                task.fileExtension = URL(fileURLWithPath: name).pathExtension
+            }
             if let password = contexts[link]?.password { pagePasswords[task.id] = password }
             return task
         }

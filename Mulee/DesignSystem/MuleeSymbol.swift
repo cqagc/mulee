@@ -37,6 +37,7 @@ enum MuleeSymbol: String, CaseIterable {
     case statusFailed = "exclamationmark.triangle.fill"
 
     // 工具栏与操作
+    case slowMode = "tortoise"
     case add = "plus"
     case remove = "minus"
     case pause = "pause.fill"

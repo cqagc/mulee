@@ -14,6 +14,7 @@ struct TorrentErrorDescriptions: Sendable {
         case "metadata_pending": (number, message) = (8, "种子元数据尚未就绪，请稍后重试")
         case "private_torrent": (number, message) = (9, "私有种子不允许追加 tracker")
         case "tracker_limit": (number, message) = (10, "tracker 数量超过上限")
+        case "conflict": (number, message) = (11, "目标位置已有同名文件，请选择保留或覆盖")
         default: (number, message) = (7, String(localized: "BT 引擎出错", bundle: .module))
         }
         return .rpc(code: number, message: String(localized: "\(message)（torrentd 错误码 \(code)）", bundle: .module))

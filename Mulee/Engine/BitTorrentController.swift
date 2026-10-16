@@ -98,6 +98,16 @@ final class BitTorrentController {
         guard isRunning else { return }
         do {
             let status = try await engine.sessionStatus()
+            let removed = await engine.consumePolicyRemovals()
+            if !removed.isEmpty, let model {
+                let removedTaskIDs = Set(model.tasks.filter {
+                    $0.kind == .bittorrent && $0.engineTaskID.map { removed.contains($0) } == true
+                }.map(\.id))
+                model.tasks.removeAll { removedTaskIDs.contains($0.id) }
+                if let selected = model.selectedTaskID, removedTaskIDs.contains(selected) {
+                    model.selectedTaskID = nil
+                }
+            }
             guard isRunning, !Task.isCancelled else { return }
             if (listenPort != nil && listenPort != status.listenPort)
                 || (reachability.sawIncoming && !status.hasIncomingConnections) {

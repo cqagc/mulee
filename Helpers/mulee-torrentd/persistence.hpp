@@ -17,6 +17,13 @@ struct Metadata {
     json::value completed_at = nullptr;
     bool sequential_download = false;
     bool first_last_priority = false;
+    bool junk_pending = false;
+    std::vector<std::string> junk_patterns;
+    json::array skipped_files;
+    json::object tracker_state;
+    std::int64_t seed_inactive_seconds = 0;
+    std::int64_t last_finished_duration = 0;
+    std::int64_t last_payload_total = 0;
 };
 
 std::string torrent_id(const lt::info_hash_t& hashes);
@@ -37,6 +44,9 @@ public:
     void remove(const std::string& id);
     lt::session_params load_dht();
     void save_dht(const lt::session_params& params);
+    json::object load_filters();
+    void save_filters(const json::object& filters);
+    void write_torrent(const fs::path& path, const std::vector<char>& buffer);
 
 private:
     fs::path directory_;

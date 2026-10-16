@@ -7,6 +7,7 @@ struct MenuBarPanelView: View {
     var body: some View {
         let presentation = MenuBarPresentation(tasks: model.tasks)
         VStack(alignment: .leading, spacing: 12) {
+            DiskReserveBanner()
             if presentation.isEmpty {
                 ContentUnavailableView(
                     "还没有下载任务",

@@ -37,7 +37,7 @@ final class OpenURLRouter {
         for request in requests {
             for link in request.links {
                 model.pendingNewTaskContexts[link] = NewTaskContext(
-                    sourcePageURL: request.sourcePageURL, password: request.password
+                    sourcePageURL: request.sourcePageURL, password: request.password, requestContext: request.requestContext
                 )
             }
         }

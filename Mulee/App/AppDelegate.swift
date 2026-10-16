@@ -8,6 +8,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var openURLRouter: OpenURLRouter?
     private var servicesProvider: DownloadServicesProvider?
     private var settingsRuntime: SettingsRuntime?
+    private var diskReserveMonitor: DiskReserveMonitor?
+    private var notificationService: NotificationService?
+    private var whenAllDoneController: WhenAllDoneController?
+    private var slowModeController: SlowModeController?
     private var coordinator: DownloadCoordinator?
     private var extractionCoordinator: ExtractionCoordinator?
     private var startupTask: Task<Void, Never>?
@@ -65,6 +69,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             model: model, engines: [Aria2Engine(stateDirectory: stateDirectory), torrent, ed2k],
             videoBootstrap: VideoEngineBootstrap()
         )
+        notificationService = NotificationService(model: model, settings: settings)
+        diskReserveMonitor = DiskReserveMonitor(model: model, settings: settings)
+        whenAllDoneController = WhenAllDoneController(model: model, settings: settings)
+        slowModeController = SlowModeController(model: model, settings: settings)
+        slowModeController?.start()
         extractionCoordinator = ExtractionCoordinator(
             model: model, settings: settings,
             extractor: ArchiveExtractionService(passwords: model.extractionPasswords)
@@ -88,9 +97,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard let coordinator, let settings else { return }
         startupTask = Task {
             await coordinator.start(
-                options: EngineOptionsMapper.options(from: settings),
+                options: EngineOptionsMapper.options(from: settings, slowMode: model?.isSlowModeActive ?? false),
                 videoConfiguration: VideoEngineConfiguration.configuration(from: settings)
             )
+            if !Task.isCancelled { diskReserveMonitor?.start() }
         }
     }
 
@@ -136,7 +146,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
         guard let coordinator else { return .terminateNow }
         guard !isTerminating else { return .terminateLater }
-        if let model, WindowClosePolicy.needsConfirmation(tasks: model.tasks) {
+        if let model, !model.isPerformingWhenAllDone, WindowClosePolicy.needsConfirmation(tasks: model.tasks) {
             let alert = NSAlert()
             alert.messageText = String(localized: "还有任务正在运行，确定退出 Mulee？")
             alert.informativeText = String(localized: "退出会暂停下载和解压，下载进度会保留。")
@@ -147,6 +157,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         isTerminating = true
         shutdownProgress.begin()
         settingsRuntime?.stop()
+        diskReserveMonitor?.stop()
+        notificationService?.stop()
+        whenAllDoneController?.cancel()
+        slowModeController?.stop()
         NetworkDiagnosticsService.shared.stop()
         startupTask?.cancel()
         extractionCoordinator?.cancel()
@@ -179,6 +193,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     /// 更新不走普通退出的五秒兜底，必须等引擎保存会话并停止后才允许安装。
     private func prepareForUpdate() async -> Bool {
+        diskReserveMonitor?.stop()
+        notificationService?.stop()
+        whenAllDoneController?.cancel()
+        slowModeController?.stop()
         shutdownProgress.begin()
         NetworkDiagnosticsService.shared.stop()
         startupTask?.cancel()

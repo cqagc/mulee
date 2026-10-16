@@ -16,6 +16,8 @@ public struct EngineTaskSnapshot: Sendable, Hashable, Identifiable {
     public var connections: Int
     /// 文件或多文件任务顶层目录的完整路径；引擎还没确定名称时为 nil。
     public var savePath: URL?
+    /// 实际写入的目录；视频尚未确定文件名、电驴临时目录也需要磁盘保护。
+    public var writeDirectories: [URL]?
     /// 下载来源 URL。
     public var sourceURL: URL?
     /// 出错时的错误说明（已转成用户能看懂的中文，原始错误码附在末尾）。
@@ -40,7 +42,8 @@ public struct EngineTaskSnapshot: Sendable, Hashable, Identifiable {
         sourceURL: URL?,
         errorMessage: String?,
         detail: TaskDetail? = nil,
-        completedAt: Date? = nil
+        completedAt: Date? = nil,
+        writeDirectories: [URL]? = nil
     ) {
         self.engineTaskID = engineTaskID
         self.name = name
@@ -51,6 +54,7 @@ public struct EngineTaskSnapshot: Sendable, Hashable, Identifiable {
         self.status = status
         self.connections = connections
         self.savePath = savePath
+        self.writeDirectories = writeDirectories
         self.sourceURL = sourceURL
         self.errorMessage = errorMessage
         self.detail = detail

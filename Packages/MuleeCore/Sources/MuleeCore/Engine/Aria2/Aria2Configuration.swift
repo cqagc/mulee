@@ -54,14 +54,19 @@ struct Aria2Configuration: Sendable {
             "console-log-level": "warn",
             "log": logURL.path,
             "log-level": "warn",
-            "user-agent": "Mulee/0.1",
+            "user-agent": DownloadRequestContext.safariUserAgent,
+            "max-tries": "5",
+            "retry-wait": "5",
+            "lowest-speed-limit": "1K",
+            "connect-timeout": "30",
+            "timeout": "60",
             "stop-with-process": String(ProcessInfo.processInfo.processIdentifier),
             "no-proxy": "localhost,127.0.0.1,::1"
         ]) { _, new in new }
         if FileManager.default.fileExists(atPath: sessionURL.path) {
             values["input-file"] = sessionURL.path
         }
-        guard values.values.allSatisfy({ !$0.contains("\n") && !$0.contains("\r") }) else {
+        guard values.values.allSatisfy({ !$0.utf8.contains(where: { [0, 10, 13].contains($0) }) }) else {
             throw EngineError.invalidResponse(String(localized: "aria2 配置不能包含换行符", bundle: .module))
         }
         return values.keys.sorted().map { "\($0)=\(values[$0, default: ""])" }.joined(separator: "\n") + "\n"

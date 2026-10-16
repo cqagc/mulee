@@ -20,6 +20,24 @@ struct MainWindowCommands: Commands {
             Button("新建下载") { model.showNewTask() }
                 .keyboardShortcut("n")
         }
+        CommandMenu("下载") {
+            Button(model.isSlowModeActive ? String(localized: "关闭慢速模式") : String(localized: "开启慢速模式")) {
+                model.slowModeController?.toggle()
+            }
+            Menu("本次下完后") {
+                ForEach(WhenAllDoneAction.allCases) { action in
+                    Button {
+                        model.whenAllDoneController?.select(action)
+                    } label: {
+                        if model.whenAllDoneAction == action {
+                            Label(action.title, systemImage: MuleeSymbol.statusCompleted.name)
+                        } else {
+                            Text(action.title)
+                        }
+                    }
+                }
+            }
+        }
         CommandGroup(after: .toolbar) {
             Button(state?.sidebarToggleTitle ?? String(localized: "显示边栏")) {
                 state?.isSidebarCollapsed.toggle()

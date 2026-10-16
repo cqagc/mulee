@@ -23,6 +23,24 @@ struct MenuBarFooter: View {
                 networkStatus
             }
             .controlSize(.small)
+            HStack {
+                Button(model.isSlowModeActive ? String(localized: "关闭慢速模式") : String(localized: "开启慢速模式"),
+                       systemImage: MuleeSymbol.slowMode.name) {
+                    model.slowModeController?.toggle()
+                }
+                Menu("本次下完后") {
+                    ForEach(WhenAllDoneAction.allCases) { action in
+                        Button(action.title) { model.whenAllDoneController?.select(action) }
+                    }
+                }
+            }
+            .controlSize(.small)
+            if let reason = model.slowModeReason {
+                Text(reason).font(.caption).foregroundStyle(.secondary)
+            }
+            if model.whenAllDoneAction != .none {
+                Text("本次下完后：\(model.whenAllDoneAction.title)").font(.caption).foregroundStyle(.secondary)
+            }
             if model.isScheduledLimitActive {
                 Text("计划限速中").font(.caption).foregroundStyle(.secondary)
             }

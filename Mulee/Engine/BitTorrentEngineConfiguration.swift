@@ -6,12 +6,18 @@ enum BitTorrentEngineConfiguration {
         var configuration = TorrentEngineSettings(
             listenPort: min(65535, max(0, settings.btPort)),
             portMapping: settings.portMapping,
-            seedingAction: settings.seedingAction == .stop ? .stop : .slowDown,
+            seedingAction: settings.seedingAction == .remove ? .remove : settings.seedingAction == .stop ? .stop : .slowDown,
             exemptPrivateTorrents: settings.privateIgnoresRatio
         )
         // Match aria2's M suffix (MiB); SettingsModel constrains the slider to 32...512.
         configuration.diskCacheBytes = Int64(min(512, max(0, settings.diskCacheMB))) * 1_048_576
         configuration.blockedClients = settings.blockLeechingClients ? TorrentEngineSettings.defaultBlockedClients : []
+        configuration.skipJunkFiles = settings.skipJunkFiles
+        configuration.junkFilePatterns = settings.junkFilePatterns
+        configuration.seedTimeLimitMinutes = max(0, settings.seedTimeLimitMinutes)
+        configuration.seedInactiveLimitMinutes = max(0, settings.seedInactiveLimitMinutes)
+        configuration.privateMinSeedMinutes = max(0, settings.privateMinSeedMinutes)
+        configuration.ipBlocklistPath = settings.ipBlocklistPath
         return configuration
     }
 }

@@ -12,6 +12,8 @@ public struct TorrentTaskInfo: Sendable, Equatable {
     public let sequentialDownload: Bool
     public let firstLastPriority: Bool
     public let diagnostics: TorrentDiagnostics?
+    public let seedTimeSeconds: Int64
+    public let seedInactiveSeconds: Int64
 }
 
 /// 以一秒为最短间隔采样的 BT 连接诊断；磁盘指标属于整个会话。

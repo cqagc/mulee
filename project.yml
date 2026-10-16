@@ -43,6 +43,8 @@ targets:
       path: Mulee/App/VideoLogin.entitlements
       properties:
         com.apple.security.application-groups: [LV69DG6R9Y.com.cqagc.mulee.video-login]
+        # 「下完后关机」通过 Apple 事件请求 System Events 关机；硬化运行时下需要这项权限。
+        com.apple.security.automation.apple-events: true
     dependencies:
       - package: MuleeCore
       - package: Sparkle
@@ -52,6 +54,7 @@ targets:
       path: Mulee/Resources/Info.plist
       properties:
         CFBundleDisplayName: Mulee
+        NSAppleEventsUsageDescription: Mulee 需要在下载全部完成后请求系统关机。
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleURLTypes:

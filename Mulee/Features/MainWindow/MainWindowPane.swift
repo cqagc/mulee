@@ -15,8 +15,11 @@ struct MainWindowPane: View {
         case .sidebar:
             MainSidebarView(selection: $state.selection)
         case .tasks:
-            TaskListView(tasks: state.visibleTasks(in: model), isSearching: !state.search.isEmpty)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            VStack(spacing: 0) {
+                DiskReserveBanner()
+                TaskListView(tasks: state.visibleTasks(in: model), isSearching: !state.search.isEmpty)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         case .inspector:
             TaskInspectorView(task: model.selectedTask)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

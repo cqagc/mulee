@@ -116,6 +116,35 @@
           }
         }
       }
+    },
+    "NSAppleEventsUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulee 需要在下载全部完成后请求系统关机。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulee needs this to shut down your Mac after all downloads finish."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mulee 需要在下載全部完成後請求系統關機。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのダウンロードが完了した後に Mac をシステム終了するために必要です。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

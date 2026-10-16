@@ -8,6 +8,7 @@
 #include <libtorrent/session.hpp>
 #include <libtorrent/torrent_handle.hpp>
 #include <map>
+#include <optional>
 
 namespace mulee {
 // Per-torrent connection cap. 100 (qBittorrent's default) left single downloads with
@@ -76,6 +77,25 @@ private:
     std::int64_t disk_blocked_peers_ = 0;
     bool disk_stats_available_ = false;
     int disk_cache_bytes_ = 16 * 1024 * 1024;
+    bool skip_junk_files_ = true;
+    std::vector<std::string> junk_patterns_ = {"*.url", "*.lnk", "*padding_file*", "_____padding_file_*",
+        "*.!ut", "*最新地址*.txt", "*广告*.txt", "*最新地址*.html", "*广告*.html", "*.mht"};
+    json::object ip_filters_;
+    lt::torrent_handle export_handle_;
+    std::optional<lt::add_torrent_params> export_resume_;
+    std::string export_error_;
+    lt::torrent_handle storage_handle_;
+    int storage_pending_ = 0;
+    std::string storage_error_;
+    std::string storage_error_code_;
+    void wait_storage();
+    void apply_ip_filters(const json::object& filters);
+    json::array read_blocklist(const std::string& path);
+    json::object manage(const std::string& method, const json::object& params);
+    json::object tracker_list(Torrent& torrent);
+    void refresh_trackers(Torrent& torrent);
+    void tracker_result(Torrent& torrent, const std::string& url, const std::string& result, int peers, bool failed);
+    void apply_junk_filter(Torrent& torrent);
     std::chrono::steady_clock::time_point last_stats_ = std::chrono::steady_clock::now();
     std::chrono::steady_clock::time_point last_stats_request_ = last_stats_;
     std::map<std::string, int> dht_nodes_;

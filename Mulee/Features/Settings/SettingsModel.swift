@@ -9,8 +9,9 @@ final class SettingsModel {
     enum SeedingAction: String, CaseIterable, Identifiable {
         case stop
         case throttle
+        case remove
 
-        static let allCases: [Self] = [.stop, .throttle]
+        static let allCases: [Self] = [.stop, .throttle, .remove]
 
         var id: Self { self }
     }
@@ -65,11 +66,20 @@ final class SettingsModel {
         static let preventSleep = "general.preventSleep"
         static let allowSleepWhenDone = "general.allowSleepWhenDone"
         static let watchClipboard = "general.watchClipboard"
+        static let notifyOnComplete = "general.notifyOnComplete"
+        static let notifyOnFailure = "general.notifyOnFailure"
+        static let notificationSound = "general.notificationSound"
+        static let whenAllDone = "general.whenAllDone"
         static let saveDirectory = "download.saveDirectory"
         static let maxConcurrentTasks = "download.maxConcurrentTasks"
         static let httpThreads = "download.httpThreads"
+        static let diskReserveEnabled = "download.diskReserveEnabled"
+        static let diskReserveGB = "download.diskReserveGB"
         static let downloadLimit = "network.downloadLimitMBps"
         static let uploadLimit = "network.uploadLimitMBps"
+        static let slowModeDownloadMBps = "network.slowModeDownloadMBps"
+        static let slowModeUploadMBps = "network.slowModeUploadMBps"
+        static let slowModeOnExpensive = "network.slowModeOnExpensive"
         static let scheduledLimit = "network.scheduledLimit"
         static let scheduleStart = "network.scheduleStart"
         static let scheduleEnd = "network.scheduleEnd"
@@ -84,6 +94,12 @@ final class SettingsModel {
         static let trackerSubscriptions = "bt.trackerSubscriptions"
         static let customTrackers = "bt.customTrackers"
         static let blockLeechingClients = "bt.blockLeechingClients"
+        static let skipJunkFiles = "bt.skipJunkFiles"
+        static let junkFilePatterns = "bt.junkFilePatterns"
+        static let seedTimeLimitMinutes = "bt.seedTimeLimitMinutes"
+        static let seedInactiveLimitMinutes = "bt.seedInactiveLimitMinutes"
+        static let privateMinSeedMinutes = "bt.privateMinSeedMinutes"
+        static let ipBlocklistPath = "bt.ipBlocklistPath"
         static let ed2kTCPPort = "ed2k.tcpPort"
         static let ed2kUDPPort = "ed2k.udpPort"
         static let ed2kShare = "ed2k.shareCompleted"
@@ -122,15 +138,30 @@ final class SettingsModel {
     var preventSleep: Bool { didSet { defaults.set(preventSleep, forKey: Key.preventSleep) } }
     var allowSleepWhenDone: Bool { didSet { defaults.set(allowSleepWhenDone, forKey: Key.allowSleepWhenDone) } }
     var watchClipboard: Bool { didSet { defaults.set(watchClipboard, forKey: Key.watchClipboard) } }
+    var notifyOnComplete: Bool { didSet { defaults.set(notifyOnComplete, forKey: Key.notifyOnComplete) } }
+    var notifyOnFailure: Bool { didSet { defaults.set(notifyOnFailure, forKey: Key.notifyOnFailure) } }
+    var notificationSound: Bool { didSet { defaults.set(notificationSound, forKey: Key.notificationSound) } }
+    var whenAllDone: WhenAllDoneAction { didSet { defaults.set(whenAllDone.rawValue, forKey: Key.whenAllDone) } }
 
     // MARK: 下载
     var saveDirectory: String { didSet { defaults.set(saveDirectory, forKey: Key.saveDirectory) } }
     var maxConcurrentTasks: Int { didSet { defaults.set(maxConcurrentTasks, forKey: Key.maxConcurrentTasks) } }
     var httpThreads: Int { didSet { defaults.set(httpThreads, forKey: Key.httpThreads) } }
+    var diskReserveEnabled: Bool { didSet { defaults.set(diskReserveEnabled, forKey: Key.diskReserveEnabled) } }
+    var diskReserveGB: Int {
+        didSet {
+            let clamped = min(500, max(1, diskReserveGB))
+            if clamped != diskReserveGB { diskReserveGB = clamped }
+            defaults.set(diskReserveGB, forKey: Key.diskReserveGB)
+        }
+    }
 
     // MARK: 网络
     var downloadLimit: Int { didSet { defaults.set(downloadLimit, forKey: Key.downloadLimit) } }
     var uploadLimit: Double { didSet { defaults.set(uploadLimit, forKey: Key.uploadLimit) } }
+    var slowModeDownloadMBps: Double { didSet { defaults.set(slowModeDownloadMBps, forKey: Key.slowModeDownloadMBps) } }
+    var slowModeUploadMBps: Double { didSet { defaults.set(slowModeUploadMBps, forKey: Key.slowModeUploadMBps) } }
+    var slowModeOnExpensive: Bool { didSet { defaults.set(slowModeOnExpensive, forKey: Key.slowModeOnExpensive) } }
     var scheduledLimit: Bool { didSet { defaults.set(scheduledLimit, forKey: Key.scheduledLimit) } }
     var scheduleStart: Date { didSet { defaults.set(scheduleStart, forKey: Key.scheduleStart) } }
     var scheduleEnd: Date { didSet { defaults.set(scheduleEnd, forKey: Key.scheduleEnd) } }
@@ -147,6 +178,13 @@ final class SettingsModel {
     var trackerSubscriptions: String { didSet { defaults.set(trackerSubscriptions, forKey: Key.trackerSubscriptions) } }
     var customTrackers: String { didSet { defaults.set(customTrackers, forKey: Key.customTrackers) } }
     var blockLeechingClients: Bool { didSet { defaults.set(blockLeechingClients, forKey: Key.blockLeechingClients) } }
+
+    var skipJunkFiles: Bool { didSet { defaults.set(skipJunkFiles, forKey: Key.skipJunkFiles) } }
+    var junkFilePatterns: [String] { didSet { defaults.set(junkFilePatterns, forKey: Key.junkFilePatterns) } }
+    var seedTimeLimitMinutes: Int { didSet { defaults.set(seedTimeLimitMinutes, forKey: Key.seedTimeLimitMinutes) } }
+    var seedInactiveLimitMinutes: Int { didSet { defaults.set(seedInactiveLimitMinutes, forKey: Key.seedInactiveLimitMinutes) } }
+    var privateMinSeedMinutes: Int { didSet { defaults.set(privateMinSeedMinutes, forKey: Key.privateMinSeedMinutes) } }
+    var ipBlocklistPath: String { didSet { defaults.set(ipBlocklistPath, forKey: Key.ipBlocklistPath) } }
 
     // MARK: 电驴
     var ed2kTCPPort: Int { didSet { defaults.set(ed2kTCPPort, forKey: Key.ed2kTCPPort) } }
@@ -173,6 +211,15 @@ final class SettingsModel {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        slowModeOnExpensive = Self.bool(defaults, Key.slowModeOnExpensive, true)
+        slowModeUploadMBps = defaults.object(forKey: Key.slowModeUploadMBps) as? Double ?? 0.2
+        slowModeDownloadMBps = defaults.object(forKey: Key.slowModeDownloadMBps) as? Double ?? 1
+        diskReserveGB = min(500, max(1, Self.int(defaults, Key.diskReserveGB, 10)))
+        diskReserveEnabled = Self.bool(defaults, Key.diskReserveEnabled, true)
+        whenAllDone = Self.raw(defaults, Key.whenAllDone, .none)
+        notificationSound = Self.bool(defaults, Key.notificationSound, false)
+        notifyOnFailure = Self.bool(defaults, Key.notifyOnFailure, true)
+        notifyOnComplete = Self.bool(defaults, Key.notifyOnComplete, true)
         closeKeepsRunning = Self.bool(defaults, Key.closeKeepsRunning, true)
         launchAtLogin = Self.bool(defaults, Key.launchAtLogin, false)
         preventSleep = Self.bool(defaults, Key.preventSleep, true)
@@ -199,6 +246,12 @@ final class SettingsModel {
         trackerSubscriptions = defaults.string(forKey: Key.trackerSubscriptions) ?? PublicTrackerList.defaultSubscriptions
         customTrackers = defaults.string(forKey: Key.customTrackers) ?? ""
         blockLeechingClients = Self.bool(defaults, Key.blockLeechingClients, false)
+        skipJunkFiles = Self.bool(defaults, Key.skipJunkFiles, true)
+        junkFilePatterns = defaults.stringArray(forKey: Key.junkFilePatterns) ?? TorrentEngineSettings.defaultJunkFilePatterns
+        seedTimeLimitMinutes = Self.int(defaults, Key.seedTimeLimitMinutes, 0)
+        seedInactiveLimitMinutes = Self.int(defaults, Key.seedInactiveLimitMinutes, 0)
+        privateMinSeedMinutes = Self.int(defaults, Key.privateMinSeedMinutes, 0)
+        ipBlocklistPath = defaults.string(forKey: Key.ipBlocklistPath) ?? ""
         ed2kTCPPort = Self.int(defaults, Key.ed2kTCPPort, 4662)
         ed2kUDPPort = Self.int(defaults, Key.ed2kUDPPort, 4672)
         ed2kShare = Self.bool(defaults, Key.ed2kShare, true)

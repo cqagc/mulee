@@ -47,6 +47,40 @@ import Testing
         #expect(SeedingPolicy.action(ratio: ratio, isFinished: true, isPrivate: isPrivate, paused: paused, uploadLimit: limit, settings: settings) == expected)
     }
 
+    @Test("垃圾文件预选与 daemon 通配语义一致")
+    func junkPatterns() {
+        var settings = TorrentEngineSettings()
+        for path in ["目录/AD.URL", "folder/link.lnk", "folder/广告.txt", "_____padding_file_1", "part.!ut"] {
+            #expect(settings.isJunkFile(path: path))
+        }
+        #expect(!settings.isJunkFile(path: "folder/actual.txt"))
+        settings.junkFilePatterns = ["sample?.[bt]in"]
+        #expect(settings.isJunkFile(path: "folder/SAMPLE1.BIN"))
+        settings.skipJunkFiles = false
+        #expect(!settings.isJunkFile(path: "sample1.bin"))
+    }
+
+    @Test("做种时间、不活跃时间、私有最低时间和删除保留文件")
+    func timeLimits() {
+        var settings = TorrentEngineSettings(seedingAction: .remove, seedTimeLimitMinutes: 10, seedInactiveLimitMinutes: 5, privateMinSeedMinutes: 20)
+        func action(_ time: Int64, _ inactive: Int64, privateTorrent: Bool = false, finished: Bool = true, ratio: Double = 0) -> SeedingPolicyAction {
+            SeedingPolicy.action(ratio: ratio, isFinished: finished, isPrivate: privateTorrent,
+                                 paused: false, uploadLimit: 0, settings: settings,
+                                 seedTimeSeconds: time, seedInactiveSeconds: inactive)
+        }
+        #expect(action(599, 299) == .none)
+        #expect(action(600, 0) == .remove)
+        #expect(action(0, 300) == .remove)
+        #expect(action(1200, 300, finished: false) == .none)
+        #expect(action(1199, 600, privateTorrent: true, ratio: 2) == .none)
+        #expect(action(1200, 0, privateTorrent: true) == .remove)
+        settings.seedTimeLimitMinutes = 0
+        settings.seedInactiveLimitMinutes = 0
+        #expect(action(99999, 99999) == .none)
+        settings.seedTimeLimitMinutes = Int.max
+        #expect(action(Int64.max, 0) == .none)
+    }
+
     @Test("下载未完成时分享率不触发策略", arguments: [TorrentSeedingAction.stop, .slowDown])
     func unfinishedPolicy(_ action: TorrentSeedingAction) {
         for isPrivate in [false, true] {

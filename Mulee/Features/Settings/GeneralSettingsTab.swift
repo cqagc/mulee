@@ -1,8 +1,11 @@
+import AppKit
 import SwiftUI
 
 /// 设置·通用。
 struct GeneralSettingsTab: View {
     @Environment(SettingsModel.self) private var model
+    @Environment(AppModel.self) private var app
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         @Bindable var model = model
@@ -23,6 +26,30 @@ struct GeneralSettingsTab: View {
                 }
                 .disabled(!model.preventSleep)
             }
+            Section("下完后") {
+                Picker("默认操作", selection: $model.whenAllDone) {
+                    ForEach(WhenAllDoneAction.allCases) { action in
+                        Text(action.title).tag(action)
+                    }
+                }
+                Text("全部下载完成后倒计时 60 秒；新任务或用户操作会取消。此设置不影响「全部完成后允许睡眠」。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Section("通知") {
+                Toggle("下载完成时通知", isOn: $model.notifyOnComplete)
+                Toggle("下载失败时通知", isOn: $model.notifyOnFailure)
+                Toggle("通知声音", isOn: $model.notificationSound)
+                if app.notificationPermissionDenied {
+                    Text("通知权限已关闭，下载完成和磁盘保护等提醒不会显示。请在系统设置中允许通知。")
+                        .foregroundStyle(.secondary)
+                    Button("打开系统设置") {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                }
+            }
             DefaultHandlerSection()
             BrowserExtensionSection()
             AppUpdateSection()
@@ -34,10 +61,12 @@ struct GeneralSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+        .task(id: scenePhase) { await app.notificationService?.refreshAuthorization() }
     }
 }
 
 #Preview {
     GeneralSettingsTab()
         .environment(SettingsModel())
+        .environment(AppModel())
 }

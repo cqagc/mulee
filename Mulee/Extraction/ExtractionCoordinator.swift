@@ -10,6 +10,7 @@ final class ExtractionCoordinator {
     private var worker: Task<Void, Never>?
     private var activeJob: ExtractionJob?
     private var candidates: [DownloadTask.ID] = []
+    private var manualRequests: Set<DownloadTask.ID> = []
     private var seenCompletions: Set<DownloadTask.ID> = []
     private var waitingSignatures: [DownloadTask.ID: [String]] = [:]
     private var isUpdating = false
@@ -46,6 +47,20 @@ final class ExtractionCoordinator {
         cancel()
         await worker?.value
         model.flushTaskHistory()
+    }
+
+    func requestExtraction(_ id: DownloadTask.ID) {
+        guard let task = model.tasks.first(where: { $0.id == id }), task.status == .completed,
+              let path = task.savePath,
+              ArchiveVolumeDetector.detect(filename: path.lastPathComponent, directoryFilenames: []).isArchive else { return }
+        manualRequests.insert(id)
+        if !candidates.contains(id) { candidates.append(id) }
+        update([id]) { task in
+            task.postDownload.autoExtract = true
+            task.postDownload.extractionState = .queued
+            task.postDownload.extractProgress = nil
+        }
+        tasksDidChange()
     }
 
     func tasksDidChange() {
@@ -106,7 +121,7 @@ final class ExtractionCoordinator {
     }
 
     private func nextJob() -> ExtractionJob? {
-        guard settings.autoExtract else {
+        guard settings.autoExtract || !manualRequests.isEmpty else {
             update(Set(candidates)) { task in
                 task.postDownload.extractionState = .cancelled
                 task.postDownload.extractionFailure = String(localized: "自动解压已关闭")
@@ -115,12 +130,20 @@ final class ExtractionCoordinator {
             return nil
         }
         for id in candidates {
+            if model.tasks.contains(where: { $0.id == id && $0.pauseReason == .diskSpace }) { continue }
             guard let task = model.tasks.first(where: { $0.id == id }), task.status == .completed,
                   task.postDownload.autoExtract, !Self.isFinished(task.postDownload), let archive = task.savePath else {
                 candidates.removeAll { $0 == id }
                 continue
             }
             let directory = archive.deletingLastPathComponent().standardizedFileURL
+            if let monitor = model.diskReserveMonitor, !monitor.canStartExtraction(at: directory) {
+                update([id]) { task in
+                    task.pauseReason = .diskSpace
+                    task.status = .paused
+                }
+                continue
+            }
             let peers = model.tasks.filter {
                 let parent = $0.savePath?.deletingLastPathComponent().standardizedFileURL
                     ?? URL(filePath: settings.saveDirectory).standardizedFileURL
@@ -164,6 +187,7 @@ final class ExtractionCoordinator {
             let main = directory.appendingPathComponent(detected.mainVolume ?? archive.lastPathComponent)
             let source = group.first { $0.savePath?.lastPathComponent == main.lastPathComponent } ?? task
             candidates.removeAll { ids.contains($0) }
+            manualRequests.subtract(ids)
             seenCompletions.formUnion(ids)
             return ExtractionJob(
                 taskIDs: ids, archive: main, destination: directory,

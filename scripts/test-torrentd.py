@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import queue
+import resource
 import signal
 import socket
 import subprocess
@@ -187,7 +188,7 @@ class Daemon:
         params.update(changes)
         result = self.request("configure", params)
         assert 0 < result["listen_port"] < 65536
-        assert result["connections_limit"] == 500
+        assert result["connections_limit"] == 500, result
         assert result["active_limit"] == max(32, min(2147483647, params["max_active_downloads"] + params["max_active_seeds"]))
         assert result["dont_count_slow_torrents"] is True
         assert result["announce_to_all_tiers"] is True and result["announce_to_all_trackers"] is False
@@ -261,7 +262,207 @@ def validate_item(item):
     assert item["state"] in ("checking", "metadata", "downloading", "seeding", "finished", "error")
 
 
+def management_tests(binary, root):
+    data = b"Mulee management fixture\n" * 4096
+    entries = [("content.bin", data), ("AD.URL", b"fixture"), ("广告.txt", b"fixture"),
+               ("folder/keep.txt", b"fixture")]
+    torrent, torrent_id, seed = fixture(root, "Management", entries, multi=True)
+    daemon = Daemon(binary, root / "management-state")
+    port = daemon.configure(seed)
+    added = daemon.request("add", {"torrent_file": str(torrent)})
+    assert [file["index"] for file in added["skipped_files"]] == [1, 2]
+    assert [file["priority"] for file in daemon.request("files", {"id": torrent_id})["files"]] == [4, 0, 0, 4]
+    daemon.complete(torrent_id)
+    assert daemon.torrent(torrent_id)["skipped_files"] == added["skipped_files"]
+    daemon.request("set_file_priorities", {"id": torrent_id, "priorities": [4, 4, 4, 4]})
+    wait_for(lambda: daemon.request("files", {"id": torrent_id})["files"][1]["priority"] == 4)
+    daemon.request("force_recheck", {"id": torrent_id})
+    daemon.complete(torrent_id)
+    daemon.request("force_reannounce", {"id": torrent_id})
+    status = daemon.torrent(torrent_id)
+    assert status["seed_time_seconds"] >= 0 and status["seed_inactive_seconds"] >= 0
+
+    moved = root / "moved"
+    collision = moved / "Management/content.bin"
+    collision.parent.mkdir(parents=True)
+    collision.write_bytes(b"existing destination")
+    daemon.request("move_storage", {"id": torrent_id, "path": str(moved), "conflict": "fail"}, error="conflict")
+    assert (seed / "Management/content.bin").read_bytes() == data
+    daemon.request("move_storage", {"id": torrent_id, "path": str(moved), "conflict": "overwrite"})
+    assert collision.read_bytes() == data and not (seed / "Management/content.bin").exists()
+    daemon.request("rename_file", {"id": torrent_id, "path": "Management/content.bin", "new_path": "Management/renamed.bin"})
+    daemon.request("rename_file", {"id": torrent_id, "path": "Management/folder", "new_path": "Management/renamed-folder"})
+    assert (moved / "Management/renamed.bin").read_bytes() == data
+    assert (moved / "Management/renamed-folder/keep.txt").read_bytes() == b"fixture"
+    daemon.request("rename_file", {"id": torrent_id, "path": "Management/renamed.bin", "new_path": "../escape"}, error="invalid_params")
+    daemon.request("rename_file", {"id": torrent_id, "path": "Management/renamed.bin", "new_path": "Management/AD.URL"}, error="conflict")
+    kept = root / "kept"
+    destination = kept / "Management/renamed.bin"
+    destination.parent.mkdir(parents=True)
+    destination.write_bytes(data)
+    daemon.request("move_storage", {"id": torrent_id, "path": str(kept), "conflict": "keep"})
+    assert destination.read_bytes() == data
+    daemon.complete(torrent_id)
+
+    class ManagementTracker(BaseHTTPRequestHandler):
+        failures = False
+
+        def do_GET(self):
+            body = bencode({"failure reason": "fixture failure"} if self.failures else
+                           {"interval": 1, "min interval": 0, "peers": b""})
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    tracker = ThreadingHTTPServer(("127.0.0.1", 0), ManagementTracker)
+    tracker_worker = threading.Thread(target=tracker.serve_forever, daemon=True)
+    tracker_worker.start()
+    url = f"http://127.0.0.1:{tracker.server_port}/announce"
+    daemon.request("set_trackers", {"id": torrent_id, "trackers": [{"url": url, "tier": 2}]})
+    rows = daemon.request("trackers", {"id": torrent_id})["trackers"]
+    assert len(rows) == 1 and rows[0]["tier"] == 2 and rows[0]["url"] == url
+    assert set(rows[0]) == {"url", "tier", "status", "last_result", "peers", "disabled_until", "subscription"}
+    daemon.request("set_trackers", {"id": torrent_id, "trackers": [{"url": url, "tier": 256}]}, error="invalid_params")
+    daemon.request("set_trackers", {"id": torrent_id, "trackers": []})
+    assert daemon.request("trackers", {"id": torrent_id}) == {"trackers": []}
+    daemon.request("add_trackers", {"id": torrent_id, "urls": [url], "subscription": True})
+    ManagementTracker.failures = True
+
+    def disabled():
+        daemon.request("force_reannounce", {"id": torrent_id})
+        rows = daemon.request("trackers", {"id": torrent_id})["trackers"]
+        return rows and rows[0]["status"] == "disabled"
+
+    wait_for(disabled, timeout=45, description="three subscription failures disable tracker")
+    disabled_row = daemon.request("trackers", {"id": torrent_id})["trackers"][0]
+    assert 86300 <= disabled_row["disabled_until"] - int(time.time()) <= 86400
+    assert disabled_row["last_result"]
+
+    # 用真实回环握手核验节点字段，测试不接触公共 swarm。
+    peer = socket.create_connection(("127.0.0.1", port), timeout=3)
+    peer.sendall(b"\x13BitTorrent protocol" + b"\0" * 8 + bytes.fromhex(torrent_id) + b"-MU0100-123456789012")
+    rows = wait_for(lambda: daemon.request("peers", {"id": torrent_id})["peers"], description="peer detail list")
+    assert rows[0]["address"] == "127.0.0.1" and rows[0]["connection"] == "tcp"
+    assert {"port", "client", "progress", "download_rate", "upload_rate", "sources"} <= rows[0].keys()
+    assert "incoming" in rows[0]["sources"]
+    peer.close()
+    daemon.request("ban_ip", {"ip": "192.0.2.10"})
+    daemon.request("ban_ip", {"ip": "invalid"}, error="invalid_params")
+    blocklist = root / "fixture.p2p"
+    blocklist.write_text("# fixture\nExample:192.0.2.1-192.0.2.9\n", encoding="utf-8")
+    assert daemon.request("import_ip_blocklist", {"path": str(blocklist)}) == {"blocked_ranges": 1}
+    dat = root / "fixture.dat"
+    dat.write_text("198.051.100.001 - 198.051.100.009 , 126 , blocked\n203.0.113.1 - 203.0.113.9 , 127 , allowed\n")
+    assert daemon.request("import_ip_blocklist", {"path": str(dat)}) == {"blocked_ranges": 1}
+    invalid = root / "invalid.dat"
+    invalid.write_text("192.0.2.9 - 192.0.2.1 , 1 , reversed\n")
+    daemon.request("import_ip_blocklist", {"path": str(invalid)}, error="invalid_params")
+    filters = json.loads((daemon.state / "ip-filters.json").read_text())
+    assert filters == {"banned": ["192.0.2.10"], "imported": [{"first": "198.51.100.1", "last": "198.51.100.9"}]}
+    daemon.configure(kept, ip_blocklist_path=str(blocklist))
+    assert json.loads((daemon.state / "ip-filters.json").read_text())["banned"] == ["192.0.2.10"]
+
+    output = root / "export.torrent"
+    assert daemon.request("export_torrent", {"id": torrent_id, "output": str(output)})["id"] == torrent_id
+    assert hashlib.sha1(bencode(bdecode(output.read_bytes())[b"info"])).hexdigest() == torrent_id
+    daemon.request("export_torrent", {"id": torrent_id, "output": str(output)}, error="conflict")
+    pending_id = "0123456789abcdef0123456789abcdef01234567"
+    daemon.request("add", {"magnet": f"magnet:?xt=urn:btih:{pending_id}"})
+    daemon.request("export_torrent", {"id": pending_id, "output": str(root / "pending.torrent")}, error="metadata_pending")
+    daemon.request("remove", {"id": pending_id, "delete_files": False})
+    source = root / "hybrid-source"
+    source.mkdir()
+    (source / "one.bin").write_bytes(data)
+    (source / "two.bin").write_bytes(data * 2)
+    hybrid = root / "hybrid.torrent"
+    created = daemon.request("create_torrent", {"path": str(source), "output": str(hybrid), "private": True,
+                                                "trackers": [url], "comment": "Mulee fixture"})
+    decoded = bdecode(hybrid.read_bytes())
+    assert decoded[b"info"][b"meta version"] == 2 and b"pieces" in decoded[b"info"]
+    assert decoded[b"info"][b"private"] == 1 and decoded[b"comment"] == b"Mulee fixture"
+    assert daemon.request("add", {"torrent_file": str(hybrid), "save_path": str(root)})["id"] == created["id"]
+    daemon.complete(created["id"])
+    hybrid_export = root / "hybrid-export.torrent"
+    daemon.request("export_torrent", {"id": created["id"], "output": str(hybrid_export)})
+    assert bdecode(hybrid_export.read_bytes())[b"info"] == decoded[b"info"]
+    assert bdecode(hybrid_export.read_bytes()).get(b"piece layers") == decoded.get(b"piece layers")
+    single_created = root / "single-created.torrent"
+    daemon.request("create_torrent", {"path": str(source / "one.bin"), "output": str(single_created), "private": False, "trackers": []})
+    assert bdecode(single_created.read_bytes())[b"info"][b"meta version"] == 2
+    daemon.close("shutdown")
+
+    # 回读停用订阅，再改变持久化到期时间，避免测试等待一整天。
+    metadata_path = daemon.state / "meta" / (torrent_id + ".json")
+    metadata = json.loads(metadata_path.read_text())
+    state = metadata["tracker_state"][url]
+    state["failures"] = 3
+    state["disabled_until"] = int(time.time()) + 86400
+    metadata_path.write_text(json.dumps(metadata))
+    daemon = Daemon(binary, daemon.state)
+    rows = daemon.request("trackers", {"id": torrent_id})["trackers"]
+    assert rows[0]["status"] == "disabled" and rows[0]["disabled_until"] == state["disabled_until"]
+    assert daemon.request("add_trackers", {"id": torrent_id, "urls": [url], "subscription": True})["added"] == 0
+    assert json.loads((daemon.state / "ip-filters.json").read_text())["banned"] == ["192.0.2.10"]
+    assert daemon.torrent(torrent_id)["save_path"] == str(kept)
+    assert any(file["path"] == "Management/renamed-folder/keep.txt" for file in daemon.request("files", {"id": torrent_id})["files"])
+    daemon.close("shutdown")
+    metadata = json.loads(metadata_path.read_text())
+    metadata["tracker_state"][url]["disabled_until"] = int(time.time()) - 1
+    metadata_path.write_text(json.dumps(metadata))
+    ManagementTracker.failures = False
+    daemon = Daemon(binary, daemon.state)
+    rows = daemon.request("trackers", {"id": torrent_id})["trackers"]
+    assert rows[0]["disabled_until"] == 0 and rows[0]["url"] == url, rows
+    daemon.configure(root / "junk-disabled", skip_junk_files=False)
+    daemon.request("remove", {"id": torrent_id, "delete_files": False})
+    added = daemon.request("add", {"torrent_file": str(torrent), "paused": True})
+    assert added["skipped_files"] == []
+    assert all(file["priority"] == 4 for file in daemon.request("files", {"id": torrent_id})["files"])
+    daemon.request("remove", {"id": torrent_id, "delete_files": False})
+    daemon.configure(root / "junk-disabled", skip_junk_files=True, junk_file_patterns=["*.bin"])
+    added = daemon.request("add", {"torrent_file": str(torrent), "paused": True})
+    assert [file["index"] for file in added["skipped_files"]] == [0]
+    daemon.request("remove", {"id": torrent_id, "delete_files": False})
+    added = daemon.request("add", {"torrent_file": str(torrent), "file_priorities": [4, 4, 4, 4]})
+    assert added["skipped_files"] == []
+    daemon.request("resume", {"id": torrent_id})
+
+    # 对比封禁前后握手，确认导入范围和手动封禁真正作用于 IP 过滤器。
+    loopback = root / "loopback.p2p"
+    loopback.write_text("Loopback:127.0.0.1-127.0.0.1\n")
+
+    def handshake_blocked(instance):
+        port = instance.request("session_status")["listen_port"]
+        with socket.create_connection(("127.0.0.1", port), timeout=3) as peer:
+            peer.sendall(b"\x13BitTorrent protocol" + b"\0" * 8 + bytes.fromhex(torrent_id) + b"-MU0100-123456789012")
+            try:
+                return peer.recv(68) == b""
+            except ConnectionResetError:
+                return True
+
+    assert not handshake_blocked(daemon)
+    daemon.configure(root / "junk-disabled", ip_blocklist_path=str(loopback))
+    assert handshake_blocked(daemon)
+    daemon.configure(root / "junk-disabled", ip_blocklist_path="")
+    assert not handshake_blocked(daemon)
+    daemon.request("ban_ip", {"ip": "127.0.0.1"})
+    assert handshake_blocked(daemon)
+    daemon.close("shutdown")
+    daemon = Daemon(binary, daemon.state)
+    assert handshake_blocked(daemon)
+    daemon.close("shutdown")
+    tracker.shutdown()
+    tracker.server_close()
+    tracker_worker.join(timeout=2)
+    print("PASS D2/F1-F5：过滤反馈、存储冲突/移动/重命名、校验/宣告、tracker、peer、IP 持久化、混合种子制作/导出", flush=True)
+
+
 def run_tests(binary, root):
+    management_tests(binary, root)
+
     data = os.urandom(5 * 1024 * 1024 + 123)
     single, single_id, seed_path = fixture(root, "Mulee-open-test.bin", [("", data)])
     multi_entries = [("说明.txt", "Mulee 开源测试数据\n".encode() * 100),
@@ -330,7 +531,7 @@ def run_tests(binary, root):
 
     result = a.request("add", {"torrent_file": str(single), "save_path": str(seed_path),
                                "source": "mulee-local-fixture", "file_priorities": [4]})
-    assert result == {"id": single_id, "name": "Mulee-open-test.bin", "duplicate": False}
+    assert result == {"id": single_id, "name": "Mulee-open-test.bin", "duplicate": False, "skipped_files": []}
     result = a.request("add", {"torrent_file": str(multi), "file_priorities": [4, 4]})
     assert result["id"] == multi_id
     for torrent_id, count in ((single_id, 1), (multi_id, 2)):
@@ -636,6 +837,11 @@ def run_tests(binary, root):
 
 
 def main():
+    # SSH 的文件描述符上限过低会使 libtorrent 降低连接数，测试子进程需要足够额度。
+    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
+    target = 4096 if hard == resource.RLIM_INFINITY else min(4096, hard)
+    if soft < target:
+        resource.setrlimit(resource.RLIMIT_NOFILE, (target, hard))
     default = Path(__file__).resolve().parents[1] / "build/thirdparty/bin/mulee-torrentd"
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("binary", nargs="?", type=Path, default=default)

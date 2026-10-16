@@ -19,6 +19,11 @@ final class NewTaskLinkModel: Identifiable {
     var ccSubtitles = true
     var sequentialDownload = false
     var firstLastPriority = false
+    var checksumText = ""
+    var requestContext = DownloadRequestContext()
+
+    var checksum: DownloadChecksum? { DownloadChecksum.parse(checksumText) }
+    var hasInvalidChecksum: Bool { !checksumText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && checksum == nil }
 
     var id: ParsedLink { link }
 
@@ -41,7 +46,7 @@ final class NewTaskLinkModel: Identifiable {
     var filePriorities: [Int]? { files?.map { $0.isSelected ? 4 : 0 } }
 
     var canStart: Bool {
-        !isLoadingVideoParts && (videoParts.count <= 1 || !selectedVideoParts.isEmpty)
+        !hasInvalidChecksum && !isLoadingVideoParts && (videoParts.count <= 1 || !selectedVideoParts.isEmpty)
             && metadataError == nil && (files == nil || files?.contains(where: \.isSelected) == true)
     }
 
@@ -105,7 +110,7 @@ final class NewTaskLinkModel: Identifiable {
         case .ed2k(let fileName, _, _, _):
             fileName
         case .http(let url, _, _):
-            url.lastPathComponent.isEmpty ? (url.host() ?? url.absoluteString) : url.lastPathComponent
+            requestContext.suggestedFilename ?? (url.lastPathComponent.isEmpty ? (url.host() ?? url.absoluteString) : url.lastPathComponent)
         case .video(let url, _, _):
             url.absoluteString
         }

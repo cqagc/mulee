@@ -7,12 +7,13 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate, NSSearchFieldDelegat
     static let sidebar = NSToolbarItem.Identifier("mulee.sidebar")
     static let newTask = NSToolbarItem.Identifier("mulee.newTask")
     static let toggleAll = NSToolbarItem.Identifier("mulee.toggleAll")
+    static let slowMode = NSToolbarItem.Identifier("mulee.slowMode")
     static let speed = NSToolbarItem.Identifier("mulee.speed")
     static let search = NSToolbarItem.Identifier("mulee.search")
     static let inspector = NSToolbarItem.Identifier("mulee.inspector")
     // 与改版前一致：窗口标题在列表段最左，操作按钮靠右，搜索框位于详情栏上方。
     static let itemIdentifiers: [NSToolbarItem.Identifier] = [
-        sidebar, .sidebarTrackingSeparator, .flexibleSpace, newTask, toggleAll, speed, inspector,
+        sidebar, .sidebarTrackingSeparator, .flexibleSpace, newTask, toggleAll, slowMode, speed, inspector,
         .inspectorTrackingSeparator, search,
     ]
 
@@ -58,6 +59,8 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate, NSSearchFieldDelegat
             item.toolTip = String(localized: "新建下载（⌘N）")
         case Self.toggleAll:
             item = button(identifier, title: String(localized: "全部暂停"), symbol: .pause, action: #selector(toggleTransfers))
+        case Self.slowMode:
+            item = button(identifier, title: String(localized: "慢速模式"), symbol: .slowMode, action: #selector(toggleSlowMode))
         case Self.speed:
             item = NSToolbarItem(itemIdentifier: identifier)
             item.label = String(localized: "传输速度")
@@ -111,6 +114,10 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate, NSSearchFieldDelegat
         toggle?.image = NSImage(systemSymbolName: (canPause ? MuleeSymbol.pause : .resume).name,
                                 accessibilityDescription: toggle?.label)
         toggle?.isEnabled = canPause || model.tasks.contains { $0.status == .paused }
+        items[Self.slowMode]?.label = model.isSlowModeActive ? String(localized: "关闭慢速模式") : String(localized: "开启慢速模式")
+        items[Self.slowMode]?.toolTip = model.slowModeReason ?? items[Self.slowMode]?.label
+        items[Self.slowMode]?.image?.accessibilityDescription = items[Self.slowMode]?.label
+        items[Self.slowMode]?.isBordered = model.isSlowModeActive
         items[Self.sidebar]?.toolTip = state.sidebarToggleTitle
         items[Self.sidebar]?.label = state.sidebarToggleTitle
         items[Self.inspector]?.toolTip = state.inspectorToggleTitle
@@ -149,6 +156,10 @@ final class MainWindowToolbar: NSObject, NSToolbarDelegate, NSSearchFieldDelegat
 
     @objc private func showNewTask() {
         model.showNewTask()
+    }
+
+    @objc private func toggleSlowMode() {
+        model.slowModeController?.toggle()
     }
 
     @objc private func toggleTransfers() {

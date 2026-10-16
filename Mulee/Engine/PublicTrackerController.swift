@@ -97,12 +97,15 @@ final class PublicTrackerController {
         updatedAt = cache.updatedAt
         trackerCount = trackers.count
         let urls = settings.publicTrackersEnabled ? trackers : []
+        let custom = Set(PublicTrackerList.parse(settings.customTrackers))
+        let subscriptions = settings.publicTrackersEnabled
+            ? cache.trackers(for: activeSubscriptions).filter { !custom.contains($0) } : []
         let token = revision
         let previous = applyTask
         applyTask = Task { [weak self] in
             await previous?.value
             guard let self, !Task.isCancelled, self.revision == token else { return }
-            await self.engine.configurePublicTrackers(urls)
+            await self.engine.configurePublicTrackers(urls, subscriptionURLs: subscriptions)
         }
     }
 }

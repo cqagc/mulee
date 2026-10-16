@@ -32,6 +32,9 @@ struct TorrentdTask: Codable, Sendable {
     let sequentialDownload: Bool?
     let firstLastPriority: Bool?
     let diagnostics: TorrentDiagnostics?
+    let seedTimeSeconds: Int64?
+    let seedInactiveSeconds: Int64?
+    let skippedFiles: [TorrentSkippedFile]?
 
     /// 恢复校验、缺少元数据或扩大文件选择后，不应用做种策略。
     var canApplySeedingPolicy: Bool {
