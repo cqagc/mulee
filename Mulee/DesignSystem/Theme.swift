@@ -8,13 +8,15 @@ enum Theme {
     static let success = Color(.success)
 
     /// 主窗口最小尺寸（原型画布为 1240×780）。
-    static let mainWindowMinWidth = 980.0
+    static let mainWindowMinWidth = 1182.0
     static let mainWindowMinHeight = 600.0
     static let sidebarWidth = 220.0
     static let inspectorWidth = 300.0
 
-    /// 列表行内进度条宽度。
-    static let rowProgressWidth = 150.0
+    /// 列表行内进度列宽度：列表变宽时进度条跟着变长，超出上限的空间留给文件名。
+    static let rowProgressMinWidth = 150.0
+    static let rowProgressMaxWidth = 360.0
+    static let rowProgressFraction = 0.28
     /// 进度条高度。
     static let progressBarHeight = 4.0
     /// 卡片圆角。

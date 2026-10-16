@@ -45,7 +45,10 @@ struct TaskRowView: View, Equatable {
                     .lineLimit(1)
                     .help(presentation.progressText)
             }
-            .frame(width: Theme.rowProgressWidth)
+            // 按列表宽度取固定比例，两侧栏收起时进度条变长，又不和文件名抢空间。
+            .containerRelativeFrame(.horizontal) { width, _ in
+                min(max(width * Theme.rowProgressFraction, Theme.rowProgressMinWidth), Theme.rowProgressMaxWidth)
+            }
             TaskStatusView(presentation: presentation)
                 .frame(width: 110, alignment: .trailing)
         }
