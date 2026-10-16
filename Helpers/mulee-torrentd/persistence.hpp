@@ -17,6 +17,10 @@ struct Metadata {
     json::value completed_at = nullptr;
     bool sequential_download = false;
     bool first_last_priority = false;
+    bool mark_incomplete = false;
+    json::object original_paths;
+    int streaming_file = -1;
+    int streaming_previous_priority = 4;
     bool junk_pending = false;
     std::vector<std::string> junk_patterns;
     json::array skipped_files;

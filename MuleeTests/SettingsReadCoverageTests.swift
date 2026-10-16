@@ -11,8 +11,9 @@ import Testing
         let properties = source.matches(of: #/(?m)^    var (\w+)(?::|[ \t]*=)/#).map { String($0.1) }
         #expect(properties.count >= 36)
         for name in ["downloadRules", "sortIntoFolders", "publicTrackersEnabled", "trackerSubscriptions", "customTrackers", "blockLeechingClients",
-                     "duplicateAction", "videoFormatChoiceBySite", "skipJunkFiles", "junkFilePatterns", "seedTimeLimitMinutes", "seedInactiveLimitMinutes",
-                     "privateMinSeedMinutes", "ipBlocklistPath"] {
+                     "markIncomplete", "duplicateAction", "videoFormatChoiceBySite", "skipJunkFiles", "junkFilePatterns", "seedTimeLimitMinutes", "seedInactiveLimitMinutes",
+                     "privateMinSeedMinutes", "ipBlocklistPath", "watchFolders", "watchAutoStart",
+                     "transferScheduleEnabled", "transferScheduleStartTime", "transferScheduleEndTime", "transferScheduleWeekdays"] {
             #expect(properties.contains(name))
         }
         let files = try #require(FileManager.default.enumerator(at: app, includingPropertiesForKeys: nil))

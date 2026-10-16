@@ -16,7 +16,9 @@ struct MenuBarPanelView: View {
                 )
             } else {
                 MenuBarSpeedHeader(downloadRate: model.totalDownloadRate, uploadRate: model.totalUploadRate)
-                SpeedHistoryChart(samples: model.downloadRateHistory)
+                if model.transferStatistics == nil {
+                    SpeedHistoryChart(samples: model.downloadRateHistory)
+                }
                 if !presentation.visibleTasks.isEmpty {
                     Text("正在下载 · \(presentation.visibleTasks.count)")
                         .font(.caption.weight(.semibold))
@@ -26,6 +28,9 @@ struct MenuBarPanelView: View {
                     }
                 }
                 MenuBarWaitingNotice(count: presentation.waitingSourceCount)
+            }
+            if let store = model.transferStatistics {
+                TransferHistoryView(store: store)
             }
             MenuBarPasteField()
             Ed2kNetworkStatusView(status: model.networkStatus)

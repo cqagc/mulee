@@ -22,6 +22,7 @@ struct MainWindowPane: View {
             }
         case .inspector:
             TaskInspectorView(task: model.selectedTask)
+                .environment(\.bitTorrentInspectorCollapsed, state.isInspectorCollapsed)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(nsColor: .windowBackgroundColor))
         }

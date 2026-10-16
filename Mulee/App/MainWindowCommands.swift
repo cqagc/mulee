@@ -19,6 +19,8 @@ struct MainWindowCommands: Commands {
         CommandGroup(after: .newItem) {
             Button("新建下载") { model.showNewTask() }
                 .keyboardShortcut("n")
+            Button("制作种子…") { CreateTorrentPanel.show(model: model) }
+                .disabled(model.bitTorrent == nil)
         }
         CommandMenu("下载") {
             Button(model.isSlowModeActive ? String(localized: "关闭慢速模式") : String(localized: "开启慢速模式")) {

@@ -28,6 +28,7 @@ final class DownloadCoordinator {
     private var replacingHTTPTasks: Set<UUID> = []
     private var checkedHTTPFiles: Set<URL> = []
     private var httpFileIssues: [URL: String] = [:]
+    private let fileProgressPublisher = DownloadFileProgressPublisher()
     private let scheduling: DownloadScheduling
 
     init(
@@ -163,6 +164,8 @@ final class DownloadCoordinator {
 
     func stop() async {
         generation = nil
+        fileProgressPublisher.stop()
+        await StreamingPlayback.shared.stop()
         for job in checksumJobs.values { job.cancel() }
         checksumJobs.removeAll()
         model.bitTorrent?.stop()
@@ -225,6 +228,7 @@ final class DownloadCoordinator {
         model.tasks = EngineSnapshotMerger.merge(
             tasks: model.tasks, snapshots: snapshots, now: .now, videoConfiguration: videoConfiguration
         )
+        await publishFileProgress()
         captureCompletedBookmarks()
         checkCompletedFiles()
         if let selected = model.selectedTaskID, !model.tasks.contains(where: { $0.id == selected }) {
@@ -308,12 +312,14 @@ final class DownloadCoordinator {
                         }
                         task.engineTaskID = try await http.add(
                             link: link, directory: directory, context: context, checksum: task.checksum, paused: queued,
-                            httpThreads: ruleResult.rule?.httpThreads, speedLimitBytes: ruleResult.rule?.speedLimitBytes
+                            httpThreads: ruleResult.rule?.httpThreads, speedLimitBytes: ruleResult.rule?.speedLimitBytes,
+                            incompleteTaskID: (model.downloadSettings?.markIncomplete ?? true) ? task.id : nil
                         )
                     } else if let torrent = engine as? TorrentEngine {
                         let mode = torrentDownloadModes[link]
                         let id = try await torrent.add(
-                            link: link, directory: directory, filePriorities: filePriorities[link], paused: queued || mode != nil
+                            link: link, directory: directory, filePriorities: filePriorities[link], paused: queued || mode != nil,
+                            markIncomplete: model.downloadSettings?.markIncomplete ?? true
                         )
                         task.engineTaskID = id
                         if let mode {
@@ -484,28 +490,66 @@ final class DownloadCoordinator {
     /// 在发布完成状态前识别登录页，避免把网页当成成品发通知或交给解压。
     private func validateHTTPCompletions(_ snapshots: [EngineTaskSnapshot]) async -> [EngineTaskSnapshot] {
         var result = snapshots
-        let htmlTaskIDs = Set(model.tasks.filter { $0.kind == .http && $0.httpIdentity?.contentType == "text/html" }.compactMap(\.engineTaskID))
+        let http = engines.first { $0.kind == .http } as? Aria2Engine
+        let token = generation
         for index in result.indices where result[index].status == .completed {
-            guard let file = result[index].savePath,
-                  !["html", "htm"].contains(file.pathExtension.lowercased()) else { continue }
-            if htmlTaskIDs.contains(result[index].engineTaskID) { continue }
-            if !checkedHTTPFiles.contains(file) {
-                do {
-                    try await HTTPResourceProbe.validateDownloadedFile(file)
+            guard let file = result[index].savePath else { continue }
+            let task = model.tasks.first { $0.kind == .http && $0.engineTaskID == result[index].engineTaskID }
+            do {
+                if !checkedHTTPFiles.contains(file) {
+                    if task?.httpIdentity?.contentType != "text/html", !["html", "htm"].contains(file.pathExtension.lowercased()) {
+                        try await HTTPResourceProbe.validateDownloadedFile(file)
+                    }
                     checkedHTTPFiles.insert(file)
-                } catch let failure as HTTPDownloadFailure {
-                    checkedHTTPFiles.insert(file)
-                    httpFileIssues[file] = failure.localizedDescription
-                } catch {
-                    // 文件可能正被移动；下一次快照重试，不凭读取失败推断网页。
                 }
-            }
-            if let issue = httpFileIssues[file] {
+                if let expected = task?.checksum {
+                    let verification: ChecksumVerification
+                    if let saved = task?.checksumVerification, saved.expected == expected, saved.actual != nil {
+                        verification = saved
+                    } else {
+                        verification = try await ChecksumVerifier.verify(file: file, expected: expected)
+                        guard generation == token, task == nil || model.tasks.contains(where: {
+                            $0.id == task?.id && $0.deletedAt == nil && $0.engineTaskID == task?.engineTaskID
+                                && $0.checksum == expected
+                        }) else { continue }
+                        if let taskIndex = model.tasks.firstIndex(where: { $0.id == task?.id }) {
+                            model.tasks[taskIndex].checksumVerification = verification
+                        }
+                    }
+                    guard verification.matches == true else {
+                        throw EngineError.invalidResponse("校验值不一致，未完成文件已保留，请重新下载。")
+                    }
+                }
+                guard generation == token, task == nil || model.tasks.contains(where: {
+                    $0.id == task?.id && $0.deletedAt == nil && $0.engineTaskID == task?.engineTaskID
+                        && $0.checksum == task?.checksum
+                }) else { continue }
+                if let issue = httpFileIssues[file] { throw EngineError.invalidResponse(issue) }
+                if let http {
+                    let destination = try await http.finalizeIncomplete(result[index].engineTaskID, file: file)
+                    result[index].savePath = destination
+                    result[index].name = destination.lastPathComponent
+                    result[index].writeDirectories = [destination.deletingLastPathComponent()]
+                    checkedHTTPFiles.insert(destination)
+                }
+            } catch {
                 result[index].status = .failed
-                result[index].errorMessage = issue
+                result[index].errorMessage = EngineStatusPresentation.errorMessage(error)
+                // 目标冲突可重试；内容检查失败保留原因，不能在后续快照中漏过。
+                if error is HTTPDownloadFailure { httpFileIssues[file] = error.localizedDescription }
             }
         }
         return result
+    }
+
+    private func publishFileProgress() async {
+        var files: [UUID: [TorrentFileEntry]] = [:]
+        if let torrent = engine(for: .bittorrent) as? TorrentEngine {
+            for task in model.activeTasks where task.kind == .bittorrent && task.status == .downloading {
+                if let id = task.engineTaskID { files[task.id] = try? await torrent.files(id) }
+            }
+        }
+        fileProgressPublisher.update(tasks: model.tasks, torrentFiles: files)
     }
 
     private func applyDownloadRule(
@@ -631,6 +675,7 @@ final class DownloadCoordinator {
     func remove(_ id: DownloadTask.ID, deleteFiles: Bool = false) async {
         guard let index = model.tasks.firstIndex(where: { $0.id == id }) else { return }
         let task = model.tasks[index]
+        StreamingPlayback.shared.cancel(id)
         waitingVideoLinks[id] = nil
         if task.kind == .video, task.status == .completed, !deleteFiles {
             await removeCompletedVideo(task).value
@@ -653,6 +698,7 @@ final class DownloadCoordinator {
         defer { revisions[task.kind, default: 0] += 1 }
         do {
             try await engine.remove(engineTaskID, deleteFiles: deleteFiles)
+            await publishFileProgress()
             scheduling.removed(task)
         } catch {
             excludedTaskIDs[task.kind]?.remove(engineTaskID)
@@ -791,6 +837,7 @@ final class DownloadCoordinator {
             model.tasks[index].uploadRate = 0
             model.tasks[index].estimatedTimeRemaining = nil
             model.tasks[index].errorMessage = nil
+            await publishFileProgress()
         case .resume:
             model.tasks[index].status = waitingVideoLinks[id] != nil ? .queued
                 : task.engineTaskID == nil ? (task.kind == .ed2k ? .waitingForSources : .downloading) : .queued

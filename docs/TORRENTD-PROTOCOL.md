@@ -82,6 +82,7 @@ mulee-torrentd --state-dir <目录>
 | `torrent_file` | string? | 本机 .torrent 文件路径；torrentd 读入后自己保存一份，原文件之后可以删 |
 | `save_path` | string? | 保存目录；省略时用 `download_dir` |
 | `paused` | bool? | 默认 false |
+| `mark_incomplete` | bool? | 默认 true，只影响新任务；未完成文件用 `.mulee` 后缀，逐文件全部 piece 校验后由 `rename_file` 改回，映射持久化到 meta/resume；旧任务缺此字段保持原路径 |
 | `source` | string? | 用户粘贴的原始链接或文件路径，`list` 原样返回 |
 | `file_priorities` | [int]? | 只对 `torrent_file` 有效：每个文件的优先级（0 = 不下载，4 = 默认），长度必须等于文件数，否则 `invalid_params` |
 
@@ -266,3 +267,18 @@ mulee-torrentd --state-dir <目录>
 分享率达到 1（私有种子的 ratio 豁免只影响该条件）、做种时长达到非零上限、不活跃时长达到非零上限，任一满足即可触发。私有种子未达到最低做种时长之前，所有动作均不触发。`bt.seedingAction` 保留 stop/throttle，新增 remove：分别发 `pause`、`set_upload_limit` 51200、`remove(delete_files=false)`。删除后的任务从快照排除，并通过 `consumePolicyRemovals()` 交给 `BitTorrentController` 同步移除 App 记录。
 
 Swift API：`TorrentEngineSettings.isJunkFile(path:)` 与 daemon 使用相同通配规则，供添加面板预选；`addWithResult` 返回 `TorrentdAddResult`（含 skippedFiles），`skippedFiles` 可读取磁力过滤结果；`moveStorage`、`renameFile`、`forceRecheck`、`forceReannounce`、`trackers`、`setTrackers`、`peers`、`banIP`、`importIPBlocklist`、`createTorrent`、`exportTorrent` 与上述命令对应。既有 add 返回任务 ID 的语义保持不变。
+
+### `set_streaming`
+
+参数 `{"id": "...", "file_index": 0, "enabled": true}`。要求元数据已取得且索引指向非 padding 文件；错误分别为 `metadata_pending` / `invalid_params`。
+
+开启时将该文件设为最高文件优先级（取消或完成时恢复原优先级），启用顺序下载，并只对该文件的首尾各 2% 字节涉及的 piece 设置优先 deadline（至少各一个 piece，重叠去重）；其他未选择文件保持跳过。状态持久化，取消（`enabled: false`）或整个任务完成时清除流式 deadline，并关闭顺序下载和首尾优先。`set_download_mode` 原有语义保持不变。
+
+结果 `{"file_index": 0, "priority_pieces": [0, 1, 98, 99]}`，数组是实际设置 deadline 的 piece 索引，取消时为空。
+
+`files` 每项增加两个字段：
+
+- `storage_path`：实际存储的种子内相对路径，可能含 `.mulee` 后缀；`path` 始终是无标记的逻辑路径。
+- `contiguous_done`：从文件开头起连续、已通过 piece 校验的字节数。`done` 也只统计完整校验 piece，不能用稀疏文件的大小推算可播放数据。
+
+App 在连续开头达到 `min(20_000_000, ceil(size * 0.05))` 字节后打开播放器，缓冲期间可取消。HTTP 分段下载尚无可靠的连续开头判定，只在成品完成后开放播放。下载目录中的 `.mulee-incomplete/<任务 UUID>/` 属于 HTTP 引擎，不属于此辅助进程协议。

@@ -15,6 +15,7 @@ struct TaskInspectorView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     TaskInspectorHeader(presentation: presentation)
+                    playbackControls(task)
                     if task.deletedAt != nil {
                         Text("任务已在最近删除中，30 天后清除记录，下载文件不受影响。")
                             .font(.caption)
@@ -79,4 +80,30 @@ struct TaskInspectorView: View {
                                    description: Text("查看进度、来源和完成后的处理信息。"))
         }
     }
+    @ViewBuilder
+    private func playbackControls(_ task: DownloadTask) -> some View {
+        let playback = StreamingPlayback.shared
+        if task.deletedAt == nil {
+            if let progress = playback.buffering[task.id] {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("正在缓冲开头部分，完成后自动打开播放器")
+                        .font(.caption)
+                    ProgressView(value: progress)
+                        .accessibilityLabel("播放缓冲进度")
+                        .accessibilityValue(progress.formatted(.percent.precision(.fractionLength(0))))
+                    Button("取消") { playback.cancel(task.id) }
+                }
+            } else if playback.playing.contains(task.id) {
+                Button("取消边下边播") { playback.cancel(task.id) }
+            } else if StreamingPlayback.canPlay(task, files: torrentModel.files) {
+                Button("播放", systemImage: "play.fill") {
+                    playback.play(task: task, engine: model.bitTorrent?.engine, coordinator: model.coordinator)
+                }
+            }
+            if let issue = playback.issues[task.id] {
+                Text(issue).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
 }

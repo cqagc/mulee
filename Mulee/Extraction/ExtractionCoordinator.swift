@@ -51,7 +51,7 @@ final class ExtractionCoordinator {
 
     func requestExtraction(_ id: DownloadTask.ID) {
         guard let task = model.tasks.first(where: { $0.id == id }), task.deletedAt == nil, task.status == .completed,
-              let path = task.savePath,
+              let path = task.savePath, Self.isReadyForExtraction(task),
               ArchiveVolumeDetector.detect(filename: path.lastPathComponent, directoryFilenames: []).isArchive else { return }
         manualRequests.insert(id)
         if !candidates.contains(id) { candidates.append(id) }
@@ -76,7 +76,7 @@ final class ExtractionCoordinator {
             }
         }
         for task in model.tasks where task.deletedAt == nil && task.status == .completed {
-            guard seenCompletions.insert(task.id).inserted else { continue }
+            guard Self.isReadyForExtraction(task), seenCompletions.insert(task.id).inserted else { continue }
             guard settings.autoExtract, task.postDownload.autoExtract,
                   !Self.isFinished(task.postDownload), let path = task.savePath,
                   ArchiveVolumeDetector.detect(filename: path.lastPathComponent, directoryFilenames: []).isArchive else { continue }
@@ -132,7 +132,7 @@ final class ExtractionCoordinator {
         for id in candidates {
             if model.tasks.contains(where: { $0.id == id && $0.pauseReason == .diskSpace }) { continue }
             guard let task = model.tasks.first(where: { $0.id == id }), task.deletedAt == nil, task.status == .completed,
-                  task.postDownload.autoExtract, !Self.isFinished(task.postDownload), let archive = task.savePath else {
+                  task.postDownload.autoExtract, Self.isReadyForExtraction(task), !Self.isFinished(task.postDownload), let archive = task.savePath else {
                 candidates.removeAll { $0 == id }
                 continue
             }
@@ -271,6 +271,12 @@ final class ExtractionCoordinator {
             change(&tasks[index])
         }
         if tasks != model.tasks { model.tasks = tasks }
+    }
+
+    static func isReadyForExtraction(_ task: DownloadTask) -> Bool {
+        guard task.status == .completed, let file = task.savePath,
+              !IncompleteHTTPTransfer.isStagingFile(file) else { return false }
+        return task.checksum == nil || task.checksumVerification?.matches == true
     }
 
     private static func isFinished(_ info: PostDownloadInfo) -> Bool {

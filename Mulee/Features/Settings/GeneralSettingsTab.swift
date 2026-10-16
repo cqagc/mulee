@@ -6,6 +6,7 @@ struct GeneralSettingsTab: View {
     @Environment(SettingsModel.self) private var model
     @Environment(AppModel.self) private var app
     @Environment(\.scenePhase) private var scenePhase
+    @State private var isShowingStatistics = false
 
     var body: some View {
         @Bindable var model = model
@@ -51,6 +52,9 @@ struct GeneralSettingsTab: View {
                 }
             }
             DefaultHandlerSection()
+            Section("传输统计") {
+                Button("查看速度曲线与统计…") { isShowingStatistics = true }
+            }
             BrowserExtensionSection()
             AppUpdateSection()
             Section {
@@ -61,6 +65,7 @@ struct GeneralSettingsTab: View {
             }
         }
         .formStyle(.grouped)
+        .sheet(isPresented: $isShowingStatistics) { TransferStatisticsSettingsView() }
         .task(id: scenePhase) { await app.notificationService?.refreshAuthorization() }
     }
 }

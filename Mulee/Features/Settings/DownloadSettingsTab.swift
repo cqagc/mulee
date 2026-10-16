@@ -44,6 +44,7 @@ struct DownloadSettingsTab: View {
             Section("下载规则") {
                 Button("管理下载规则…") { isShowingRules = true }
             }
+            TransferScheduleSettingsSection()
             Section("磁盘保护") {
                 Toggle("保留磁盘可用空间", isOn: $model.diskReserveEnabled)
                 Stepper("保护容量：\(model.diskReserveGB) GB", value: $model.diskReserveGB, in: 1...500)

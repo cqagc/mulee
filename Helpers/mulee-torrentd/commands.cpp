@@ -283,6 +283,7 @@ json::object Session::add(const json::object& params) {
     bool paused = params.contains("paused") ? bool_param(params, "paused") : false;
     Metadata metadata;
     metadata.added_at = unix_time();
+    metadata.mark_incomplete = params.contains("mark_incomplete") ? bool_param(params, "mark_incomplete") : true;
     if (params.contains("source")) metadata.source = string_param(params, "source");
     lt::add_torrent_params add;
     lt::error_code error;
@@ -340,6 +341,14 @@ json::object Session::add(const json::object& params) {
     } else {
         add.flags &= ~lt::torrent_flags::paused;
         add.flags |= lt::torrent_flags::auto_managed;
+    }
+    if (metadata.mark_incomplete && add.ti) {
+        for (auto index : add.ti->files().file_range()) {
+            if (add.ti->files().pad_file_at(index)) continue;
+            auto original = add.ti->files().file_path(index);
+            metadata.original_paths[std::to_string(static_cast<int>(index))] = original;
+            if (!fs::exists(fs::path(path) / original)) add.renamed_files[index] = original + ".mulee";
+        }
     }
     auto count = std::make_shared<std::atomic<std::int64_t>>(0);
     prepare(add, count);
@@ -830,7 +839,9 @@ json::object Session::manage(const std::string& method, const json::object& para
         validate_relative(to);
         std::vector<std::pair<lt::file_index_t, std::string>> changes;
         for (auto index : info->files().file_range()) {
-            auto name = info->files().file_path(index);
+            auto key = std::to_string(static_cast<int>(index));
+            auto original = torrent.metadata.original_paths.if_contains(key);
+            auto name = original ? std::string(original->as_string()) : info->files().file_path(index);
             if (name == from || name.compare(0, from.size() + 1, from + "/") == 0) {
                 auto replacement = to + name.substr(from.size());
                 auto destination = fs::path(handle.status().save_path) / replacement;
@@ -845,8 +856,12 @@ json::object Session::manage(const std::string& method, const json::object& para
         if (from == to) return {};
         for (const auto& change : changes) {
             storage_pending_ = 1;
-            handle.rename_file(change.first, change.second);
+            auto key = std::to_string(static_cast<int>(change.first));
+            auto current = info->files().file_path(change.first);
+            bool marked = torrent.metadata.original_paths.contains(key) && current != std::string(torrent.metadata.original_paths.at(key).as_string());
+            handle.rename_file(change.first, change.second + (marked ? ".mulee" : ""));
             wait_storage();
+            if (torrent.metadata.original_paths.contains(key)) torrent.metadata.original_paths[key] = change.second;
         }
     }
     save(torrent);
@@ -864,6 +879,7 @@ json::object Session::execute(const std::string& method, const json::object& par
     if (method == "list") {
         json::array result;
         for (auto& entry : torrents_) {
+            update_incomplete_files(entry.second);
             auto status = entry.second.handle.status();
             auto& metadata = entry.second.metadata;
             auto duration = status.finished_duration.count();
@@ -926,7 +942,41 @@ json::object Session::execute(const std::string& method, const json::object& par
         return {{"sequential_download", sequential}, {"first_last_priority", edges}};
     }
     if (method == "add_trackers") return add_trackers(find(params), params);
-    if (method == "files") return {{"files", serialize_files(find(params))}};
+    if (method == "set_streaming") {
+        auto& torrent = find(params);
+        auto info = torrent.handle.torrent_file();
+        if (!info) throw RequestError("metadata_pending", "Torrent has no metadata");
+        int index = int_param(params, "file_index");
+        if (index >= info->num_files() || info->files().pad_file_at(lt::file_index_t{index}))
+            throw RequestError("invalid_params", "Invalid streaming file index");
+        bool enabled = bool_param(params, "enabled");
+        auto priorities = torrent.handle.get_file_priorities();
+        auto previous = torrent.metadata.streaming_file;
+        if (previous >= 0 && previous < static_cast<int>(priorities.size()) && (!enabled || previous != index)
+            && priorities.at(previous) == lt::top_priority)
+            priorities.at(previous) = lt::download_priority_t{static_cast<std::uint8_t>(torrent.metadata.streaming_previous_priority)};
+        if (enabled) {
+            if (previous != index)
+                torrent.metadata.streaming_previous_priority = static_cast<std::uint8_t>(priorities.at(index));
+            // 目标文件排在其他文件前面，顺序模式才会继续缓冲它的开头而非先下载别的文件。
+            priorities.at(index) = lt::top_priority;
+        }
+        torrent.handle.prioritize_files(priorities);
+        torrent.metadata.streaming_file = enabled ? index : -1;
+        torrent.metadata.sequential_download = enabled;
+        torrent.metadata.first_last_priority = enabled;
+        apply_download_mode(torrent);
+        persistence_.save_meta(string_param(params, "id"), torrent.metadata);
+        save(torrent);
+        json::array pieces;
+        for (auto piece : torrent.priority_pieces) pieces.push_back(static_cast<int>(piece));
+        return {{"file_index", index}, {"priority_pieces", pieces}};
+    }
+    if (method == "files") {
+        auto& torrent = find(params);
+        update_incomplete_files(torrent);
+        return {{"files", serialize_files(torrent)}};
+    }
     if (method == "set_file_priorities") {
         auto& torrent = find(params);
         auto info = torrent.handle.torrent_file();

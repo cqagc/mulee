@@ -77,6 +77,7 @@ private:
     std::int64_t disk_blocked_peers_ = 0;
     bool disk_stats_available_ = false;
     int disk_cache_bytes_ = 16 * 1024 * 1024;
+    bool updating_incomplete_ = false;
     bool skip_junk_files_ = true;
     std::vector<std::string> junk_patterns_ = {"*.url", "*.lnk", "*padding_file*", "_____padding_file_*",
         "*.!ut", "*最新地址*.txt", "*广告*.txt", "*最新地址*.html", "*广告*.html", "*.mht"};
@@ -112,6 +113,7 @@ private:
     void mark_completed(Torrent& torrent);
     void prepare(lt::add_torrent_params& params, const std::shared_ptr<std::atomic<std::int64_t>>& count);
     void apply_download_mode(Torrent& torrent);
+    void update_incomplete_files(Torrent& torrent);
     json::object add_trackers(Torrent& torrent, const json::object& params);
     void sample_diagnostics(Torrent& torrent);
 };

@@ -1,0 +1,67 @@
+import Foundation
+import Observation
+
+@Observable
+final class CreateTorrentModel {
+    typealias Creator = (URL, URL, Bool, [String]) async throws -> Void
+
+    var source: URL?
+    var trackerText = ""
+    var isPrivate = false
+    var startsSeeding = false
+    private(set) var isWorking = false
+    private(set) var output: URL?
+    private(set) var issue: String?
+    private(set) var job: Task<Void, Never>?
+    private var activeJob: UUID?
+
+    var trackers: [String] {
+        trackerText.components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+    }
+
+    var validation: String? { BitTorrentManagementModel.trackerValidation(trackers) }
+
+    func start(to destination: URL, creator: @escaping Creator, seed: @escaping (URL, URL) async throws -> Void) {
+        guard let source, !isWorking, validation == nil else { return }
+        let token = UUID()
+        activeJob = token
+        isWorking = true
+        output = nil
+        issue = nil
+        let trackers = trackers
+        let privateTorrent = isPrivate
+        let shouldSeed = startsSeeding
+        // 不取消 RPC 等待，才能在引擎完成后清理用户已取消的临时输出。
+        job = Task {
+            guard activeJob == token else { return }
+            let manager = FileManager.default
+            let temporaryDirectory = destination.deletingLastPathComponent()
+                .appending(path: ".mulee-create-" + UUID().uuidString, directoryHint: .isDirectory)
+            let temporaryOutput = temporaryDirectory.appending(path: "created.torrent")
+            defer {
+                try? manager.removeItem(at: temporaryDirectory)
+                if activeJob == token { isWorking = false }
+            }
+            do {
+                try manager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: false)
+                try await creator(source, temporaryOutput, privateTorrent, trackers)
+                guard activeJob == token else { return }
+                // moveItem 不覆盖已有输出，避免生成期间其他进程写入的文件被替换。
+                try manager.moveItem(at: temporaryOutput, to: destination)
+                output = destination
+                if shouldSeed { try await seed(destination, source.deletingLastPathComponent()) }
+            } catch {
+                guard activeJob == token else { return }
+                issue = output == nil
+                    ? String(localized: "制作未完成：\(EngineStatusPresentation.errorMessage(error))。请检查输入和保存位置后重试。")
+                    : String(localized: "种子已保存，但做种未开始。请通过新建下载添加此种子，并选择原文件所在目录。")
+            }
+        }
+    }
+
+    func cancel() {
+        activeJob = nil
+        isWorking = false
+    }
+}

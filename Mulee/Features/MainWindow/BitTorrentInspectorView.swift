@@ -3,9 +3,11 @@ import SwiftUI
 
 struct BitTorrentInspectorView: View {
     @Environment(AppModel.self) private var appModel
+    @Environment(\.bitTorrentInspectorCollapsed) private var isInspectorCollapsed
     let task: DownloadTask
     let model: BitTorrentFilesModel
     @State private var showsConnections = false
+    @State private var management = BitTorrentManagementModel()
 
     private var sequentialDownload: Binding<Bool> {
         Binding(get: { model.info?.sequentialDownload ?? false }, set: setSequentialDownload)
@@ -49,6 +51,14 @@ struct BitTorrentInspectorView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .disabled(model.info == nil || model.isUpdating)
+            BitTorrentActionsView(task: task)
+            BitTorrentTrackersView(model: management)
+            BitTorrentPeersView(model: management)
+            if let issue = management.issue {
+                Text(issue)
+                    .font(.caption)
+                    .foregroundStyle(Theme.wait)
+            }
             Text("下载文件")
                 .font(.headline)
                 .accessibilityAddTraits(.isHeader)
@@ -64,6 +74,12 @@ struct BitTorrentInspectorView: View {
             } else {
                 let selectedCount = model.selectedCount
                 LazyVStack(alignment: .leading, spacing: 12) {
+                    ForEach(model.folders, id: \.self) { path in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(path).font(.caption).textSelection(.enabled)
+                            BitTorrentRenameView(path: path, model: model)
+                        }
+                    }
                     ForEach(model.files) { file in
                         BitTorrentFileRow(
                             file: file, model: model,
@@ -76,6 +92,10 @@ struct BitTorrentInspectorView: View {
         .onChange(of: task.engineTaskID) { showsConnections = false }
         .task(id: task.engineTaskID) {
             await model.watch(engine: appModel.bitTorrent?.engine, id: task.engineTaskID)
+        }
+        .task(id: isInspectorCollapsed ? nil : task.engineTaskID) {
+            guard !isInspectorCollapsed else { return }
+            await management.watch(engine: appModel.bitTorrent?.engine, id: task.engineTaskID)
         }
     }
 

@@ -2,6 +2,7 @@ import MuleeCore
 import SwiftUI
 
 struct BitTorrentFileRow: View {
+    @Environment(AppModel.self) private var appModel
     let file: TorrentFileEntry
     let model: BitTorrentFilesModel
     let canChange: Bool
@@ -27,6 +28,14 @@ struct BitTorrentFileRow: View {
             ProgressView(value: progress)
                 .accessibilityLabel("文件下载进度")
                 .accessibilityValue(progress.formatted(.percent.precision(.fractionLength(0))))
+            if StreamingPlayback.isVideo(file.path), let task = appModel.tasks.first(where: { $0.id == appModel.selectedTaskID }),
+               StreamingPlayback.canPlay(task, files: [file]) {
+                Button("播放", systemImage: "play.fill") {
+                    StreamingPlayback.shared.play(task: task, engine: appModel.bitTorrent?.engine, file: file, coordinator: appModel.coordinator)
+                }
+                .help(file.path)
+            }
+            BitTorrentRenameView(path: file.path, model: model)
         }
     }
 

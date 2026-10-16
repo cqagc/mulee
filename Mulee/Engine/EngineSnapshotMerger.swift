@@ -71,12 +71,12 @@ enum EngineSnapshotMerger {
                 }
                 task.downloadRate = snapshot.downloadRate
                 task.uploadRate = snapshot.uploadRate
-                if task.pauseReason == .diskSpace {
+                if task.pauseReason != nil {
                     task.downloadRate = 0
                     task.uploadRate = 0
                 }
                 // 引擎快照可能仍在报告旧状态，保护原因由应用持有。
-                task.status = task.pauseReason == .diskSpace ? .paused : snapshot.status
+                task.status = task.pauseReason != nil ? .paused : snapshot.status
                 if task.fileBookmark == nil { task.savePath = snapshot.savePath }
                 if let directories = snapshot.writeDirectories { task.writeDirectories = directories }
                 task.errorMessage = snapshot.errorMessage

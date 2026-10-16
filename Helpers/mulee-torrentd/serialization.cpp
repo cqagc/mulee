@@ -26,11 +26,24 @@ json::array serialize_files(const Torrent& torrent) {
     if (!info) return result;
     auto priorities = torrent.handle.get_file_priorities();
     std::vector<std::int64_t> progress;
-    torrent.handle.file_progress(progress);
+    torrent.handle.file_progress(progress, lt::torrent_handle::piece_granularity);
+    auto status = torrent.handle.status(lt::torrent_handle::query_pieces);
     const auto& files = info->files();
     for (auto index : files.file_range()) {
         auto i = static_cast<int>(index);
-        result.push_back(json::object{{"index", i}, {"path", files.file_path(index)},
+        auto original = torrent.metadata.original_paths.if_contains(std::to_string(i));
+        std::int64_t contiguous = 0;
+        if (files.file_size(index) > 0) {
+            auto first = info->map_file(index, 0, 1).piece;
+            auto last = info->map_file(index, files.file_size(index) - 1, 1).piece;
+            for (int piece = static_cast<int>(first); piece <= static_cast<int>(last); ++piece) {
+                if (piece >= status.pieces.size() || !status.pieces[lt::piece_index_t{piece}]) break;
+                auto end = (static_cast<std::int64_t>(piece) + 1) * info->piece_length() - files.file_offset(index);
+                contiguous = std::min(files.file_size(index), end);
+            }
+        }
+        result.push_back(json::object{{"index", i}, {"path", original ? *original : json::value(files.file_path(index))},
+            {"storage_path", files.file_path(index)}, {"contiguous_done", contiguous},
             {"size", files.file_size(index)}, {"done", progress.at(i)},
             {"priority", static_cast<std::uint8_t>(priorities.at(i))}});
     }

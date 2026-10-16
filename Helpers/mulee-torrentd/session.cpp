@@ -158,12 +158,26 @@ void Session::apply_download_mode(Torrent& torrent) {
     for (auto piece : torrent.priority_pieces) handle.reset_piece_deadline(piece);
     torrent.priority_pieces.clear();
     auto info = handle.torrent_file();
-    if (!info || !torrent.metadata.first_last_priority) return;
+    if (!info || (!torrent.metadata.first_last_priority && torrent.metadata.streaming_file < 0)) return;
     auto priorities = handle.get_file_priorities();
     const auto& files = info->files();
     for (auto index : files.file_range()) {
         if (files.pad_file_at(index) || files.file_size(index) == 0
             || priorities.at(static_cast<int>(index)) == lt::dont_download) continue;
+        if (torrent.metadata.streaming_file >= 0) {
+            if (static_cast<int>(index) != torrent.metadata.streaming_file) continue;
+            auto edge = std::max<std::int64_t>(1, (files.file_size(index) + 49) / 50);
+            auto first = info->map_file(index, 0, 1).piece;
+            auto head = info->map_file(index, edge - 1, 1).piece;
+            auto tail = info->map_file(index, files.file_size(index) - edge, 1).piece;
+            auto last = info->map_file(index, files.file_size(index) - 1, 1).piece;
+            for (int piece = static_cast<int>(first); piece <= static_cast<int>(last); ++piece) {
+                if (piece > static_cast<int>(head) && piece < static_cast<int>(tail)) continue;
+                torrent.priority_pieces.push_back(lt::piece_index_t{piece});
+                handle.set_piece_deadline(lt::piece_index_t{piece}, 0);
+            }
+            continue;
+        }
         for (auto offset : {std::int64_t{0}, files.file_size(index) - 1}) {
             auto piece = info->map_file(index, offset, 1).piece;
             if (std::find(torrent.priority_pieces.begin(), torrent.priority_pieces.end(), piece)
@@ -175,9 +189,81 @@ void Session::apply_download_mode(Torrent& torrent) {
     }
 }
 
+// 文件进度只计已校验的完整 piece；改名等磁盘操作完成后才发布完成状态。
+void Session::update_incomplete_files(Torrent& torrent) {
+    if (updating_incomplete_ || stopping_) return;
+    auto info = torrent.handle.torrent_file();
+    if (!info) return;
+    auto status = torrent.handle.status();
+    if (status.state == lt::torrent_status::checking_files
+        || status.state == lt::torrent_status::checking_resume_data) return;
+    updating_incomplete_ = true;
+    try {
+        std::vector<std::int64_t> done;
+        torrent.handle.file_progress(done, lt::torrent_handle::piece_granularity);
+        bool changed = false;
+        for (auto index : info->files().file_range()) {
+            int i = static_cast<int>(index);
+            if (info->files().pad_file_at(index)) continue;
+            auto current = info->files().file_path(index);
+            auto key = std::to_string(i);
+            if (torrent.metadata.mark_incomplete && !torrent.metadata.original_paths.contains(key)) {
+                torrent.metadata.original_paths[key] = current;
+                changed = true;
+            }
+            auto original = torrent.metadata.original_paths.if_contains(key);
+            if (!original) continue;
+            std::string logical(original->as_string());
+            bool complete = done.at(i) >= info->files().file_size(index);
+            auto target = complete ? logical : logical + ".mulee";
+            if (target == current) continue;
+            if (fs::exists(fs::path(status.save_path) / target))
+                throw RequestError("conflict", "Incomplete-file rename destination exists");
+            persistence_.save_meta(torrent_id(torrent.handle.info_hashes()), torrent.metadata);
+            storage_handle_ = torrent.handle;
+            storage_error_.clear();
+            storage_error_code_ = "io_error";
+            storage_pending_ = 1;
+            torrent.handle.rename_file(index, target);
+            wait_storage();
+            changed = true;
+        }
+        if (status.is_finished && torrent.metadata.streaming_file >= 0) {
+            auto priorities = torrent.handle.get_file_priorities();
+            auto index = torrent.metadata.streaming_file;
+            if (index < static_cast<int>(priorities.size()) && priorities.at(index) == lt::top_priority) {
+                priorities.at(index) = lt::download_priority_t{static_cast<std::uint8_t>(torrent.metadata.streaming_previous_priority)};
+                torrent.handle.prioritize_files(priorities);
+            }
+            torrent.metadata.streaming_file = -1;
+            torrent.metadata.sequential_download = false;
+            torrent.metadata.first_last_priority = false;
+            apply_download_mode(torrent);
+            changed = true;
+        }
+        if (changed) {
+            persistence_.save_meta(torrent_id(torrent.handle.info_hashes()), torrent.metadata);
+            save(torrent);
+        }
+    } catch (...) {
+        updating_incomplete_ = false;
+        throw;
+    }
+    updating_incomplete_ = false;
+}
+
 void Session::restore() {
     for (auto& params : persistence_.restore()) {
         auto id = torrent_id(params.info_hashes);
+        auto metadata = persistence_.load_meta(id);
+        // meta 与 resume 保存时刻可能不同，以实际存在的后缀文件恢复磁盘映射。
+        for (const auto& entry : metadata.original_paths) {
+            auto index = lt::file_index_t{std::stoi(std::string(entry.key()))};
+            std::string original(entry.value().as_string());
+            if (fs::exists(fs::path(params.save_path) / (original + ".mulee")))
+                params.renamed_files[index] = original + ".mulee";
+            else if (fs::exists(fs::path(params.save_path) / original)) params.renamed_files[index] = original;
+        }
         lt::error_code error;
         auto count = std::make_shared<std::atomic<std::int64_t>>(0);
         prepare(params, count);
@@ -187,7 +273,7 @@ void Session::restore() {
             continue;
         }
         handle.set_max_connections(per_torrent_connections);
-        auto inserted = torrents_.emplace(id, Torrent{handle, persistence_.load_meta(id), params.peers, count});
+        auto inserted = torrents_.emplace(id, Torrent{handle, metadata, params.peers, count});
         apply_junk_filter(inserted.first->second);
         apply_download_mode(inserted.first->second);
         refresh_trackers(inserted.first->second);
@@ -423,7 +509,11 @@ void Session::poll() {
         clear_extra_port_mapping_handles();
     }
     update_extra_port_mappings();
-    for (auto& entry : torrents_) refresh_trackers(entry.second);
+    for (auto& entry : torrents_) {
+        refresh_trackers(entry.second);
+        try { update_incomplete_files(entry.second); }
+        catch (const std::exception& error) { persistence_.log(error.what()); }
+    }
     auto now = std::chrono::steady_clock::now();
     if (now - last_stats_request_ >= std::chrono::seconds(1)) {
         session_.post_session_stats();

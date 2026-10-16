@@ -6,6 +6,9 @@ import Observation
 @Observable
 final class BitTorrentController {
     let engine: TorrentEngine
+    let watchFolders = TorrentWatchFolderService()
+    private var watchedDrafts = Set<String>()
+    private var submittedWatchedDrafts = Set<String>()
     private weak var model: AppModel?
     private var configuration: TorrentEngineSettings
     private var isRunning = false
@@ -28,6 +31,12 @@ final class BitTorrentController {
         isRunning = true
         reachability = BitTorrentPortReachability()
         configure(configuration)
+        if let settings = model?.downloadSettings {
+            watchFolders.start(settings: settings) { [weak self] _, text, autoStart in
+                guard let self else { return false }
+                return try await self.acceptWatchedFile(text: text, autoStart: autoStart)
+            }
+        }
         monitor = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
@@ -39,6 +48,7 @@ final class BitTorrentController {
 
     func stop() {
         isRunning = false
+        watchFolders.stop()
         model?.publicTrackers?.stop()
         monitor?.cancel()
         monitor = nil
@@ -92,6 +102,67 @@ final class BitTorrentController {
             if case .bittorrent(_, _, let peers, _) = task.detail { return peers > 0 }
             return false
         })
+    }
+
+    func confirmWatchedDrafts(_ links: [ParsedLink]) {
+        submittedWatchedDrafts.formUnion(links.map(\.original).filter { watchedDrafts.contains($0) })
+    }
+
+    func refreshTaskLocation(_ id: String) async {
+        guard let snapshots = try? await engine.snapshots(),
+              let snapshot = snapshots.first(where: { $0.engineTaskID == id }),
+              let model, let index = model.tasks.firstIndex(where: { $0.kind == .bittorrent && $0.engineTaskID == id }) else { return }
+        // 旧书签会阻止普通快照更新路径；主动移动或重命名后要重新绑定实际位置。
+        model.tasks[index].fileBookmark = nil
+        model.tasks[index].fileMissing = nil
+        model.tasks[index].savePath = snapshot.savePath
+        model.tasks[index].writeDirectories = snapshot.writeDirectories
+        model.tasks[index].name = snapshot.name
+        if [.completed, .seeding].contains(snapshot.status) { FileTracker.capture(&model.tasks[index]) }
+    }
+
+    private func acceptWatchedFile(text: String, autoStart: Bool) async throws -> Bool {
+        guard let model, let settings = model.downloadSettings else { return false }
+        let draft = NewTaskModel(inputText: text, saveDirectory: URL(filePath: settings.saveDirectory), autoExtract: settings.autoExtract)
+        guard draft.canStartDownload else {
+            throw EngineError.rpc(code: 3, message: String(localized: "种子文件或磁力链接无效，请检查内容后重试。"))
+        }
+        let previousIDs = Set(model.tasks.map(\.id))
+        let sources = Set(draft.downloadLinks.map(\.original))
+        if autoStart {
+            guard await draft.checkBeforeAdding(in: model, settings: settings), let coordinator = model.coordinator else {
+                throw EngineError.rpc(code: 3, message: String(localized: "需要确认下载选项，请关闭自动开始后重新扫描。"))
+            }
+            await coordinator.add(
+                links: draft.downloadLinks, autoExtract: settings.autoExtract, directory: draft.saveDirectory,
+                filePriorities: draft.filePriorities, torrentDownloadModes: draft.torrentDownloadModes
+            )
+        } else {
+            // 不抢占用户已打开的草稿；监视到的多个文件按顺序逐个确认。
+            while model.isShowingNewTask {
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            watchedDrafts.formUnion(sources)
+            defer {
+                watchedDrafts.subtract(sources)
+                submittedWatchedDrafts.subtract(sources)
+            }
+            model.showNewTask(prefill: text)
+            while model.isShowingNewTask {
+                try await Task.sleep(for: .milliseconds(100))
+            }
+            guard !submittedWatchedDrafts.isDisjoint(with: sources) else { return false }
+            // 新建面板先关闭、异步添加随后才完成；只按引擎确认的结果归档。
+            for _ in 0..<3100 {
+                if model.tasks.contains(where: { !previousIDs.contains($0.id) && sources.contains($0.sourceLink) }) { break }
+                try await Task.sleep(for: .milliseconds(100))
+            }
+        }
+        guard let task = model.tasks.first(where: { !previousIDs.contains($0.id) && sources.contains($0.sourceLink) }),
+              task.engineTaskID != nil, task.status != .failed else {
+            throw EngineError.rpc(code: 3, message: String(localized: "添加未完成，原文件已保留。请检查下载引擎后重新扫描。"))
+        }
+        return true
     }
 
     func refreshSession() async {

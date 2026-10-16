@@ -1,4 +1,5 @@
 import AppKit
+import AppIntents
 import MuleeCore
 
 /// 菜单栏常驻，并在退出前给下载引擎最多五秒保存会话。
@@ -12,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var notificationService: NotificationService?
     private var whenAllDoneController: WhenAllDoneController?
     private var slowModeController: SlowModeController?
+    private var transferScheduleController: TransferScheduleController?
     private var coordinator: DownloadCoordinator?
     private var extractionCoordinator: ExtractionCoordinator?
     private var startupTask: Task<Void, Never>?
@@ -28,6 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         servicesProvider = DownloadServicesProvider(router: openURLRouter)
         self.model = model
         self.settings = settings
+        let intentActions = MuleeIntentActions(model: model)
+        AppDependencyManager.shared.add(dependency: intentActions)
         updates.installation.hasActiveTransfers = { [weak model] in
             guard let model else { return false }
             return model.hasActiveTransfers || model.tasks.contains { [.queued, .waitingForSources].contains($0.status) }
@@ -44,6 +48,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard !usesSampleData, !AppEnvironment.isRunningUnitTests, coordinator == nil else { return }
         NetworkDiagnosticsService.shared.start(model: model)
         model.loadTaskHistory(from: TaskHistoryStore())
+        model.transferStatistics = TransferStatisticsStore(
+            fileURL: URL.applicationSupportDirectory.appending(path: "Mulee/statistics.json")
+        )
+        model.transferStatistics?.record(tasks: model.tasks)
         model.loadUnzipRules(from: UnzipRuleStore())
         let stateDirectory = URL.applicationSupportDirectory.appending(path: "Mulee/aria2", directoryHint: .isDirectory)
         let torrent = TorrentEngine(
@@ -73,6 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         diskReserveMonitor = DiskReserveMonitor(model: model, settings: settings)
         whenAllDoneController = WhenAllDoneController(model: model, settings: settings)
         slowModeController = SlowModeController(model: model, settings: settings)
+        transferScheduleController = TransferScheduleController(model: model, settings: settings)
         slowModeController?.start()
         extractionCoordinator = ExtractionCoordinator(
             model: model, settings: settings,
@@ -100,7 +109,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 options: EngineOptionsMapper.options(from: settings, slowMode: model?.isSlowModeActive ?? false),
                 videoConfiguration: VideoEngineConfiguration.configuration(from: settings)
             )
-            if !Task.isCancelled { diskReserveMonitor?.start() }
+            if !Task.isCancelled {
+                diskReserveMonitor?.start()
+                transferScheduleController?.start()
+            }
         }
     }
 
@@ -161,6 +173,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         notificationService?.stop()
         whenAllDoneController?.cancel()
         slowModeController?.stop()
+        transferScheduleController?.stop()
+        model?.transferStatistics?.save()
         NetworkDiagnosticsService.shared.stop()
         startupTask?.cancel()
         extractionCoordinator?.cancel()
@@ -186,6 +200,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard !hasReplied else { return }
         hasReplied = true
         model?.flushTaskHistory()
+        model?.transferStatistics?.save()
         timeoutTask?.cancel()
         shutdownProgress.finish()
         application.reply(toApplicationShouldTerminate: true)
@@ -193,6 +208,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     /// 更新不走普通退出的五秒兜底，必须等引擎保存会话并停止后才允许安装。
     private func prepareForUpdate() async -> Bool {
+        transferScheduleController?.stop()
+        model?.transferStatistics?.save()
         diskReserveMonitor?.stop()
         notificationService?.stop()
         whenAllDoneController?.cancel()
@@ -205,6 +222,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         await extractionCoordinator?.stop()
         await coordinator?.stop()
         model?.flushTaskHistory()
+        model?.transferStatistics?.save()
         let saved = model?.taskHistoryIssue == nil
         if !saved { shutdownProgress.finish(restoreWindows: true) }
         return saved

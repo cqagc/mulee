@@ -19,6 +19,39 @@ final class BitTorrentFilesModel {
     #endif
 
     var selectedCount: Int { files.filter { $0.priority > 0 }.count }
+    var engineTaskID: String? { currentID }
+
+    var folders: [String] {
+        var paths = Set<String>()
+        for file in files {
+            let components = file.path.split(separator: "/")
+            for count in 1..<max(1, components.count) {
+                paths.insert(components.prefix(count).joined(separator: "/"))
+            }
+        }
+        return paths.sorted()
+    }
+
+    func rename(path: String, to newPath: String) async {
+        guard !isUpdating, let engine, let id = currentID else { return }
+        let token = generation
+        isUpdating = true
+        revision += 1
+        defer {
+            if generation == token {
+                isUpdating = false
+                revision += 1
+            }
+        }
+        do {
+            try await engine.renameFile(id, path: path, to: newPath)
+            if generation == token { issue = nil }
+        } catch {
+            if generation == token { issue = EngineStatusPresentation.errorMessage(error) }
+        }
+        // 目录重命名可能只完成一部分，失败也必须回读实际磁盘结果。
+        if let entries = try? await engine.files(id), generation == token { files = entries }
+    }
 
     func watch(engine: TorrentEngine?, id: String?) async {
         #if DEBUG

@@ -125,6 +125,15 @@ Metadata Persistence::load_meta(const std::string& id) {
             if (auto value = object.if_contains(field.first); value && value->is_int64() && value->as_int64() >= 0)
                 *field.second = value->as_int64();
         }
+        if (auto value = object.if_contains("mark_incomplete"); value && value->is_bool())
+            metadata.mark_incomplete = value->as_bool();
+        if (auto value = object.if_contains("original_paths"); value && value->is_object())
+            metadata.original_paths = value->as_object();
+        if (auto value = object.if_contains("streaming_file"); value && value->is_int64())
+            metadata.streaming_file = static_cast<int>(value->as_int64());
+        if (auto value = object.if_contains("streaming_previous_priority"); value && value->is_int64()
+            && value->as_int64() >= 0 && value->as_int64() <= 7)
+            metadata.streaming_previous_priority = static_cast<int>(value->as_int64());
         auto completed = object.if_contains("completed_at");
         if (completed && (completed->is_null() || completed->is_int64())) metadata.completed_at = *completed;
     } catch (const std::exception& error) {
@@ -161,7 +170,10 @@ void Persistence::atomic_write(const fs::path& destination, const char* data, st
 void Persistence::save_meta(const std::string& id, const Metadata& metadata) {
     auto text = json::serialize(json::object{{"source", metadata.source}, {"added_at", metadata.added_at},
         {"completed_at", metadata.completed_at}, {"sequential_download", metadata.sequential_download},
-        {"first_last_priority", metadata.first_last_priority}, {"junk_pending", metadata.junk_pending},
+        {"first_last_priority", metadata.first_last_priority},
+        {"mark_incomplete", metadata.mark_incomplete}, {"original_paths", metadata.original_paths},
+        {"streaming_file", metadata.streaming_file},
+        {"streaming_previous_priority", metadata.streaming_previous_priority}, {"junk_pending", metadata.junk_pending},
         {"junk_patterns", json::value_from(metadata.junk_patterns)}, {"skipped_files", metadata.skipped_files},
         {"tracker_state", metadata.tracker_state}, {"seed_inactive_seconds", metadata.seed_inactive_seconds},
         {"last_finished_duration", metadata.last_finished_duration}, {"last_payload_total", metadata.last_payload_total}});

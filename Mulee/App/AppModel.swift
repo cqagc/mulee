@@ -24,6 +24,8 @@ final class AppModel {
         didSet { updateSleepPrevention() }
     }
     var isScheduledLimitActive = false
+    var isTransferScheduleActive = false
+    var transferScheduleWakeIssue: String?
     var isSlowModeActive = false
     var slowModeReason: String?
     var diskReserveWarnings: [DiskReserveMonitor.Warning] = []
@@ -64,11 +66,15 @@ final class AppModel {
     var openURLIssue: String?
     /// 打开「新建下载」面板时预填的文本，读取后由面板清空。
     var pendingNewTaskText = ""
+    var pendingNewTaskDirectory: URL?
     var pendingNewTaskContexts: [ParsedLink: NewTaskContext] = [:]
     var waitingHTTPReplacement: HTTPReplacementWait?
     var pendingBrowserHTTPReplacement: BrowserHTTPReplacement?
     /// 最近 30 次采样的总下载速度（字节/秒），最后一个是最新值。菜单栏速度曲线使用。
-    var downloadRateHistory: [Int64]
+    var downloadRateHistory: [Int64] {
+        didSet { transferStatistics?.record(tasks: tasks) }
+    }
+    var transferStatistics: TransferStatisticsStore?
     /// 有任务在传输时阻止系统空闲睡眠。
     @ObservationIgnored private let sleepPreventer: SleepPreventer
 

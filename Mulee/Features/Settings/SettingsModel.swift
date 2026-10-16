@@ -70,11 +70,16 @@ final class SettingsModel {
         static let notifyOnFailure = "general.notifyOnFailure"
         static let notificationSound = "general.notificationSound"
         static let whenAllDone = "general.whenAllDone"
+        static let transferScheduleEnabled = "schedule.enabled"
+        static let transferScheduleStartTime = "schedule.startTime"
+        static let transferScheduleEndTime = "schedule.endTime"
+        static let transferScheduleWeekdays = "schedule.weekdays"
         static let saveDirectory = "download.saveDirectory"
         static let maxConcurrentTasks = "download.maxConcurrentTasks"
         static let downloadRules = "download.rules"
         static let sortIntoFolders = "download.sortIntoFolders"
         static let httpThreads = "download.httpThreads"
+        static let markIncomplete = "download.markIncomplete"
         static let duplicateAction = "download.duplicateAction"
         static let diskReserveEnabled = "download.diskReserveEnabled"
         static let diskReserveGB = "download.diskReserveGB"
@@ -103,6 +108,8 @@ final class SettingsModel {
         static let seedInactiveLimitMinutes = "bt.seedInactiveLimitMinutes"
         static let privateMinSeedMinutes = "bt.privateMinSeedMinutes"
         static let ipBlocklistPath = "bt.ipBlocklistPath"
+        static let watchFolders = "bt.watchFolders"
+        static let watchAutoStart = "bt.watchAutoStart"
         static let ed2kTCPPort = "ed2k.tcpPort"
         static let ed2kUDPPort = "ed2k.udpPort"
         static let ed2kShare = "ed2k.shareCompleted"
@@ -148,6 +155,10 @@ final class SettingsModel {
     var whenAllDone: WhenAllDoneAction { didSet { defaults.set(whenAllDone.rawValue, forKey: Key.whenAllDone) } }
 
     // MARK: 下载
+    var transferScheduleEnabled: Bool { didSet { defaults.set(transferScheduleEnabled, forKey: Key.transferScheduleEnabled) } }
+    var transferScheduleStartTime: String { didSet { defaults.set(transferScheduleStartTime, forKey: Key.transferScheduleStartTime) } }
+    var transferScheduleEndTime: String { didSet { defaults.set(transferScheduleEndTime, forKey: Key.transferScheduleEndTime) } }
+    var transferScheduleWeekdays: [Int] { didSet { defaults.set(transferScheduleWeekdays, forKey: Key.transferScheduleWeekdays) } }
     var saveDirectory: String { didSet { defaults.set(saveDirectory, forKey: Key.saveDirectory) } }
     var maxConcurrentTasks: Int { didSet { defaults.set(maxConcurrentTasks, forKey: Key.maxConcurrentTasks) } }
     var downloadRules: [DownloadRule] {
@@ -157,6 +168,7 @@ final class SettingsModel {
     }
     var sortIntoFolders: Bool { didSet { defaults.set(sortIntoFolders, forKey: Key.sortIntoFolders) } }
     var httpThreads: Int { didSet { defaults.set(httpThreads, forKey: Key.httpThreads) } }
+    var markIncomplete: Bool { didSet { defaults.set(markIncomplete, forKey: Key.markIncomplete) } }
     var duplicateAction: DownloadRequestContext.DuplicateAction { didSet { defaults.set(duplicateAction.rawValue, forKey: Key.duplicateAction) } }
     var diskReserveEnabled: Bool { didSet { defaults.set(diskReserveEnabled, forKey: Key.diskReserveEnabled) } }
     var diskReserveGB: Int {
@@ -196,6 +208,8 @@ final class SettingsModel {
     var seedInactiveLimitMinutes: Int { didSet { defaults.set(seedInactiveLimitMinutes, forKey: Key.seedInactiveLimitMinutes) } }
     var privateMinSeedMinutes: Int { didSet { defaults.set(privateMinSeedMinutes, forKey: Key.privateMinSeedMinutes) } }
     var ipBlocklistPath: String { didSet { defaults.set(ipBlocklistPath, forKey: Key.ipBlocklistPath) } }
+    var watchFolders: [String] { didSet { defaults.set(watchFolders, forKey: Key.watchFolders) } }
+    var watchAutoStart: Bool { didSet { defaults.set(watchAutoStart, forKey: Key.watchAutoStart) } }
 
     // MARK: 电驴
     var ed2kTCPPort: Int { didSet { defaults.set(ed2kTCPPort, forKey: Key.ed2kTCPPort) } }
@@ -223,10 +237,15 @@ final class SettingsModel {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        transferScheduleEnabled = Self.bool(defaults, Key.transferScheduleEnabled, false)
+        transferScheduleStartTime = defaults.string(forKey: Key.transferScheduleStartTime) ?? "01:00"
+        transferScheduleEndTime = defaults.string(forKey: Key.transferScheduleEndTime) ?? "07:00"
+        transferScheduleWeekdays = defaults.array(forKey: Key.transferScheduleWeekdays) as? [Int] ?? Array(1...7)
         slowModeOnExpensive = Self.bool(defaults, Key.slowModeOnExpensive, true)
         slowModeUploadMBps = defaults.object(forKey: Key.slowModeUploadMBps) as? Double ?? 0.2
         slowModeDownloadMBps = defaults.object(forKey: Key.slowModeDownloadMBps) as? Double ?? 1
         diskReserveGB = min(500, max(1, Self.int(defaults, Key.diskReserveGB, 10)))
+        markIncomplete = Self.bool(defaults, Key.markIncomplete, true)
         duplicateAction = Self.raw(defaults, Key.duplicateAction, .rename)
         videoFormatChoiceBySite = defaults.dictionary(forKey: Key.videoFormatChoiceBySite) as? [String: String] ?? [:]
         diskReserveEnabled = Self.bool(defaults, Key.diskReserveEnabled, true)
@@ -268,6 +287,8 @@ final class SettingsModel {
         seedInactiveLimitMinutes = Self.int(defaults, Key.seedInactiveLimitMinutes, 0)
         privateMinSeedMinutes = Self.int(defaults, Key.privateMinSeedMinutes, 0)
         ipBlocklistPath = defaults.string(forKey: Key.ipBlocklistPath) ?? ""
+        watchFolders = defaults.stringArray(forKey: Key.watchFolders) ?? []
+        watchAutoStart = Self.bool(defaults, Key.watchAutoStart, false)
         ed2kTCPPort = Self.int(defaults, Key.ed2kTCPPort, 4662)
         ed2kUDPPort = Self.int(defaults, Key.ed2kUDPPort, 4672)
         ed2kShare = Self.bool(defaults, Key.ed2kShare, true)

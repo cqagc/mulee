@@ -83,6 +83,10 @@ final class NewTaskModel {
     func consumePendingText(from model: AppModel) {
         let pendingText = model.pendingNewTaskText
         guard !pendingText.isEmpty else { return }
+        if let directory = model.pendingNewTaskDirectory {
+            saveDirectory = directory
+            model.pendingNewTaskDirectory = nil
+        }
         contexts.merge(model.pendingNewTaskContexts) { _, new in new }
         model.pendingNewTaskContexts = [:]
         mergePrefillText(pendingText)
@@ -112,6 +116,9 @@ final class NewTaskModel {
 
     func createTasks(in model: AppModel) {
         guard canStartDownload else { return }
+        model.bitTorrent?.confirmWatchedDrafts(downloadLinks.filter { link in
+            !links.contains { $0.duplicateMessage != nil && ($0.link == link || $0.selectedVideoEntries.contains { $0.link == link }) }
+        })
         var expandedContexts = contexts
         for item in links {
             var context = contexts[item.link] ?? NewTaskContext()

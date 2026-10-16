@@ -121,3 +121,9 @@ public struct TorrentFileResult: Decodable, Sendable, Equatable {
     public let path: String
     public let id: String
 }
+
+struct TorrentdStreamingParameters: Encodable, Sendable {
+    let id: String
+    let fileIndex: Int
+    let enabled: Bool
+}

@@ -8,13 +8,19 @@ struct BitTorrentSettingsTab: View {
         @Bindable var model = model
         Form {
             Section {
-                Picker("做种到分享率 1:1 后", selection: $model.seedingAction) {
+                Picker("达到做种限制后", selection: $model.seedingAction) {
                     Text("停止").tag(SettingsModel.SeedingAction.stop)
                     Text("降速到 50 KB/s 继续做种").tag(SettingsModel.SeedingAction.throttle)
+                    Text("删除任务（保留文件）").tag(SettingsModel.SeedingAction.remove)
                 }
+                Text("分享率达到 1:1，或达到以下任一时长后执行。")
+                    .foregroundStyle(.secondary)
+                BitTorrentLimitField(title: "做种时长", minutes: $model.seedTimeLimitMinutes)
+                BitTorrentLimitField(title: "不活跃时长", minutes: $model.seedInactiveLimitMinutes)
+                BitTorrentLimitField(title: "私有种子最低做种时长", minutes: $model.privateMinSeedMinutes)
                 Toggle(isOn: $model.privateIgnoresRatio) {
                     Text("私有种子不按分享率自动停止")
-                    Text("PT 站有做种时长要求，按分享率自动停可能被记 H&R")
+                    Text("私有站点可能要求持续做种；最低做种时长内不会执行限制动作。")
                 }
             }
             Section {
@@ -24,6 +30,8 @@ struct BitTorrentSettingsTab: View {
                 }
             }
             PublicTrackerSettingsSection()
+            BitTorrentBlocklistSettingsSection()
+            BitTorrentWatchSettingsSection()
             Section {
                 Toggle("自动端口映射", isOn: $model.portMapping)
                 LabeledContent("BT 端口") {
@@ -38,8 +46,10 @@ struct BitTorrentSettingsTab: View {
     }
 }
 
+#if DEBUG
 #Preview {
     BitTorrentSettingsTab()
         .environment(SettingsModel())
         .environment(AppModel())
 }
+#endif

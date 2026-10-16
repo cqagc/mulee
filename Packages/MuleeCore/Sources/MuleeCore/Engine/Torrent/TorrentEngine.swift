@@ -150,16 +150,16 @@ public actor TorrentEngine: DownloadEngine {
         try await add(link: link, directory: directory, filePriorities: nil, paused: true)
     }
 
-    public func add(link: ParsedLink, directory: URL?, filePriorities: [Int]?, paused: Bool = false) async throws -> String {
-        try await addWithResult(link: link, directory: directory, filePriorities: filePriorities, paused: paused).id
+    public func add(link: ParsedLink, directory: URL?, filePriorities: [Int]?, paused: Bool = false, markIncomplete: Bool = true) async throws -> String {
+        try await addWithResult(link: link, directory: directory, filePriorities: filePriorities, paused: paused, markIncomplete: markIncomplete).id
     }
 
     /// 添加任务并返回垃圾文件过滤结果；显式 filePriorities 优先于自动过滤。
     public func addWithResult(
-        link: ParsedLink, directory: URL?, filePriorities: [Int]? = nil, paused: Bool = false
+        link: ParsedLink, directory: URL?, filePriorities: [Int]? = nil, paused: Bool = false, markIncomplete: Bool = true
     ) async throws -> TorrentdAddResult {
         let client = try await runningClient()
-        var params = TorrentdAddParameters(savePath: directory?.path, paused: paused, source: link.original)
+        var params = TorrentdAddParameters(savePath: directory?.path, paused: paused, markIncomplete: markIncomplete, source: link.original)
         var temporary: URL?
         defer {
             if let temporary {
@@ -252,6 +252,14 @@ public actor TorrentEngine: DownloadEngine {
             "set_download_mode", TorrentdDownloadModeParameters(
                 id: id, sequentialDownload: sequentialDownload, firstLastPriority: firstLastPriority
             )
+        )
+    }
+
+    /// 对指定文件开启顺序下载及首尾各 2% 的块优先；取消或完成时关闭。
+    public func setStreaming(_ id: String, fileIndex: Int, enabled: Bool) async throws {
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call(
+            "set_streaming", TorrentdStreamingParameters(id: id, fileIndex: fileIndex, enabled: enabled)
         )
     }
 

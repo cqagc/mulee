@@ -4,6 +4,7 @@ import Foundation
 public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
     public enum PauseReason: String, Sendable, Hashable, Codable {
         case diskSpace
+        case schedule
     }
 
     /// 可选字段使旧版历史仍可解码；用户暂停不会被磁盘恢复逻辑接管。

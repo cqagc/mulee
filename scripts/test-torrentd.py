@@ -460,7 +460,79 @@ def management_tests(binary, root):
     print("PASS D2/F1-F5：过滤反馈、存储冲突/移动/重命名、校验/宣告、tracker、peer、IP 持久化、混合种子制作/导出", flush=True)
 
 
+def incomplete_file_tests(binary, root):
+    root.mkdir()
+    first = os.urandom(256 * 1024)
+    second = os.urandom(8 * 1024 * 1024)
+    torrent, torrent_id, _ = fixture(root, "stream-fixture", [
+        ("first.mp4", first), ("second.mkv", second),
+    ], multi=True)
+    destination = root / "downloads"
+    content = destination / "stream-fixture"
+    content.mkdir(parents=True)
+    (content / "first.mp4.mulee").write_bytes(first)
+    (content / "second.mkv.mulee").write_bytes(bytes(len(second)))
+    state = root / "state"
+    daemon = Daemon(binary, state)
+    daemon.configure(destination)
+    daemon.request("add", {"torrent_file": str(torrent), "save_path": str(destination)})
+    daemon.request("force_recheck", {"id": torrent_id})
+
+    def checked_first():
+        files = daemon.request("files", {"id": torrent_id})["files"]
+        return files if files[0]["done"] == len(first) and files[0]["storage_path"].endswith("first.mp4") else None
+
+    files = wait_for(checked_first, description="individual checked file rename")
+    assert files[0]["path"] == "stream-fixture/first.mp4"
+    assert files[0]["contiguous_done"] == len(first)
+    assert files[1]["storage_path"].endswith("second.mkv.mulee")
+    assert files[1]["done"] == 0 and files[1]["contiguous_done"] == 0
+    assert (content / "first.mp4").read_bytes() == first
+    assert not (content / "first.mp4.mulee").exists()
+    assert daemon.torrent(torrent_id)["is_finished"] is False
+    params = {"id": torrent_id, "file_index": 1, "enabled": True}
+    result = daemon.request("set_streaming", params)
+    # 第二个文件 128 个 piece，首尾各 2% 涉及 3 个 piece。
+    assert len(result["priority_pieces"]) == 6, result
+    assert result["priority_pieces"][:3] == [4, 5, 6]
+    assert result["priority_pieces"][-3:] == [129, 130, 131]
+    assert daemon.torrent(torrent_id)["sequential_download"] is True
+    assert daemon.request("files", {"id": torrent_id})["files"][1]["priority"] == 7
+    daemon.request("set_streaming", {**params, "file_index": 2}, error="invalid_params")
+    daemon.request("set_streaming", {**params, "enabled": 1}, error="invalid_params")
+    daemon.close("shutdown")
+    meta = json.loads((state / "meta" / (torrent_id + ".json")).read_text())
+    assert meta["mark_incomplete"] is True and meta["streaming_file"] == 1
+    assert meta["original_paths"] == {"0": "stream-fixture/first.mp4", "1": "stream-fixture/second.mkv"}
+    daemon = Daemon(binary, state)
+    daemon.configure(destination)
+    files = wait_for(checked_first, description="restored file rename mapping")
+    assert files[1]["storage_path"].endswith("second.mkv.mulee")
+    daemon.request("set_streaming", {**params, "enabled": False})
+    assert daemon.torrent(torrent_id)["sequential_download"] is False
+    assert daemon.request("files", {"id": torrent_id})["files"][1]["priority"] == 4
+    daemon.request("set_streaming", params)
+    daemon.request("pause", {"id": torrent_id})
+    (content / "second.mkv.mulee").write_bytes(second)
+    daemon.request("force_recheck", {"id": torrent_id})
+    daemon.request("resume", {"id": torrent_id})
+    daemon.complete(torrent_id)
+    assert daemon.torrent(torrent_id)["sequential_download"] is False
+    assert daemon.torrent(torrent_id)["first_last_priority"] is False
+    files = daemon.request("files", {"id": torrent_id})["files"]
+    assert all(not item["storage_path"].endswith(".mulee") for item in files)
+    assert (content / "second.mkv").read_bytes() == second
+    daemon.close("shutdown")
+    daemon = Daemon(binary, state)
+    daemon.configure(destination)
+    daemon.complete(torrent_id)
+    assert (content / "second.mkv").read_bytes() == second
+    daemon.close("shutdown")
+    print("PASS C2/E4：逐文件校验改名、未完成/完成重启一致、连续开头、首尾 2% 优先、取消顺序下载", flush=True)
+
+
 def run_tests(binary, root):
+    incomplete_file_tests(binary, root / "incomplete-files")
     management_tests(binary, root)
 
     data = os.urandom(5 * 1024 * 1024 + 123)
@@ -543,7 +615,7 @@ def run_tests(binary, root):
         files = a.request("files", {"id": torrent_id})["files"]
         assert len(files) == count
         for index, file in enumerate(files):
-            assert set(file) == {"index", "path", "size", "done", "priority"}
+            assert set(file) == {"index", "path", "storage_path", "contiguous_done", "size", "done", "priority"}
             assert file["index"] == index and file["done"] == file["size"]
             assert file["priority"] == 4
     assert not a.torrent(single_id)["sequential_download"]
