@@ -61,7 +61,10 @@ struct NewTaskLinkRow: View {
                 .font(.caption)
                 .padding(12)
             }
-            NewTaskChecksumView(item: item)
+            // 种子通常包含多个文件，单个校验值只对 HTTP 下载有意义。
+            if item.link.kind == .http {
+                NewTaskChecksumView(item: item)
+            }
         }
     }
 

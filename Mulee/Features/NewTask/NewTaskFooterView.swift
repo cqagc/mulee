@@ -55,7 +55,7 @@ struct NewTaskFooterView: View {
                     Text("覆盖已有文件").tag(DownloadRequestContext.DuplicateAction?.some(.overwrite))
                 }
             }
-            if draft.links.contains(where: { $0.link.kind == .bittorrent || $0.link.kind == .video }) {
+            if draft.showsEngineDuplicateNote {
                 Text("BT 与视频沿用引擎的同名处理。要保留独立副本，请选择其他保存目录。")
                     .font(.caption)
                     .foregroundStyle(.secondary)

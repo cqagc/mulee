@@ -14,6 +14,8 @@ final class NewTaskModel {
     var diskConfirmed = false
     var duplicateChoice: DownloadRequestContext.DuplicateAction?
     private(set) var needsDuplicateChoice = false
+    // 自动编号是默认值，只有改成覆盖或询问时才需要说明 BT 与视频的同名处理。
+    private(set) var showsEngineDuplicateNote = false
     private(set) var isChecking = false
     private(set) var links: [NewTaskLinkModel] = []
     var saveDirectory: URL {
@@ -205,6 +207,8 @@ final class NewTaskModel {
         }
         guard inputText == originalText, saveDirectory == directory, !Task.isCancelled else { return false }
         needsDuplicateChoice = settings.duplicateAction == .ask && links.contains { $0.link.kind == .http }
+        showsEngineDuplicateNote = settings.duplicateAction != .rename
+            && links.contains { $0.link.kind == .bittorrent || $0.link.kind == .video }
         let duplicatesReady = links.allSatisfy { $0.duplicateMessage == nil || $0.duplicateAcknowledged }
         let diskReady = checkDisk { size, directory in
             guard size > 0, let protection = model.diskReserveMonitor else { return false }
@@ -297,6 +301,7 @@ final class NewTaskModel {
         diskWarning = nil
         diskCheckNote = nil
         needsDuplicateChoice = false
+        showsEngineDuplicateNote = false
         duplicateChoice = nil
         inputRows = parser == nil ? SmartPasteParser.parse(inputText) : []
         var parsedContexts: [ParsedLink: DownloadRequestContext] = [:]

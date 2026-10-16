@@ -33,7 +33,7 @@ struct TaskContextMenu: View {
         }
         Button("复制链接", systemImage: MuleeSymbol.copy.name, action: copyLink)
         Button("在访达中显示", systemImage: MuleeSymbol.revealInFinder.name, action: reveal)
-        Button("编辑标签…", systemImage: MuleeSymbol.tags.name) { TaskActions.editTags(task, model: model) }
+        Button((task.tags ?? []).isEmpty ? String(localized: "添加标签…") : String(localized: "编辑标签…"), systemImage: MuleeSymbol.tags.name) { TaskActions.editTags(task, model: model) }
         if task.kind == .bittorrent {
             Divider()
             BitTorrentActionsView(task: task)
