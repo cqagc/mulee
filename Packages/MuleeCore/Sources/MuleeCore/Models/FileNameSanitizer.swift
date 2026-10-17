@@ -2,11 +2,11 @@ import Foundation
 
 /// 把远端标题限制为一个可见的文件名，不能让列表名变成路径。
 public enum FileNameSanitizer {
-    public static func sanitize(_ name: String, fallback: String = "播放列表") -> String {
+    public static func sanitize(_ name: String, fallback: String = "") -> String {
         let cleaned = clean(name)
         if !cleaned.isEmpty { return cleaned }
         let safeFallback = clean(fallback)
-        return safeFallback.isEmpty ? "播放列表" : safeFallback
+        return safeFallback.isEmpty ? String(localized: "播放列表", bundle: .module) : safeFallback
     }
 
     private static func clean(_ name: String) -> String {

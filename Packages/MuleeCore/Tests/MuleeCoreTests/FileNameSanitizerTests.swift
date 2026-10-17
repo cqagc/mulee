@@ -7,8 +7,8 @@ struct FileNameSanitizerTests {
     func illegalNamesUseSafeFallback(_ name: String) {
         let result = FileNameSanitizer.sanitize(name)
 
-        #expect(result == "播放列表")
-        #expect(FileNameSanitizer.sanitize(name, fallback: "../") == "播放列表")
+        #expect(result == String(localized: "播放列表", bundle: .module))
+        #expect(FileNameSanitizer.sanitize(name, fallback: "../") == String(localized: "播放列表", bundle: .module))
     }
 
     @Test func removesPathsHiddenPrefixAndControlCharacters() {

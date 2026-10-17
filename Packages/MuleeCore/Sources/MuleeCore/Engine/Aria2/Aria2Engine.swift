@@ -223,14 +223,14 @@ public actor Aria2Engine: DownloadEngine {
         var values: [String: Aria2RPCValue] = ["pause": .string(paused ? "true" : "false")]
         if let directory { values["dir"] = .string(directory.path) }
         let ids: [String] = try await client.call("aria2.addMetalink", [.string(data.base64EncodedString()), .object(values)])
-        guard let id = ids.first else { throw EngineError.invalidResponse("Metalink 中没有可下载的文件") }
+        guard let id = ids.first else { throw EngineError.invalidResponse(String(localized: "Metalink 中没有可下载的文件", bundle: .module)) }
         return id
     }
 
     public func addMirror(_ id: String, url: URL, original: HTTPResourceIdentity, context: DownloadRequestContext = .init()) async throws {
         let client = try runningClient()
         let status = try await taskStatus(id, using: client)
-        guard status.status == "active" else { throw EngineError.invalidResponse("仅正在下载的任务可以添加镜像地址") }
+        guard status.status == "active" else { throw EngineError.invalidResponse(String(localized: "仅正在下载的任务可以添加镜像地址", bundle: .module)) }
         guard url.user == nil, url.password == nil else { throw EngineError.unsupportedLink }
         // 镜像不继承原服务器的 Cookie 和认证头。
         var safeContext = context.withoutCookie
@@ -245,12 +245,12 @@ public actor Aria2Engine: DownloadEngine {
             // aria2 的自定义头作用于整项任务；凭据任务只接受同源镜像。
             guard let source = (status.files?.first?.uris?.first?.uri).flatMap({ URL(string: $0) }),
                   HTTPResourceProbe.sameHost(source, url), source.scheme?.lowercased() == url.scheme?.lowercased() else {
-                throw EngineError.invalidResponse("此任务使用登录信息，只能添加同一服务器的镜像地址。")
+                throw EngineError.invalidResponse(String(localized: "此任务使用登录信息，只能添加同一服务器的镜像地址。", bundle: .module))
             }
             let authenticated = Self.requestContext(headers: (options["header"] ?? "").components(separatedBy: "\n"))
             let prepared = try await HTTPResourceProbe.prepareDownload(url, context: authenticated)
             guard HTTPResourceProbe.sameHost(source, prepared.url), source.scheme?.lowercased() == prepared.url.scheme?.lowercased() else {
-                throw EngineError.invalidResponse("镜像跳转到了其他服务器，未附加原服务器的登录信息。")
+                throw EngineError.invalidResponse(String(localized: "镜像跳转到了其他服务器，未附加原服务器的登录信息。", bundle: .module))
             }
             mirrorURL = prepared.url
             safeContext = prepared.context
@@ -262,7 +262,7 @@ public actor Aria2Engine: DownloadEngine {
         let changed: [Int] = try await client.call("aria2.changeUri", [
             .string(id), .integer(1), .array([]), .array([.string(mirrorURL.absoluteString)])
         ])
-        guard changed.count == 2, changed[1] == 1 else { throw EngineError.invalidResponse("未能添加镜像地址") }
+        guard changed.count == 2, changed[1] == 1 else { throw EngineError.invalidResponse(String(localized: "未能添加镜像地址", bundle: .module)) }
     }
 
     public func setStreaming(_ id: String, enabled: Bool) async throws {
@@ -300,7 +300,7 @@ public actor Aria2Engine: DownloadEngine {
     public func streamingProgress(_ id: String) async throws -> (file: URL?, size: Int64, contiguous: Int64, finished: Bool) {
         let status = try await taskStatus(id, using: runningClient())
         guard ["active", "waiting", "paused", "complete"].contains(status.status) else {
-            throw EngineError.invalidResponse("下载已停止，无法继续缓冲")
+            throw EngineError.invalidResponse(String(localized: "下载已停止，无法继续缓冲", bundle: .module))
         }
         let size = Int64(status.totalLength ?? "") ?? 0
         let file = finalizedFiles[id] ?? status.files?.first.flatMap { $0.path.isEmpty ? nil : URL(filePath: $0.path) }

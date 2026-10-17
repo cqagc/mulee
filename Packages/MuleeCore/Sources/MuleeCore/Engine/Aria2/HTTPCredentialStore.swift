@@ -27,7 +27,7 @@ public enum HTTPCredentialStore {
         guard !host.isEmpty, !credential.username.contains(":"),
               ![host, credential.username, credential.password].contains(where: {
                   $0.unicodeScalars.contains { CharacterSet.controlCharacters.contains($0) }
-              }) else { throw EngineError.invalidResponse("账号或密码包含无效字符") }
+              }) else { throw EngineError.invalidResponse(String(localized: "账号或密码包含无效字符", bundle: .module)) }
         let query = query(host: host, service: service)
         let data = try JSONEncoder().encode(credential)
         var item = query
@@ -47,7 +47,7 @@ public enum HTTPCredentialStore {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
         try check(status)
-        guard let data = result as? Data else { throw EngineError.invalidResponse("无法读取已保存的账号") }
+        guard let data = result as? Data else { throw EngineError.invalidResponse(String(localized: "无法读取已保存的账号", bundle: .module)) }
         return try JSONDecoder().decode(Credential.self, from: data)
     }
 
@@ -66,6 +66,6 @@ public enum HTTPCredentialStore {
     }
 
     private static func check(_ status: OSStatus) throws {
-        guard status == errSecSuccess else { throw EngineError.invalidResponse("账号钥匙串访问失败（\(status)）") }
+        guard status == errSecSuccess else { throw EngineError.invalidResponse(String(localized: "账号钥匙串访问失败（\(status)）", bundle: .module)) }
     }
 }

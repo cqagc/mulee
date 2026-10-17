@@ -126,7 +126,7 @@ public struct YtDlpTaskOptions: Codable, Hashable, Sendable {
 
     public func validate() throws {
         if let subtitleLanguages, !subtitleLanguages.allSatisfy(YtDlpSubtitleLanguage.isValidID) {
-            throw EngineError.invalidResponse("字幕语言无效，请重新选择")
+            throw EngineError.invalidResponse(String(localized: "字幕语言无效，请重新选择", bundle: .module))
         }
         if let section, !section.isValid { throw YtDlpTimeSection.ValidationError.invalid }
     }
@@ -135,7 +135,11 @@ public struct YtDlpTaskOptions: Codable, Hashable, Sendable {
 public struct YtDlpTimeSection: Codable, Hashable, Sendable {
     public enum ValidationError: String, Error, LocalizedError {
         case invalid = "时间段无效，请填写时:分:秒、分:秒或秒数，结束时间须大于开始时间"
-        public var errorDescription: String? { rawValue }
+        public var errorDescription: String? {
+            switch self {
+            case .invalid: String(localized: "时间段无效，请填写时:分:秒、分:秒或秒数，结束时间须大于开始时间", bundle: .module)
+            }
+        }
     }
 
     public let start: Double

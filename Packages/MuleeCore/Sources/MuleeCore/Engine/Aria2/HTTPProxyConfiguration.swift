@@ -20,7 +20,7 @@ public struct HTTPProxyConfiguration: Sendable, Equatable, CustomStringConvertib
         let manual = Self.manualURL(manualURL)
         url = mode == .system ? system.url : mode == .manual ? manual : nil
         unsupportedReason = mode == .system ? system.unsupportedReason
-            : mode == .manual && manual == nil ? "代理地址无效，当前直连；请输入 http://主机:端口。" : nil
+            : mode == .manual && manual == nil ? String(localized: "代理地址无效，当前直连；请输入 http://主机:端口。", bundle: .module) : nil
         self.credential = mode == .off ? nil : credential
         let bypass = ["localhost", "127.0.0.1", "::1"] + (mode == .system ? system.exceptions : [])
             + [environment["no_proxy"], environment["NO_PROXY"]].compactMap { $0 }.flatMap { $0.components(separatedBy: ",") }
@@ -54,7 +54,7 @@ public struct HTTPProxyConfiguration: Sendable, Equatable, CustomStringConvertib
         text.replacingOccurrences(of: #"(?i)(https?://)[^\s/]+@"#, with: "$1***@", options: .regularExpression)
     }
 
-    public var description: String { url?.absoluteString ?? "直连" }
+    public var description: String { url?.absoluteString ?? String(localized: "直连", bundle: .module) }
     public var debugDescription: String { description }
 
     var aria2Options: [String: String] {

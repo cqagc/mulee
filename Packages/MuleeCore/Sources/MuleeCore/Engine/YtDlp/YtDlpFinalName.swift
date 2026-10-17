@@ -7,7 +7,7 @@ enum YtDlpFinalName {
     static func resolve(_ reported: URL, audioFormat: YtDlpOutputOptions.AudioFormat?) throws -> URL {
         let candidate = audioFormat.map { reported.deletingPathExtension().appendingPathExtension($0.rawValue) } ?? reported
         guard FileManager.default.fileExists(atPath: candidate.path) else {
-            throw EngineError.invalidResponse("yt-dlp 未生成预期的成品文件")
+            throw EngineError.invalidResponse(String(localized: "yt-dlp 未生成预期的成品文件", bundle: .module))
         }
         return candidate
     }

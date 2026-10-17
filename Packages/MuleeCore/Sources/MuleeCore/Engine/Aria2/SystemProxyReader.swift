@@ -30,8 +30,8 @@ public enum SystemProxyReader {
         let pac = (settings["ProxyAutoConfigEnable"] as? NSNumber)?.boolValue == true
             || (settings["ProxyAutoDiscoveryEnable"] as? NSNumber)?.boolValue == true
         let socks = (settings["SOCKSEnable"] as? NSNumber)?.boolValue == true
-        let reason: String? = pac ? "不支持自动代理脚本（PAC），当前直连；请改用 HTTP 代理。"
-            : socks ? "aria2 只支持 HTTP 代理，当前系统仅设置了 SOCKS 代理，因此使用直连。" : nil
+        let reason: String? = pac ? String(localized: "不支持自动代理脚本（PAC），当前直连；请改用 HTTP 代理。", bundle: .module)
+            : socks ? String(localized: "aria2 只支持 HTTP 代理，当前系统仅设置了 SOCKS 代理，因此使用直连。", bundle: .module) : nil
         return Snapshot(url: nil, exceptions: exceptions, unsupportedReason: reason)
     }
 }

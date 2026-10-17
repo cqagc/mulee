@@ -196,7 +196,9 @@ targets:
     platform: macOS
     sources:
       - path: MuleeQuickLook
-        excludes: [Info.plist]
+        excludes: [Info.plist, Resources]
+      - path: MuleeQuickLook/Resources
+        buildPhase: resources
       - path: Mulee/DesignSystem/MuleeSymbol.swift
     entitlements:
       path: MuleeQuickLook/MuleeQuickLook.entitlements

@@ -4,12 +4,33 @@ import Testing
 
 struct HTTPFeatureTests {
     @Test func unauthorizedStateOffersCredentialsOnlyForFailedAuthentication() {
-        let message = HTTPDownloadFailure.needsLogin.localizedDescription
+        let message = String(localized: "服务器需要认证，请输入账号和密码后重试。", bundle: .module)
+        #expect(HTTPDownloadFailure.needsLogin.localizedDescription == message)
         #expect(HTTPDownloadFailure.requiresCredentials(status: .failed, message: message))
         #expect(!HTTPDownloadFailure.requiresCredentials(status: .downloading, message: message))
+        #expect(!HTTPDownloadFailure.requiresCredentials(status: .failed, message: nil))
+        #expect(!HTTPDownloadFailure.requiresCredentials(status: .failed, message: ""))
+        #expect(!HTTPDownloadFailure.requiresCredentials(status: .failed, message: HTTPDownloadFailure.invalidCertificate.localizedDescription))
         #expect(!HTTPDownloadFailure.requiresCredentials(status: .failed, message: HTTPDownloadFailure.expiredLink.localizedDescription))
         #expect(Aria2ErrorDescriptions.message(for: "24") == message)
         #expect(Aria2ErrorDescriptions.message(for: "22", detail: "status=401") == message)
+    }
+
+    @Test(arguments: [
+        ("en", "The server requires authentication. Enter your username and password, then try again.", "Playlist"),
+        ("zh-Hant", "伺服器需要驗證，請輸入帳號和密碼後重試。", "播放清單"),
+        ("ja", "サーバの認証が必要です。ユーザー名とパスワードを入力して再試行してください。", "プレイリスト")
+    ])
+    func compiledCoreCatalogLocalizesAuthenticationAndPlaylist(_ language: String, _ message: String, _ playlist: String) throws {
+        let path = try #require(Bundle.module.path(forResource: language, ofType: "lproj"))
+        let bundle = try #require(Bundle(path: path))
+        let locale = Locale(identifier: language)
+
+        let localizedMessage = String(localized: "服务器需要认证，请输入账号和密码后重试。", bundle: bundle, locale: locale)
+        let localizedPlaylist = String(localized: "播放列表", bundle: bundle, locale: locale)
+
+        #expect(localizedMessage == message)
+        #expect(localizedPlaylist == playlist)
     }
 
     @Test func authenticationLookupRequiresTheTaskMarkerAndKeepsTheOriginalHost() throws {

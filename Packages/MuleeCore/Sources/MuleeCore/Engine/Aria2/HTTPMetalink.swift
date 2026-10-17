@@ -13,7 +13,7 @@ public enum HTTPMetalink {
             let handle = try FileHandle(forReadingFrom: url)
             defer { try? handle.close() }
             let data = try handle.read(upToCount: maximumBytes + 1) ?? Data()
-            guard !data.isEmpty, data.count <= maximumBytes else { throw EngineError.invalidResponse("Metalink 文件为空或超过 4 MB") }
+            guard !data.isEmpty, data.count <= maximumBytes else { throw EngineError.invalidResponse(String(localized: "Metalink 文件为空或超过 4 MB", bundle: .module)) }
             return data
         }
         guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""), url.user == nil, url.password == nil else {
@@ -28,11 +28,11 @@ public enum HTTPMetalink {
         let session = URLSession(configuration: configuration, delegate: HTTPProbeRedirectDelegate(proxy: proxy), delegateQueue: nil)
         defer { session.invalidateAndCancel() }
         let (bytes, response) = try await session.bytes(from: url)
-        guard let response = response as? HTTPURLResponse else { throw EngineError.invalidResponse("无法读取 Metalink") }
+        guard let response = response as? HTTPURLResponse else { throw EngineError.invalidResponse(String(localized: "无法读取 Metalink", bundle: .module)) }
         if let failure = HTTPDownloadFailure.classify(statusCode: response.statusCode) { throw failure }
         var data = Data()
         for try await byte in bytes {
-            guard data.count < maximumBytes else { throw EngineError.invalidResponse("Metalink 文件超过 4 MB") }
+            guard data.count < maximumBytes else { throw EngineError.invalidResponse(String(localized: "Metalink 文件超过 4 MB", bundle: .module)) }
             data.append(byte)
         }
         return data

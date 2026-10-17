@@ -4698,6 +4698,644 @@
           }
         }
       }
+    },
+    "Metalink 中没有可下载的文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metalink 中没有可下载的文件"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Metalink contains no downloadable files"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metalink 中沒有可下載的檔案"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metalinkにダウンロード可能なファイルがありません"
+          }
+        }
+      }
+    },
+    "Metalink 文件为空或超过 4 MB": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metalink 文件为空或超过 4 MB"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Metalink file is empty or larger than 4 MB"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metalink 檔案為空或超過 4 MB"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metalinkファイルが空か、4 MBを超えています"
+          }
+        }
+      }
+    },
+    "Metalink 文件超过 4 MB": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metalink 文件超过 4 MB"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Metalink file is larger than 4 MB"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metalink 檔案超過 4 MB"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metalinkファイルが4 MBを超えています"
+          }
+        }
+      }
+    },
+    "aria2 只支持 HTTP 代理，当前系统仅设置了 SOCKS 代理，因此使用直连。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2 只支持 HTTP 代理，当前系统仅设置了 SOCKS 代理，因此使用直连。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2 only supports HTTP proxies. The system only has a SOCKS proxy configured, so a direct connection is used."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2 僅支援 HTTP 代理，目前系統僅設定 SOCKS 代理，因此使用直接連線。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "aria2はHTTPプロキシにのみ対応しています。システムにはSOCKSプロキシのみが設定されているため、直接接続しています。"
+          }
+        }
+      }
+    },
+    "yt-dlp 未生成预期的成品文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "yt-dlp 未生成预期的成品文件"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "yt-dlp did not produce the expected output file"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "yt-dlp 未產生預期的成品檔案"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "yt-dlpが予定の出力ファイルを生成しませんでした"
+          }
+        }
+      }
+    },
+    "下载已停止，无法继续缓冲": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载已停止，无法继续缓冲"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download has stopped. Buffering cannot continue."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載已停止，無法繼續緩衝"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードが停止したため、バッファリングを続けられません"
+          }
+        }
+      }
+    },
+    "不支持自动代理脚本（PAC），当前直连；请改用 HTTP 代理。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不支持自动代理脚本（PAC），当前直连；请改用 HTTP 代理。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proxy auto-configuration scripts (PAC) are not supported. Using a direct connection. Use an HTTP proxy instead."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不支援自動代理指令稿（PAC），目前為直接連線；請改用 HTTP 代理。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動プロキシ設定スクリプト（PAC）には対応していないため、直接接続しています。HTTPプロキシを使用してください。"
+          }
+        }
+      }
+    },
+    "仅正在下载的任务可以添加镜像地址": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅正在下载的任务可以添加镜像地址"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mirror URLs can only be added to downloading tasks"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅下載中的任務可以加入鏡像位址"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミラーURLはダウンロード中のタスクにのみ追加できます"
+          }
+        }
+      }
+    },
+    "代理地址无效，当前直连；请输入 http://主机:端口。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理地址无效，当前直连；请输入 http://主机:端口。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The proxy address is invalid. Using a direct connection. Enter http://host:port."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理位址無效，目前為直接連線；請輸入 http://主機:連接埠。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロキシのアドレスが無効なため、直接接続しています。http://ホスト:ポートを入力してください。"
+          }
+        }
+      }
+    },
+    "字幕语言无效，请重新选择": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕语言无效，请重新选择"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The subtitle language is invalid. Select it again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕語言無效，請重新選擇"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕の言語が無効です。選択し直してください"
+          }
+        }
+      }
+    },
+    "播放列表": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放列表"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playlist"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放清單"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイリスト"
+          }
+        }
+      }
+    },
+    "无法读取 Metalink": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取 Metalink"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not read the Metalink"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法讀取 Metalink"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Metalinkを読み込めません"
+          }
+        }
+      }
+    },
+    "无法读取已保存的账号": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取已保存的账号"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not read the saved account"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法讀取已儲存的帳號"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存済みのアカウントを読み込めません"
+          }
+        }
+      }
+    },
+    "时间段无效，请填写时:分:秒、分:秒或秒数，结束时间须大于开始时间": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时间段无效，请填写时:分:秒、分:秒或秒数，结束时间须大于开始时间"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid time range. Enter hours:minutes:seconds, minutes:seconds, or seconds. The end must be after the start."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時間範圍無效，請填寫時:分:秒、分:秒或秒數，結束時間須晚於開始時間"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時間範囲が無効です。時:分:秒、分:秒、または秒数で入力し、終了時刻を開始時刻より後にしてください"
+          }
+        }
+      }
+    },
+    "服务器的安全证书无效，Mulee 不会继续连接": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器的安全证书无效，Mulee 不会继续连接"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server’s security certificate is invalid. Mulee will not continue the connection."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器的安全憑證無效，Mulee 不會繼續連線"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバのセキュリティ証明書が無効なため、Muleeは接続を続行しません"
+          }
+        }
+      }
+    },
+    "服务器需要认证，请输入账号和密码后重试。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器需要认证，请输入账号和密码后重试。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server requires authentication. Enter your username and password, then try again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器需要驗證，請輸入帳號和密碼後重試。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバの認証が必要です。ユーザー名とパスワードを入力して再試行してください。"
+          }
+        }
+      }
+    },
+    "未能添加镜像地址": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未能添加镜像地址"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not add the mirror URL"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未能加入鏡像位址"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミラーURLを追加できませんでした"
+          }
+        }
+      }
+    },
+    "此任务使用登录信息，只能添加同一服务器的镜像地址。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此任务使用登录信息，只能添加同一服务器的镜像地址。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This task uses login credentials. Only mirror URLs on the same server can be added."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此任務使用登入資訊，只能加入同一伺服器的鏡像位址。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このタスクはログイン情報を使用しています。同じサーバのミラーURLのみ追加できます。"
+          }
+        }
+      }
+    },
+    "直连": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直连"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Direct"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直接連線"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直接接続"
+          }
+        }
+      }
+    },
+    "账号或密码包含无效字符": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账号或密码包含无效字符"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The username or password contains invalid characters"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳號或密碼包含無效字元"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ユーザー名またはパスワードに無効な文字が含まれています"
+          }
+        }
+      }
+    },
+    "账号钥匙串访问失败（%d）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账号钥匙串访问失败（%d）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not access the account in Keychain (%d)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帳號鑰匙圈存取失敗（%d）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントのキーチェーンにアクセスできません（%d）"
+          }
+        }
+      }
+    },
+    "镜像跳转到了其他服务器，未附加原服务器的登录信息。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "镜像跳转到了其他服务器，未附加原服务器的登录信息。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The mirror redirected to another server. The original server’s login credentials were not included."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鏡像重新導向至其他伺服器，未附加原始伺服器的登入資訊。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミラーが別のサーバにリダイレクトされたため、元のサーバのログイン情報を付加しませんでした。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
