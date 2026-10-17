@@ -190,7 +190,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }
     }
 
+    private var reopensForLanguageChange = false
+
+    func reopenForLanguageChange() {
+        reopensForLanguageChange = true
+        NSApp.terminate(nil)
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
+        if reopensForLanguageChange {
+            UserDefaults.standard.synchronize()
+            AppRelaunch.launchAfterExit()
+        }
         handoffTask?.cancel()
         openURLRouter?.stopCookieCleanup()
     }
@@ -254,12 +265,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if singleInstanceHandoff != nil { return .terminateNow }
         if updates.installation.isPrepared { return .terminateNow }
         if updates.installationPending {
-            guard updates.installation.mayInstall() else { return .terminateCancel }
+            guard updates.installation.mayInstall() else {
+                reopensForLanguageChange = false
+                return .terminateCancel
+            }
             guard !isTerminating else { return .terminateLater }
             isTerminating = true
             shutdownTask = Task {
                 let prepared = await updates.installation.prepareForInstallation()
                 isTerminating = false
+                if !prepared { reopensForLanguageChange = false }
                 sender.reply(toApplicationShouldTerminate: prepared)
             }
             return .terminateLater
@@ -272,7 +287,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             alert.informativeText = String(localized: "退出会暂停下载和解压，下载进度会保留。")
             alert.addButton(withTitle: String(localized: "取消"))
             alert.addButton(withTitle: String(localized: "退出"))
-            guard alert.runModal() == .alertSecondButtonReturn else { return .terminateCancel }
+            guard alert.runModal() == .alertSecondButtonReturn else {
+                reopensForLanguageChange = false
+                return .terminateCancel
+            }
         }
         isTerminating = true
         shutdownProgress.begin()

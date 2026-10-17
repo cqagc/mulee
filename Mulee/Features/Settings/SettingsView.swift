@@ -2,6 +2,7 @@ import SwiftUI
 
 /// 设置窗口：七个标签页。
 struct SettingsView: View {
+    var reopenForLanguageChange: () -> Void = {}
     @Environment(SettingsModel.self) private var model
     @State private var navigation = NetworkSettingsNavigation.shared
 
@@ -9,7 +10,7 @@ struct SettingsView: View {
         @Bindable var navigation = navigation
         TabView(selection: $navigation.selection) {
             Tab(SettingsTab.general.title, systemImage: SettingsTab.general.symbol.name, value: .general) {
-                GeneralSettingsTab()
+                GeneralSettingsTab(reopenForLanguageChange: reopenForLanguageChange)
             }
             Tab(SettingsTab.download.title, systemImage: SettingsTab.download.symbol.name, value: .download) {
                 DownloadSettingsTab()

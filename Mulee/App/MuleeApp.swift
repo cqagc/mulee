@@ -73,7 +73,7 @@ struct MuleeApp: App {
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView()
+            SettingsView(reopenForLanguageChange: appDelegate.reopenForLanguageChange)
                 .modifier(SettingsSyncModifier())
                 .environment(model)
                 .environment(settings)

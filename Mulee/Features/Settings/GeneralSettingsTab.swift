@@ -4,6 +4,7 @@ import UserNotifications
 
 /// 设置·通用。
 struct GeneralSettingsTab: View {
+    var reopenForLanguageChange: () -> Void = {}
     @Environment(SettingsModel.self) private var model
     @Environment(AppModel.self) private var app
     @Environment(\.scenePhase) private var scenePhase
@@ -12,14 +13,35 @@ struct GeneralSettingsTab: View {
     @State private var shortcutIssue: String?
     @State private var shortcutRefresh = 0
     @State private var badgeNotAllowed = false
+    @State private var language = AppLanguage.read(
+        defaults: .standard, domain: Bundle.main.bundleIdentifier ?? ""
+    )
+    @State private var languageChanged = false
 
     var body: some View {
         @Bindable var model = model
         Form {
             Section {
-                LabeledContent("界面语言") {
-                    Text("跟随系统")
+                Picker("界面语言", selection: $language) {
+                    ForEach(AppLanguage.allCases) { option in
+                        if option == .system {
+                            Text("跟随系统").tag(option)
+                        } else {
+                            Text(verbatim: option.nativeName).tag(option)
+                        }
+                    }
+                }
+                .onChange(of: language) {
+                    language.write(defaults: .standard)
+                    languageChanged = true
+                }
+                if languageChanged {
+                    Text("重新打开 Mulee 后生效")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
+                    Button("立即重新打开") {
+                        reopenForLanguageChange()
+                    }
                 }
                 Toggle("关闭窗口后继续在菜单栏运行", isOn: $model.closeKeepsRunning)
                 LoginItemSection()
