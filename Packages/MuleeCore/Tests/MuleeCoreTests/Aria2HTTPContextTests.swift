@@ -28,6 +28,24 @@ struct Aria2HTTPContextTests {
         #expect(identity.etag == "\"v1\"")
     }
 
+    @Test func emptyRangeResponseUsesResourceSizeInsteadOfErrorBodyLength() throws {
+        let url = try #require(URL(string: "https://example.org/empty.bin"))
+        let response = try #require(HTTPURLResponse(url: url, statusCode: 416, httpVersion: nil, headerFields: [
+            "Content-Range": "bytes */0", "Content-Length": "200", "Content-Type": "text/html", "ETag": "empty"
+        ]))
+        let identity = try HTTPResourceProbe.identity(response: response, expectsHTML: false)
+        #expect(identity.size == 0)
+        #expect(identity.etag == "empty")
+        #expect(identity.contentType == nil)
+    }
+
+    @Test(arguments: ["bytes */1", "bytes */*", "bytes 0-0/0", ""])
+    func otherUnsatisfiedRangesStillFail(_ range: String) throws {
+        let url = try #require(URL(string: "https://example.org/file.bin"))
+        let response = try #require(HTTPURLResponse(url: url, statusCode: 416, httpVersion: nil, headerFields: ["Content-Range": range]))
+        #expect(throws: HTTPDownloadFailure.status(416)) { try HTTPResourceProbe.identity(response: response, expectsHTML: false) }
+    }
+
     @Test func replacementRequiresSizeAndAvailableETagToMatch() throws {
         #expect(Aria2ErrorDescriptions.message(for: "7") == HTTPDownloadFailure.resourceChanged.localizedDescription)
         let original = HTTPResourceIdentity(size: 4096, etag: "\"v1\"")

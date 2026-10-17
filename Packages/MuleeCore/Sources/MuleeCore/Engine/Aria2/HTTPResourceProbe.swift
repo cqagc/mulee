@@ -38,7 +38,7 @@ public enum HTTPResourceProbe {
         }
         guard hasCredentials, ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return (url, context) }
         let response = try await inspectResponse(url, context: context)
-        if let failure = HTTPDownloadFailure.classify(statusCode: response.statusCode) { throw failure }
+        if !isEmptyRangeResponse(response), let failure = HTTPDownloadFailure.classify(statusCode: response.statusCode) { throw failure }
         guard let finalURL = response.url else { throw EngineError.unsupportedLink }
         var scoped = context
         if !sameHost(url, finalURL) || url.scheme?.lowercased() != finalURL.scheme?.lowercased() {
@@ -78,7 +78,16 @@ public enum HTTPResourceProbe {
         return response
     }
 
+    static func isEmptyRangeResponse(_ response: HTTPURLResponse) -> Bool {
+        response.statusCode == 416
+            && response.value(forHTTPHeaderField: "Content-Range")?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "bytes */0"
+    }
+
     static func identity(response: HTTPURLResponse, expectsHTML: Bool) throws -> HTTPResourceIdentity {
+        if isEmptyRangeResponse(response) {
+            // 416 的正文可能是错误网页；*/0 才是原资源确实为空的证据。
+            return HTTPResourceIdentity(size: 0, etag: response.value(forHTTPHeaderField: "ETag"))
+        }
         if let failure = HTTPDownloadFailure.classify(statusCode: response.statusCode) { throw failure }
         let type = response.value(forHTTPHeaderField: "Content-Type")?
             .split(separator: ";").first.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }

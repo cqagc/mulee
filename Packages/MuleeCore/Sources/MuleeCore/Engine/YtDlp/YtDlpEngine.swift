@@ -130,13 +130,22 @@ public actor YtDlpEngine: DownloadEngine {
         try requireRunning()
         try Self.validate(options)
         try FileManager.default.createDirectory(at: options.downloadDirectory, withIntermediateDirectories: true)
+        let previousConcurrency = self.options?.maxConcurrentDownloads ?? options.maxConcurrentDownloads
+        let concurrencyChanged = previousConcurrency != options.maxConcurrentDownloads
+        let cacheChanged = self.options?.diskCacheMegabytes != options.diskCacheMegabytes
         let restart = self.options?.downloadLimit != options.downloadLimit
-            || self.options?.maxConcurrentDownloads != options.maxConcurrentDownloads
-            || self.options.map(Self.downloadBufferBytes) != Self.downloadBufferBytes(options)
+            || (cacheChanged && self.options.map(Self.downloadBufferBytes) != Self.downloadBufferBytes(options))
+            || (concurrencyChanged && options.downloadLimit > 0)
         self.options = options
         // Rate and buffer options are startup-only; requeue workers with their existing .part files.
         // The coordinator reserves that envelope while video workers are running.
-        if restart { await requeueActive() }
+        // 无限速时只调整名额，不能因派生缓冲大小变化中断下载或后处理。
+        // 有限速时仍沿用重启分配额度的既有路径，本次不改变该行为。
+        if restart {
+            await requeueActive()
+        } else if options.maxConcurrentDownloads < previousConcurrency {
+            await requeueOverflow()
+        }
         try persist()
         schedule()
     }
@@ -562,6 +571,23 @@ public actor YtDlpEngine: DownloadEngine {
         }
         for child in processes { await child.terminate() }
         for task in tasks { await task.value }
+    }
+
+    private func requeueOverflow() async {
+        guard let options else { return }
+        let excess = max(0, workers.count - options.maxConcurrentDownloads)
+        let candidates = jobs.reversed().filter {
+            workers[$0.id] != nil && [.queued, .downloading].contains($0.status)
+        }
+        // 尚未启动子进程的先退回队列；已经后处理的任务保留到完成，即使暂时超限。
+        let pending = candidates.filter { children[$0.id] == nil }
+        let active = candidates.filter { children[$0.id] != nil }
+        let ids = (pending + active).prefix(excess).map(\.id)
+        for id in ids {
+            captureProgress(id)
+            if let index = jobs.firstIndex(where: { $0.id == id }) { jobs[index].status = .queued }
+        }
+        await cancelWorkers(ids)
     }
 
     private func requeueActive() async {

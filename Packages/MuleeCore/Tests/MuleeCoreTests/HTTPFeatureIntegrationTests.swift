@@ -5,6 +5,103 @@ import Testing
 
 @Suite(.serialized, .enabled(if: Aria2IntegrationFixture.binaryAvailable))
 struct HTTPFeatureIntegrationTests {
+    @Test func authenticatedProxySessionWaitsForPerTaskCredentialsAndAppAdmission() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            let credential = HTTPCredentialStore.Credential(username: "proxy-account", password: "proxy-password")
+            let proxy = try Aria2HTTPServer(payload: Data(repeating: 7, count: 65_536))
+            await proxy.requireProxyAuthorization(credential.authorization)
+            let port = try await proxy.start()
+            let proxyURL = "http://127.0.0.1:\(port)"
+            let engine = Aria2Engine(
+                stateDirectory: fixture.state,
+                binaryURL: URL(filePath: try #require(ProcessInfo.processInfo.environment["MULEE_ARIA2C"])),
+                proxyProvider: { HTTPProxyConfiguration(mode: .manual, manualURL: proxyURL, credential: credential, environment: [:]) }
+            )
+            do {
+                try FileManager.default.createDirectory(at: fixture.state, withIntermediateDirectories: true)
+                let session = """
+                http://origin.example.org/slow-resumed.bin
+                 gid=0000000000000001
+                 dir=\(fixture.downloads.path)
+                 out=resumed.bin
+                http://origin.example.org/slow-paused.bin
+                 gid=0000000000000002
+                 dir=\(fixture.downloads.path)
+                 out=paused.bin
+                 pause=true
+                """
+                try Data((session + "\n").utf8).write(to: fixture.state.appendingPathComponent("aria2.session"))
+                try await engine.start(options: fixture.options)
+                #expect(await proxy.receivedHeaders.isEmpty)
+                let restored = try await engine.snapshots()
+                #expect(restored.count == 2)
+                #expect(restored.allSatisfy { $0.status == .paused })
+                #expect(await engine.takeProxyRestoredTaskIDs() == ["0000000000000001", "0000000000000002"])
+                let rpc = try fixture.rpc()
+                for id in ["0000000000000001", "0000000000000002"] {
+                    let options: [String: String] = try await rpc.call("aria2.getOption", [.string(id)])
+                    #expect(options["all-proxy-user"] == credential.username)
+                    #expect(options["all-proxy-passwd"] == credential.password)
+                    #expect(options["all-proxy"].flatMap(HTTPProxyConfiguration.manualURL)?.absoluteString == proxyURL)
+                }
+                let conf = try String(contentsOf: fixture.state.appendingPathComponent("aria2.conf"), encoding: .utf8)
+                #expect(!conf.contains(credential.password))
+                try await engine.resume("0000000000000001")
+                let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+                var complete = false
+                while ContinuousClock.now < deadline {
+                    let snapshots = try await engine.snapshots()
+                    if snapshots.contains(where: { $0.engineTaskID == "0000000000000001" && $0.status == .completed }) {
+                        complete = true
+                        break
+                    }
+                    try await Task.sleep(for: .milliseconds(25))
+                }
+                #expect(complete)
+                #expect(try await engine.snapshots().first { $0.engineTaskID == "0000000000000002" }?.status == .paused)
+                #expect(await proxy.proxyAuthenticationFailures == 0)
+                #expect(await proxy.receivedHeaders.allSatisfy { $0["proxy-authorization"] == credential.authorization })
+                let freshURL = try #require(URL(string: "http://origin.example.org/new.bin"))
+                let fresh = try await engine.add(link: .http(url: freshURL, decodedFromThunder: false, original: freshURL.absoluteString), directory: fixture.downloads)
+                let status: Aria2RPCModels.Status = try await rpc.call("aria2.tellStatus", [.string(fresh)])
+                #expect(status.status != "paused")
+                await engine.stop()
+                await proxy.stop()
+            } catch {
+                await engine.stop()
+                await proxy.stop()
+                throw error
+            }
+        }
+    }
+
+    @Test func credentialedEmptyResourceAcceptsUnsatisfiedZeroRange() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            let server = try Aria2HTTPServer(payload: Data())
+            do {
+                let port = try await server.start()
+                let url = try #require(URL(string: "http://127.0.0.1:\(port)/empty.bin"))
+                let context = DownloadRequestContext(headers: ["Authorization": "Basic example-token"], cookie: "sid=example-cookie")
+                let identity = try await HTTPResourceProbe.inspect(url, context: context)
+                #expect(identity.size == 0)
+                let prepared = try await HTTPResourceProbe.prepareDownload(url, context: context)
+                #expect(prepared.url == url)
+                #expect(prepared.context.headers["Authorization"] == "Basic example-token")
+                try await fixture.engine.start(options: fixture.options)
+                let id = try await fixture.engine.add(
+                    link: .http(url: url, decodedFromThunder: false, original: url.absoluteString), directory: fixture.downloads, context: context
+                )
+                let complete = try await fixture.waitFor(id) { $0.status == .completed }
+                #expect(complete.receivedBytes == 0)
+                #expect(await server.receivedHeaders.contains { $0["range"] == "bytes=0-0" })
+                await server.stop()
+            } catch {
+                await server.stop()
+                throw error
+            }
+        }
+    }
+
     @Test func GETOnlyCrossHostRedirectNeverForwardsCredentialsToAria2() async throws {
         try await Aria2IntegrationFixture.withFixture { fixture in
             let destination = try Aria2HTTPServer(payload: fixture.payload)

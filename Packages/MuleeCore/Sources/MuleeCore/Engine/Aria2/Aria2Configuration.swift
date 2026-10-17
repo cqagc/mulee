@@ -68,6 +68,10 @@ struct Aria2Configuration: Sendable {
         ]) { _, new in new }
         if FileManager.default.fileExists(atPath: sessionURL.path) {
             values["input-file"] = sessionURL.path
+            if proxy.credential != nil {
+                // 会话任务在 RPC 就绪前即建立，认证代理必须先暂停，逐项注入凭据后再由 App 放行。
+                values["pause"] = "true"
+            }
         }
         guard values.values.allSatisfy({ !$0.utf8.contains(where: { [0, 10, 13].contains($0) }) }) else {
             throw EngineError.invalidResponse(String(localized: "aria2 配置不能包含换行符", bundle: .module))

@@ -13,6 +13,7 @@ public actor Aria2Engine: DownloadEngine {
     private var stopping: Task<Void, Never>?
     private let proxyProvider: @Sendable () -> HTTPProxyConfiguration
     private var proxyMonitor: Task<Void, Never>?
+    private var proxyRestoredTaskIDs: Set<String> = []
     private var streamSelectors: [String: String] = [:]
     private var permissionMonitor: Task<Void, Never>?
     private var incompleteTransfers: [String: IncompleteHTTPTransfer] = [:]
@@ -117,7 +118,7 @@ public actor Aria2Engine: DownloadEngine {
             values["dir"] = .string(pending.directory.path)
             transfer = pending
         } else if let directory { values["dir"] = .string(directory.path) }
-        if paused { values["pause"] = .string("true") }
+        values["pause"] = .string(paused ? "true" : "false")
         if !values.isEmpty { params.append(.object(values)) }
         let id: String = try await client.call("aria2.addUri", params)
         if let transfer {
@@ -197,6 +198,12 @@ public actor Aria2Engine: DownloadEngine {
         }
         try rekeyIncomplete(engineTaskID, to: id, transfer: transfer)
         return id
+    }
+
+    /// 仅标记已补齐代理选项的恢复任务；是否继续由 App 的暂停原因和并发队列决定。
+    public func takeProxyRestoredTaskIDs() -> Set<String> {
+        defer { proxyRestoredTaskIDs.removeAll() }
+        return proxyRestoredTaskIDs
     }
 
     public func refreshProxy() async throws {
@@ -649,6 +656,22 @@ public actor Aria2Engine: DownloadEngine {
             let _: String = try await rpc.call("aria2.changeGlobalOption", [
                 .object(configuration.proxy.aria2Options.mapValues(Aria2RPCValue.string))
             ])
+            if configuration.proxy.credential != nil {
+                var offset = 0
+                while true {
+                    let restored: [Aria2RPCModels.Status] = try await rpc.call("aria2.tellWaiting", [
+                        .integer(offset), .integer(1000), .array([.string("gid"), .string("status")])
+                    ])
+                    for task in restored {
+                        let _: String = try await rpc.call("aria2.changeOption", [
+                            .string(task.gid), .object(configuration.proxy.aria2Options.mapValues(Aria2RPCValue.string))
+                        ])
+                    }
+                    proxyRestoredTaskIDs.formUnion(restored.map(\.gid))
+                    guard restored.count == 1000 else { break }
+                    offset += restored.count
+                }
+            }
             client = rpc
             // 轮询不需要跨执行器管理系统回调，且随子进程退出取消。
             proxyMonitor = Task { [weak self] in
@@ -775,6 +798,7 @@ public actor Aria2Engine: DownloadEngine {
         guard process?.id == id else { return }
         proxyMonitor?.cancel()
         proxyMonitor = nil
+        proxyRestoredTaskIDs.removeAll()
         streamSelectors.removeAll()
         permissionMonitor?.cancel()
         permissionMonitor = nil

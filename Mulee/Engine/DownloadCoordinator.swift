@@ -206,6 +206,8 @@ final class DownloadCoordinator {
         guard let token = generation, !isPolling else { return }
         isPolling = true
         defer { isPolling = false }
+        await prepareProxySessionRecovery(token: token)
+        guard generation == token, !Task.isCancelled else { return }
         var snapshots: [TaskKind: [EngineTaskSnapshot]] = [:]
         var snapshotRevisions: [TaskKind: Int] = [:]
         for engine in engines where started.contains(engine.kind) {
@@ -1184,8 +1186,40 @@ final class DownloadCoordinator {
         model.tasks = GlobalConcurrencyPolicy.moving(tasks: model.tasks, id: id, toFront: toFront)
     }
 
+    private func prepareProxySessionRecovery(token: UUID) async {
+        guard let http = engine(for: .http) as? Aria2Engine else { return }
+        let ids = await http.takeProxyRestoredTaskIDs()
+        guard generation == token, !Task.isCancelled else { return }
+        queueProxyRestoredTasks(ids)
+    }
+
+    func queueProxyRestoredTasks(_ engineIDs: Set<String>) {
+        guard !engineIDs.isEmpty else { return }
+        let scheduleClosed = scheduleRequiresPause()
+        for index in model.tasks.indices {
+            let task = model.tasks[index]
+            guard task.kind == .http, task.deletedAt == nil, let id = task.engineTaskID, engineIDs.contains(id),
+                  [.downloading, .queued].contains(task.status) || task.status == .paused && scheduling.isQueuePaused(task) else { continue }
+            if model.userPausedTaskIDs.contains(task.id) || model.automaticPauseStore.isManuallyPaused(task) || scheduling.isUserPaused(task) {
+                model.tasks[index].status = .paused
+                continue
+            }
+            if scheduleClosed { model.automaticPauseStore.insert(.schedule, for: task) }
+            if let reason = model.automaticPauseStore.displayReason(for: task) {
+                model.tasks[index].pauseReason = reason
+                model.tasks[index].status = .paused
+                continue
+            }
+            // 恢复只进入现有队列，不能越过并发上限，也不能覆盖用户或系统的暂停意图。
+            scheduling.queue(task)
+            model.tasks[index].status = .queued
+        }
+    }
+
     private func refreshScheduling(sample: Bool = true) async {
         guard let token = generation, let latestOptions else { return }
+        await prepareProxySessionRecovery(token: token)
+        guard generation == token, !Task.isCancelled else { return }
         await scheduling.refresh(
             model: model, engines: engines.filter { started.contains($0.kind) },
             options: latestOptions, sample: sample,

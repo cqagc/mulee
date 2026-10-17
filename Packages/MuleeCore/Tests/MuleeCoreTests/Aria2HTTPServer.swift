@@ -15,6 +15,8 @@ actor Aria2HTTPServer {
     private var stopped = false
     private var redirect: URL?
     private var redirectsGETOnly = false
+    private var requiredProxyAuthorization: String?
+    private(set) var proxyAuthenticationFailures = 0
     private var holdsGET = false
     private var getWaiters: [CheckedContinuation<Void, Never>] = []
 
@@ -29,6 +31,10 @@ actor Aria2HTTPServer {
         let waiting = getWaiters
         getWaiters.removeAll()
         for continuation in waiting { continuation.resume() }
+    }
+
+    func requireProxyAuthorization(_ value: String) {
+        requiredProxyAuthorization = value
     }
 
     func setRedirect(_ url: URL?, onlyGET: Bool = false) {
@@ -119,12 +125,18 @@ actor Aria2HTTPServer {
         let lines = String(decoding: request, as: UTF8.self).components(separatedBy: "\r\n")
         let first = lines.first?.split(separator: " ") ?? []
         guard first.count >= 2 else { throw URLError(.badServerResponse) }
-        let path = String(first[1])
+        let target = String(first[1])
+        let path = requiredProxyAuthorization == nil ? target : URL(string: target)?.path ?? target
         let headers = Dictionary(lines.dropFirst().compactMap { line -> (String, String)? in
             guard let colon = line.firstIndex(of: ":") else { return nil }
             return (String(line[..<colon]).lowercased(), String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces))
         }, uniquingKeysWith: { _, new in new })
         receivedHeaders.append(headers)
+        if let requiredProxyAuthorization, headers["proxy-authorization"] != requiredProxyAuthorization {
+            proxyAuthenticationFailures += 1
+            try await send(Data("HTTP/1.1 407 Proxy Authentication Required\r\nProxy-Authenticate: Basic realm=\"example\"\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8), on: connection)
+            return
+        }
         if first[0] == "GET", holdsGET {
             await withCheckedContinuation { getWaiters.append($0) }
         }
@@ -148,6 +160,13 @@ actor Aria2HTTPServer {
         }
         if path == "/missing.bin" {
             try await send(Data("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8), on: connection)
+            return
+        }
+        if payload.isEmpty {
+            let ranged = headers["range"] != nil
+            let status = ranged ? "416 Range Not Satisfiable" : "200 OK"
+            let range = ranged ? "Content-Range: bytes */0\r\n" : ""
+            try await send(Data("HTTP/1.1 \(status)\r\n\(range)Content-Length: 0\r\nETag: \"empty\"\r\nConnection: close\r\n\r\n".utf8), on: connection)
             return
         }
         var lower = 0

@@ -1,9 +1,104 @@
 import CryptoKit
+import Darwin
 import Foundation
 import Testing
 @testable import MuleeCore
 
 struct YtDlpConfigurationTests {
+    @Test func increasingConcurrencyStartsQueuedWorkerWithoutReplacingExistingProcess() async throws {
+        try await withConcurrencyEngine { engine, directory in
+            var options = EngineOptions(downloadDirectory: directory, maxConcurrentDownloads: 1, diskCacheMegabytes: 1)
+            try await engine.start(options: options)
+            let first = try await engine.add(link: concurrencyLink("first"))
+            let firstPID = try await processID(directory, id: first)
+            let second = try await engine.add(link: concurrencyLink("second"))
+            #expect(try await engine.snapshots().first(where: { $0.id == second })?.status == .queued)
+
+            options.maxConcurrentDownloads = 2
+            try await engine.apply(options: options)
+            _ = try await processID(directory, id: second)
+
+            #expect(kill(firstPID, 0) == 0)
+            #expect(try await processID(directory, id: first) == firstPID)
+            #expect(try starts(directory, id: first) == [String(firstPID)])
+            #expect(try await engine.snapshots().filter { $0.status == .downloading }.count == 2)
+        }
+    }
+
+    @Test func loweringConcurrencyRequeuesNewestDownloadAndKeepsPostProcessing() async throws {
+        try await withConcurrencyEngine { engine, directory in
+            var options = EngineOptions(downloadDirectory: directory, maxConcurrentDownloads: 3, diskCacheMegabytes: 1)
+            try await engine.start(options: options)
+            let first = try await engine.add(link: concurrencyLink("first"))
+            let firstPID = try await processID(directory, id: first)
+            let second = try await engine.add(link: concurrencyLink("second"))
+            let secondPID = try await processID(directory, id: second)
+            let post = try await engine.add(link: concurrencyLink("post"))
+            let postPID = try await processID(directory, id: post)
+            _ = try await YtDlpIntegrationFixture.waitFor(engine, id: post) { $0.status == .postProcessing }
+
+            options.maxConcurrentDownloads = 2
+            try await engine.apply(options: options)
+
+            let snapshots = try await engine.snapshots()
+            #expect(snapshots.first(where: { $0.id == first })?.status == .downloading)
+            #expect(snapshots.first(where: { $0.id == second })?.status == .queued)
+            #expect(snapshots.first(where: { $0.id == post })?.status == .postProcessing)
+            #expect(kill(firstPID, 0) == 0)
+            #expect(kill(secondPID, 0) != 0)
+            #expect(kill(postPID, 0) == 0)
+            #expect(try starts(directory, id: post) == [String(postPID)])
+            try Data().write(to: directory.appendingPathComponent(post + ".finish"))
+            _ = try await YtDlpIntegrationFixture.waitFor(engine, id: post) { $0.status == .completed }
+            _ = try await YtDlpIntegrationFixture.waitFor(engine, id: second) { $0.status == .downloading }
+            #expect(kill(firstPID, 0) == 0)
+        }
+    }
+
+    @Test func postProcessingAboveNewLimitFinishesBeforeQueuedWorkStarts() async throws {
+        try await withConcurrencyEngine { engine, directory in
+            var options = EngineOptions(downloadDirectory: directory, maxConcurrentDownloads: 2)
+            try await engine.start(options: options)
+            let first = try await engine.add(link: concurrencyLink("post"))
+            let firstPID = try await processID(directory, id: first)
+            _ = try await YtDlpIntegrationFixture.waitFor(engine, id: first) { $0.status == .postProcessing }
+            let second = try await engine.add(link: concurrencyLink("post"))
+            let secondPID = try await processID(directory, id: second)
+            _ = try await YtDlpIntegrationFixture.waitFor(engine, id: second) { $0.status == .postProcessing }
+
+            options.maxConcurrentDownloads = 1
+            try await engine.apply(options: options)
+            let queued = try await engine.add(link: concurrencyLink("next"))
+
+            #expect(kill(firstPID, 0) == 0)
+            #expect(kill(secondPID, 0) == 0)
+            #expect(try await engine.snapshots().first(where: { $0.id == queued })?.status == .queued)
+            try Data().write(to: directory.appendingPathComponent(first + ".finish"))
+            _ = try await YtDlpIntegrationFixture.waitFor(engine, id: first) { $0.status == .completed }
+            #expect(try await engine.snapshots().first(where: { $0.id == queued })?.status == .queued)
+            try Data().write(to: directory.appendingPathComponent(second + ".finish"))
+            _ = try await YtDlpIntegrationFixture.waitFor(engine, id: second) { $0.status == .completed }
+            _ = try await processID(directory, id: queued)
+        }
+    }
+
+    @Test(arguments: [0, -1])
+    func invalidConcurrencyDoesNotTerminateExistingWorker(limit: Int) async throws {
+        try await withConcurrencyEngine { engine, directory in
+            var options = EngineOptions(downloadDirectory: directory, maxConcurrentDownloads: 1)
+            try await engine.start(options: options)
+            let id = try await engine.add(link: concurrencyLink("first"))
+            let pid = try await processID(directory, id: id)
+
+            options.maxConcurrentDownloads = limit
+            await #expect(throws: EngineError.self) { try await engine.apply(options: options) }
+
+            #expect(kill(pid, 0) == 0)
+            #expect(try starts(directory, id: id) == [String(pid)])
+            #expect(try await engine.snapshots().first?.status == .downloading)
+        }
+    }
+
     @Test func channelAndQualityChangesUseNewToolWithoutRestartingEngine() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("YtDlp-config-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
@@ -103,6 +198,67 @@ struct YtDlpConfigurationTests {
             throw error
         }
     }
+
+    private func withConcurrencyEngine(_ body: @Sendable (YtDlpEngine, URL) async throws -> Void) async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("YtDlp-concurrency-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let binary = root.appendingPathComponent("yt-dlp")
+        try Data(Self.concurrencyScript.utf8).write(to: binary)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
+        let engine = YtDlpEngine(stateDirectory: root.appendingPathComponent("state"), binaryURL: binary,
+                                 installer: nil, updatesEnabled: false)
+        do {
+            try await body(engine, root.appendingPathComponent("downloads"))
+            await engine.stop()
+            try await YtDlpIntegrationFixture.checkNoProcesses(root: root)
+        } catch {
+            await engine.stop()
+            try await YtDlpIntegrationFixture.checkNoProcesses(root: root)
+            throw error
+        }
+    }
+
+    private func concurrencyLink(_ name: String) throws -> ParsedLink {
+        let url = try #require(URL(string: "https://example.invalid/" + name))
+        return .video(url: url, site: .other, original: url.absoluteString)
+    }
+
+    private func processID(_ directory: URL, id: String) async throws -> Int32 {
+        let marker = directory.appendingPathComponent(id + ".pid")
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while !FileManager.default.fileExists(atPath: marker.path), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        return try #require(Int32(String(contentsOf: marker, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)))
+    }
+
+    private func starts(_ directory: URL, id: String) throws -> [String] {
+        try String(contentsOf: directory.appendingPathComponent(id + ".starts"), encoding: .utf8)
+            .split(separator: "\n").map(String.init)
+    }
+
+    private static let concurrencyScript = """
+    #!/bin/sh
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --paths) directory="$2"; shift 2 ;;
+            --output) template="$2"; shift 2 ;;
+            *) source="$1"; shift ;;
+        esac
+    done
+    prefix="${template%%\\%*}"
+    id="${prefix%-}"
+    printf '%s\\n' "$$" >> "$directory/$id.starts"
+    printf '%s\\n' "$$" > "$directory/$id.pid"
+    case "$source" in
+        */post) printf 'MULEE:{"event":"postprocess"}\\n' ;;
+    esac
+    while [ ! -f "$directory/$id.finish" ]; do /bin/sleep 0.02; done
+    file="$directory/${prefix}fixture.mp4"
+    printf 'video' > "$file"
+    printf 'MULEE:{"event":"file","path":"%s"}\\n' "$file"
+    """
 
     private static func script(marker: String) -> String {
         """

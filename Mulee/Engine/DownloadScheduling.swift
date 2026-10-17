@@ -77,6 +77,10 @@ final class DownloadScheduling {
         taskLimits[task.id] = nil
     }
 
+    func isUserPaused(_ task: DownloadTask) -> Bool {
+        pauses.reason(for: task) == "user"
+    }
+
     func isQueuePaused(_ task: DownloadTask) -> Bool {
         pauses.reason(for: task) == "queue"
     }

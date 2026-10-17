@@ -70,6 +70,23 @@ struct HTTPProxyTests {
         #expect(proxy.sessionProxyDictionary.isEmpty)
     }
 
+    @Test func onlyAuthenticatedProxySessionsEnableStartupPause() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("proxy-session-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        var configuration = Aria2Configuration(stateDirectory: root, port: 34567, secret: "test", options: .init(downloadDirectory: root))
+        configuration.proxy = HTTPProxyConfiguration(
+            mode: .manual, manualURL: "http://proxy.example.org:8080", credential: .init(username: "user", password: "password"), environment: [:]
+        )
+        #expect(!((try configuration.contents()).contains("pause=true\n")))
+        try Data().write(to: configuration.sessionURL)
+        #expect((try configuration.contents()).contains("pause=true\n"))
+        configuration.proxy = HTTPProxyConfiguration(mode: .manual, manualURL: "http://proxy.example.org:8080", environment: [:])
+        #expect(!((try configuration.contents()).contains("pause=true\n")))
+        configuration.proxy = HTTPProxyConfiguration(mode: .off, environment: [:])
+        #expect(!((try configuration.contents()).contains("pause=true\n")))
+    }
+
     @Test func configurationNeverSerializesProxyCredentials() throws {
         let root = URL(filePath: "/tmp/http-proxy-tests")
         var configuration = Aria2Configuration(stateDirectory: root, port: 34567, secret: "rpc-test", options: .init(downloadDirectory: root))
