@@ -5,6 +5,138 @@ import Testing
 @testable import Mulee
 
 @Suite @MainActor struct MainWindowTests {
+    @Test func sidebarScrollerDiagnostics() async throws {
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        for minimal in [true, false] {
+            for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+                for usesMaterial in [false, true] {
+                    let content: AnyView
+                    if minimal {
+                        content = AnyView(List(0..<50, id: \.self) { Text("Item \($0)") }.listStyle(.sidebar))
+                    } else {
+                        content = AnyView(MainSidebarView(selection: .constant(.all)).environment(model))
+                    }
+                    let host = NSHostingController(rootView: content)
+                    host.sizingOptions = []
+                    let split = NSSplitViewController()
+                    split.splitView.isVertical = true
+                    let container: NSViewController
+                    if usesMaterial {
+                        let sidebar = MainSidebarContainerViewController(content: host)
+                        sidebar.applyScrollerStyle(.legacy)
+                        container = sidebar
+                    } else {
+                        container = host
+                    }
+                    split.addSplitViewItem(NSSplitViewItem(sidebarWithViewController: container))
+                    split.addSplitViewItem(NSSplitViewItem(viewController: NSViewController()))
+                    let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 560),
+                                          styleMask: [.titled, .resizable], backing: .buffered, defer: false)
+                    window.contentViewController = split
+                    defer { window.contentViewController = nil }
+                    split.view.appearance = NSAppearance(named: appearance)
+                    split.view.layoutSubtreeIfNeeded()
+                    await Task.yield()
+                    split.view.layoutSubtreeIfNeeded()
+                    let scroll = try #require(sidebarDescendants(host.view).compactMap { $0 as? NSScrollView }.first)
+                    // 仅测试传统滚动条，不改用户偏好或产品中的滚动条策略。
+                    scroll.scrollerStyle = .legacy
+                    scroll.tile()
+                    let effects = sidebarAncestors(scroll).compactMap { $0 as? NSVisualEffectView }
+                    #expect(effects.contains { $0.material == .sidebar } == usesMaterial)
+                    #expect(!scroll.drawsBackground)
+                    #expect(scroll.verticalScroller != nil)
+                    #expect(scroll.bounds.width > 0 && scroll.bounds.height > 0)
+                    print("SCROLLER minimal=\(minimal) appearance=\(appearance.rawValue) material=\(usesMaterial) \(sidebarDescription(scroll))")
+                }
+            }
+        }
+    }
+
+    @Test func sidebarMaterialTracksSystemStyleWithoutRecreatingContent() throws {
+        let temporary = try TemporaryDefaults(prefix: "sidebar-style.")
+        defer { temporary.clean() }
+        let controller = makeController(state: MainWindowState(defaults: temporary.defaults))
+        controller.view.frame = NSRect(x: 0, y: 0, width: 1240, height: 780)
+        let sidebar = try #require(controller.splitViewItems[0].viewController as? MainSidebarContainerViewController)
+        let content = sidebar.content
+        let preferred = NSScroller.preferredScrollerStyle
+        for style: NSScroller.Style in [.legacy, .overlay, .legacy, .overlay] {
+            sidebar.applyScrollerStyle(style)
+            controller.view.layoutSubtreeIfNeeded()
+            #expect(sidebar.children.count == 1)
+            #expect(sidebar.content === content)
+            #expect(content.view.frame.size == sidebar.view.bounds.size)
+            #expect(NSScroller.preferredScrollerStyle == preferred)
+            if style == .legacy {
+                let effect = try #require(sidebar.materialView)
+                #expect(effect.material == .sidebar)
+                #expect(effect.blendingMode == .withinWindow)
+                #expect(effect.state == .followsWindowActiveState)
+                #expect(content.view.superview === effect)
+                sidebar.applyScrollerStyle(style)
+                #expect(sidebar.materialView === effect)
+            } else {
+                #expect(sidebar.materialView == nil)
+                #expect(content.view.superview === sidebar.view)
+                #expect(sidebar.view.subviews.count == 1)
+            }
+        }
+        NotificationCenter.default.post(name: NSScroller.preferredScrollerStyleDidChangeNotification, object: nil)
+        #expect((sidebar.materialView != nil) == (preferred == .legacy))
+    }
+
+    @Test func sidebarMaterialPreservesHighContrastAppearanceWithoutAList() async throws {
+        let host = NSViewController()
+        host.view = NSView()
+        let sidebar = MainSidebarContainerViewController(content: host)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 220, height: 560),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentViewController = sidebar
+        defer { window.contentViewController = nil }
+        for appearance in [NSAppearance.Name.accessibilityHighContrastAqua, .accessibilityHighContrastDarkAqua] {
+            window.appearance = try #require(NSAppearance(named: appearance))
+            for style: NSScroller.Style in [.legacy, .overlay] {
+                sidebar.applyScrollerStyle(style)
+                sidebar.view.layoutSubtreeIfNeeded()
+                await Task.yield()
+                sidebar.view.layoutSubtreeIfNeeded()
+                #expect(host.view.isDescendant(of: sidebar.view))
+                let parent = try #require(host.view.superview)
+                #expect(sidebar.view.appearance == nil)
+                #expect(parent.appearance == nil)
+                #expect(host.view.effectiveAppearance.name == parent.effectiveAppearance.name)
+                #expect(host.view.frame.size == sidebar.view.bounds.size)
+            }
+        }
+    }
+
+    private func sidebarDescendants(_ view: NSView) -> [NSView] {
+        [view] + view.subviews.flatMap(sidebarDescendants)
+    }
+
+    private func sidebarDescription(_ scroll: NSScrollView) -> String {
+        let chain = sidebarAncestors(scroll).map { view in
+            var details = "\(type(of: view)){appearance=\(view.effectiveAppearance.name.rawValue),opaque=\(view.isOpaque),vibrant=\(view.allowsVibrancy)"
+            if let effect = view as? NSVisualEffectView {
+                details += ",material=\(effect.material.rawValue),blend=\(effect.blendingMode.rawValue)"
+            }
+            return details + "}"
+        }
+        let scroller = scroll.verticalScroller
+        return "style=\(scroll.scrollerStyle.rawValue) knob=\(scroller?.knobStyle.rawValue ?? -1) scrollerAppearance=\(scroller?.effectiveAppearance.name.rawValue ?? "nil") drawsBackground=\(scroll.drawsBackground) chain=\(chain.joined(separator: " -> "))"
+    }
+
+    private func sidebarAncestors(_ view: NSView) -> [NSView] {
+        var chain: [NSView] = []
+        var ancestor: NSView? = view
+        while let current = ancestor {
+            chain.append(current)
+            ancestor = current.superview
+        }
+        return chain
+    }
+
     @Test func escapeClosesNewTaskWhileMultilineEditorHasFocus() async throws {
         let temporary = try TemporaryDefaults(prefix: "new-task-escape.")
         defer { temporary.clean() }
