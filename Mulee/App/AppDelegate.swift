@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var systemSleepController: SystemSleepController?
     private var dockPresenter: DockPresenter?
     private var notificationService: NotificationService?
+    private var soundEffects: SoundEffects?
     private var whenAllDoneController: WhenAllDoneController?
     private var slowModeController: SlowModeController?
     private var transferScheduleController: TransferScheduleController?
@@ -129,6 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             model: model, engines: [Aria2Engine(stateDirectory: stateDirectory), torrent, ed2k],
             videoBootstrap: VideoEngineBootstrap()
         )
+        soundEffects = SoundEffects(model: model, settings: settings)
         notificationService = NotificationService(model: model, settings: settings)
         diskReserveMonitor = DiskReserveMonitor(model: model, settings: settings)
         volumeAvailabilityMonitor = VolumeAvailabilityMonitor(model: model, settings: settings)

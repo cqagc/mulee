@@ -1,6 +1,93 @@
 {
   "sourceLanguage": "zh-Hans",
   "strings": {
+    "操作音效": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作音效"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface Sound Effects"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作音效"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "操作効果音"
+          }
+        }
+      }
+    },
+    "添加、完成、失败、暂停等操作时播放提示音": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加、完成、失败、暂停等操作时播放提示音"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play sounds when adding, completing, failing, or pausing downloads."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入、完成、失敗、暫停等操作時播放提示音"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加、完了、失敗、一時停止などの操作時に効果音を再生します"
+          }
+        }
+      }
+    },
+    "系统设置里关闭了界面声音效果": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统设置里关闭了界面声音效果"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface sound effects are turned off in System Settings."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系統設定裡關閉了介面聲音效果"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム設定でユーザインターフェイスの効果音がオフになっています"
+          }
+        }
+      }
+    },
     "立即重新打开": {
       "extractionState": "manual",
       "localizations": {

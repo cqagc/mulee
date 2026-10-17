@@ -561,3 +561,24 @@ python3 -I scripts/test-ed2k-portmap.py --mapping-only
 ```
 
 `--mapping-only` 启动隔离的临时 amuled 和 `build/thirdparty/bin/mulee-torrentd`，即使 WAN 不是公网 IPv4 也申请映射。申请前确认候选端口未被映射；使用 `GetSpecificPortMappingEntry` 核对电驴 TCP、客户端 UDP、服务器 UDP 的内部端口、内部地址和启用状态。撤销后再次查询确认删除；退出时清理 BT 映射、两个子进程及临时目录。此模式不连接电驴服务器或 Kad，不以能否从外部连入作为映射成功的判据，不修改代理规则或路由器管理配置。
+
+## 操作音效来源与重建
+
+`Mulee/Resources/Sounds/` 包含九个 48 kHz、16 位单声道 CAF 音效，峰值为 −12 至 −20 dBFS（点击类更轻）。采用 PCM CAF：资源总量不足 350 KiB，避免有损编码对短促点击的瞬态产生影响，预加载后播放不需要额外解码。
+
+| 音效 | 来源与许可 |
+|---|---|
+| download_complete、all_complete、failed、pause、resume、delete、link_received、warning | Mulee 用 `scripts/make-ui-sounds.py` 从正弦和噪声合成，无外部采样，按本项目相同的 GPL-3.0 许可发布。 |
+| task_added | 由 Stable Audio Open 1.0 生成后裁切、归一化。提示词为 “soft gentle user interface pop with a subtle airy upward swish, clean, minimal, quiet, short sound effect”，种子 68619，生成 2 秒后裁到约 0.14 秒。模型使用 [Stability AI Community License](https://stability.ai/license)，按该许可生成内容的权利归使用者；年收入超过许可门槛的组织商用前需另行确认。 |
+
+合成脚本依赖 Python 3 与 numpy。输出目录由参数指定，八个合成音效的峰值分别为：完成 / 全部完成 −12 dBFS、失败 / 警告 −13 dBFS、暂停 / 继续 −18 dBFS、删除 −20 dBFS、收到链接 −16 dBFS。`task_added` 是固定生成资源（−14 dBFS），脚本会跳过，保留仓库内定稿文件。
+
+```bash
+python3 scripts/make-ui-sounds.py /tmp/mulee-ui-sounds
+for source in /tmp/mulee-ui-sounds/*.wav; do
+  name=$(basename "$source" .wav)
+  afconvert -f caff -d LEI16 "$source" "Mulee/Resources/Sounds/$name.caf"
+done
+```
+
+`general.uiSounds` 默认开启，并遵守系统的「播放用户界面声音效果」。打开「通知声音」后，完成和失败提示由系统通知出声；操作音效不再叠加。相同音效在 150 ms 内去抖；完成事件按连续一秒窗口合并，最后一个完成事件决定播放普通完成还是全部完成。自动暂停 / 继续不播放操作音，磁盘保护和卷断开每次新事件只播放一次警告。启动恢复、引擎重新同步和单元测试宿主不播放提示音。

@@ -84,6 +84,7 @@ final class DiskReserveMonitor {
         }
         var warnings: [Warning] = []
         var blockedVolumes: Set<URL> = []
+        var newlyProtected = false
         var readableVolumes: Set<URL> = []
         for key in byVolume.keys.sorted(by: { $0.path < $1.path }) {
             guard !Task.isCancelled else { return }
@@ -96,6 +97,7 @@ final class DiskReserveMonitor {
             if blocked {
                 blockedVolumes.insert(key)
                 if !wasProtected {
+                    newlyProtected = true
                     model.notificationService?.sendSystem(
                         title: String(localized: "因磁盘空间不足已暂停"),
                         body: String(localized: "清理磁盘、换保存目录或调低保护容量后继续。")
@@ -106,6 +108,7 @@ final class DiskReserveMonitor {
                 warnings.append(Warning(volume: key, available: available, reserve: reserveBytes, isPaused: blocked))
             }
         }
+        if newlyProtected { model.soundEffects?.play(.warning) }
         protectedVolumes = blockedVolumes
         // 一个任务可能同时写入临时卷和目标卷；必须全部恢复后才能继续。
         for task in tasks {
@@ -137,6 +140,7 @@ final class DiskReserveMonitor {
         guard let key = try? volume(directory).standardizedFileURL, let available = try? capacity(key) else { return false }
         guard available <= reserveBytes else { return true }
         if protectedVolumes.insert(key).inserted {
+            model.soundEffects?.play(.warning)
             model.notificationService?.sendSystem(
                 title: String(localized: "因磁盘空间不足已暂停"),
                 body: String(localized: "清理磁盘、换保存目录或调低保护容量后继续。")

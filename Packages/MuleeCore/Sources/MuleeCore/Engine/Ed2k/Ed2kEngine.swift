@@ -5,6 +5,11 @@ import Foundation
 public actor Ed2kEngine: DownloadEngine {
     public nonisolated let kind: TaskKind = .ed2k
 
+    /// 会话变化时，首次快照只用于同步，不应作为新的操作音效事件。
+    public var snapshotSessionID: UUID? {
+        get async { await client?.generation }
+    }
+
     private let stateDirectory: URL
     private let binaryURL: URL?
     private var settings: Ed2kEngineSettings

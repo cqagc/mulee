@@ -4,6 +4,9 @@ import Foundation
 public actor Aria2Engine: DownloadEngine {
     public nonisolated let kind: TaskKind = .http
 
+    /// 会话变化时，首次快照只用于同步，不应作为新的操作音效事件。
+    public var snapshotSessionID: UUID? { process?.id }
+
     private let stateDirectory: URL
     private let binaryURL: URL?
     private var process: Aria2Process?

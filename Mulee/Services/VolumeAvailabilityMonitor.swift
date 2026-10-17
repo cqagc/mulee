@@ -106,6 +106,7 @@ final class VolumeAvailabilityMonitor {
     private var observers: [NSObjectProtocol] = []
     private var worker: Task<Void, Never>?
     private var refreshing = false
+    private var soundWarningTracker = SoundEffectWarningTracker()
 
     init(
         model: AppModel, settings: SettingsModel, probe: any DownloadVolumeProbing = SystemDownloadVolumeProbe(),
@@ -172,27 +173,41 @@ final class VolumeAvailabilityMonitor {
             }
             refreshing = false
         }
+        var unavailableVolumes: Set<String> = []
         for task in model.activeTasks where ![.completed, .seeding].contains(task.status) || task.postDownload.extractionState == .queued {
             let fallback = task.savePath?.deletingLastPathComponent()
                 ?? model.coordinator?.diskProtectionDirectory(for: task.id) ?? URL(filePath: settings.saveDirectory)
             let directories = task.writeDirectories.flatMap { $0.isEmpty ? nil : $0 } ?? [fallback]
             var unavailable = false
+            var missingVolumes: Set<String> = []
             for directory in directories {
                 let key = DownloadVolume.directoryKey(directory)
                 let directory = directory.standardizedFileURL
+                let soundKey = knownVolumes[key]?.url.path ?? (directory.path.hasPrefix("/Volumes/")
+                    ? "/" + directory.pathComponents.dropFirst().prefix(2).joined(separator: "/") : key)
                 do {
-                    guard let volume = try probe.volume(for: directory) else { unavailable = true; continue }
+                    guard let volume = try probe.volume(for: directory) else {
+                        unavailable = true
+                        missingVolumes.insert(soundKey)
+                        continue
+                    }
                     if let previous = knownVolumes[key], previous.identifier != volume.identifier {
                         unavailable = true
+                        missingVolumes.insert(soundKey)
                     } else if knownVolumes[key] != volume {
                         knownVolumes[key] = volume
                         needsSaving = true
                     }
                 } catch {
                     unavailable = true
+                    missingVolumes.insert(soundKey)
                 }
             }
             if unavailable {
+                if [.downloading, .queued, .waitingForSources, .postProcessing, .extracting].contains(task.status)
+                    || model.automaticPauseReasons(for: task).contains(.volumeUnavailable) {
+                    unavailableVolumes.formUnion(missingVolumes)
+                }
                 if task.status == .extracting {
                     await model.extractionCoordinator?.cancelForUnavailableVolume(task.id)
                     continue
@@ -202,6 +217,9 @@ final class VolumeAvailabilityMonitor {
             } else {
                 await model.resumeAutomatically(task.id, reason: .volumeUnavailable)
             }
+        }
+        if soundWarningTracker.update(unavailableVolumes) {
+            model.soundEffects?.play(.warning)
         }
     }
 }

@@ -8,6 +8,7 @@ import Observation
 final class AppModel {
     var tasks: [DownloadTask] {
         didSet {
+            soundEffects?.tasksDidChange(previous: oldValue, current: tasks)
             newTaskDraft.refreshDuplicateWarnings(in: self)
             extractionCoordinator?.tasksDidChange()
             updateSleepPrevention()
@@ -40,6 +41,7 @@ final class AppModel {
     @ObservationIgnored var userPausedTaskIDs: Set<DownloadTask.ID> = []
     @ObservationIgnored weak var diskReserveMonitor: DiskReserveMonitor?
     @ObservationIgnored weak var notificationService: NotificationService?
+    @ObservationIgnored weak var soundEffects: SoundEffects?
     @ObservationIgnored weak var whenAllDoneController: WhenAllDoneController?
     @ObservationIgnored weak var slowModeController: SlowModeController?
     @ObservationIgnored var downloadSettings: SettingsModel?
@@ -148,6 +150,7 @@ final class AppModel {
             pendingNewTaskText += separator + text
         }
         isShowingNewTask = true
+        if !text.isEmpty { soundEffects?.play(.linkReceived) }
     }
 
     @discardableResult
@@ -182,6 +185,9 @@ final class AppModel {
 
     func pause(_ id: DownloadTask.ID) {
         guard tasks.contains(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+        if let task = tasks.first(where: { $0.id == id }), [.downloading, .queued, .waitingForSources, .seeding].contains(task.status) {
+            soundEffects?.play(.pause(manual: true))
+        }
         userPausedTaskIDs.insert(id)
         whenAllDoneController?.userDidInteract()
         if let index = tasks.firstIndex(where: { $0.id == id }) {
@@ -208,6 +214,9 @@ final class AppModel {
             }
             tasks[index].pauseReason = automaticPauseStore.displayReason(for: tasks[index])
             if tasks[index].pauseReason != nil { return }
+            if [.paused, .failed, .engineUnavailable].contains(tasks[index].status) {
+                soundEffects?.play(.resume(manual: true))
+            }
         }
         if let coordinator {
             Task { await coordinator.resume(id) }
@@ -242,6 +251,7 @@ final class AppModel {
         var task = tasks[index]
         TaskTrash.move(&task, now: now)
         tasks[index] = task
+        soundEffects?.play(.delete)
         if selectedTaskID == id { selectedTaskID = nil }
     }
 
@@ -286,6 +296,7 @@ final class AppModel {
     }
 
     func removeRecord(_ id: DownloadTask.ID) {
+        if tasks.contains(where: { $0.id == id && $0.deletedAt == nil }) { soundEffects?.play(.delete) }
         if let task = tasks.first(where: { $0.id == id }) { coordinator?.forgetHTTPTransfer(task) }
         userPausedTaskIDs.remove(id)
         tasks.removeAll { $0.id == id }

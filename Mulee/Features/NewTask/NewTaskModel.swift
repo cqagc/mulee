@@ -175,7 +175,7 @@ final class NewTaskModel {
                 !links.contains { $0.duplicateMessage != nil && ($0.link == link || $0.selectedVideoEntries.contains { $0.link == link }) }
             }, autoExtract: autoExtract, directory: saveDirectory,
             filePriorities: filePriorities, torrentDownloadModes: torrentDownloadModes,
-            videoEntries: videoEntries, contexts: expandedContexts
+            videoEntries: videoEntries, contexts: expandedContexts, playAddedSound: true
         )
     }
 

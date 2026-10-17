@@ -35,8 +35,10 @@ targets:
     platform: macOS
     sources:
       - path: Mulee
-        excludes: [Resources/Licenses]
+        excludes: [Resources/Licenses, Resources/Sounds]
       - path: Mulee/Resources/Licenses
+        type: folder
+      - path: Mulee/Resources/Sounds
         type: folder
       - path: MuleeSafariExtension/BrowserExtensionRequest.swift
     entitlements:

@@ -5,6 +5,9 @@ import OSLog
 public actor TorrentEngine: DownloadEngine {
     public nonisolated let kind: TaskKind = .bittorrent
 
+    /// 会话变化时，首次快照只用于同步，不应作为新的操作音效事件。
+    public var snapshotSessionID: UUID? { sessionID }
+
     private let stateDirectory: URL
     private let binaryURL: URL?
     private let transportFactory: (@Sendable () -> any TorrentdTransport)?

@@ -23,6 +23,7 @@ final class DownloadCoordinator {
     private var revisions: [TaskKind: Int] = [:]
     private var excludedTaskIDs: [TaskKind: Set<String>] = [:]
     private var isPolling = false
+    private var soundSnapshotSessions: [TaskKind: UUID] = [:]
     private var volumeWriteFailures: [UUID: Date] = [:]
     private var volumeHTTPRecoveries: Set<UUID> = []
     private let volumeProbe: any DownloadVolumeProbing
@@ -67,6 +68,8 @@ final class DownloadCoordinator {
         guard generation == nil, !Task.isCancelled else { return }
         let token = UUID()
         generation = token
+        model.soundEffects?.beginSynchronization()
+        soundSnapshotSessions.removeAll()
         latestOptions = options
         scheduling.reset()
         for task in model.tasks where task.deletedAt != nil { excludeFromSnapshots(task) }
@@ -226,6 +229,11 @@ final class DownloadCoordinator {
             let revision = revisions[engine.kind, default: 0]
             do {
                 let current = try await engine.snapshots()
+                let session = await soundSnapshotSession(for: engine)
+                if SoundEffectPolicy.needsSynchronization(previousSession: soundSnapshotSessions[engine.kind], currentSession: session) {
+                    model.soundEffects?.resynchronize(engine.kind)
+                }
+                soundSnapshotSessions[engine.kind] = session
                 guard generation == token else { return }
                 if pendingAdds[engine.kind, default: 0] == 0, revisions[engine.kind, default: 0] == revision {
                     snapshots[engine.kind] = current
@@ -233,6 +241,7 @@ final class DownloadCoordinator {
                 }
             } catch {
                 guard generation == token else { return }
+                model.soundEffects?.resynchronize(engine.kind)
                 model.engineStates[engine.kind] = .failed(EngineStatusPresentation.errorMessage(error))
             }
         }
@@ -333,6 +342,7 @@ final class DownloadCoordinator {
         guard model.tasks == mergeInput, snapshots.keys.allSatisfy({ revisions[$0, default: 0] == snapshotRevisions[$0] }) else { return }
         provenanceCompletions.formUnion(newCompletions.map(\.id))
         model.tasks = merged
+        model.soundEffects?.didSynchronize(Set(snapshots.keys))
         for task in newCompletions { model.completionShortcutRunner?.completed(task) }
         // 重启或迟到快照可能仍在写盘；保护状态必须同时落实到引擎。
         for task in model.activeTasks where task.status == .paused && !model.automaticPauseReasons(for: task).isEmpty {
@@ -499,6 +509,7 @@ final class DownloadCoordinator {
                 task.detail = .http(connections: 0)
             }
             model.tasks.insert(task, at: min(insertionIndex, model.tasks.count))
+            if task.status == .failed { model.soundEffects?.taskFailed(task.id) }
             if insertionIndex == 0 {
                 model.selectedTaskID = task.id
             }
@@ -1242,6 +1253,7 @@ final class DownloadCoordinator {
         for index in model.tasks.indices where waitingVideoLinks[model.tasks[index].id] != nil {
             model.tasks[index].status = .failed
             model.tasks[index].errorMessage = reason
+            model.soundEffects?.taskFailed(model.tasks[index].id)
         }
         waitingVideoLinks.removeAll()
     }
@@ -1291,6 +1303,7 @@ final class DownloadCoordinator {
                 guard generation == token, let index = model.tasks.firstIndex(where: { $0.id == id }) else { continue }
                 model.tasks[index].status = .failed
                 model.tasks[index].errorMessage = EngineStatusPresentation.errorMessage(error)
+                model.soundEffects?.taskFailed(id)
             }
         }
     }
@@ -1335,6 +1348,7 @@ final class DownloadCoordinator {
 
     func queueProxyRestoredTasks(_ engineIDs: Set<String>) {
         guard !engineIDs.isEmpty else { return }
+        model.soundEffects?.resynchronize(.http)
         let scheduleClosed = scheduleRequiresPause()
         for index in model.tasks.indices {
             let task = model.tasks[index]
@@ -1370,6 +1384,13 @@ final class DownloadCoordinator {
     private func setError(_ message: String, for id: DownloadTask.ID) {
         guard let index = model.tasks.firstIndex(where: { $0.id == id }) else { return }
         model.tasks[index].errorMessage = message
+    }
+
+    private func soundSnapshotSession(for engine: any DownloadEngine) async -> UUID? {
+        if let http = engine as? Aria2Engine { return await http.snapshotSessionID }
+        if let torrent = engine as? TorrentEngine { return await torrent.snapshotSessionID }
+        if let ed2k = engine as? Ed2kEngine { return await ed2k.snapshotSessionID }
+        return nil
     }
 
     private func engine(for kind: TaskKind) -> (any DownloadEngine)? {

@@ -67,7 +67,7 @@ extension AppModel {
         filePriorities: [ParsedLink: [Int]] = [:],
         torrentDownloadModes: [ParsedLink: (sequentialDownload: Bool, firstLastPriority: Bool)] = [:],
         videoEntries: [ParsedLink: YtDlpPlaylistEntry] = [:],
-        contexts: [ParsedLink: NewTaskContext], canPresentNewTask: Bool = true
+        contexts: [ParsedLink: NewTaskContext], canPresentNewTask: Bool = true, playAddedSound: Bool = false
     ) -> String? {
         if let error = redirectVideoPlaylists(in: links, directory: directory, contexts: contexts, canPresentNewTask: canPresentNewTask) {
             return error
@@ -75,6 +75,7 @@ extension AppModel {
         let acceptedLinks = links.filter { !Self.isPureVideoPlaylist($0) }
         if let coordinator {
             Task {
+                var addedAny = false
                 for link in acceptedLinks.reversed() {
                     let previousIDs = Set(tasks.map(\.id))
                     let source = Self.singleVideoDownloadLink(link).original
@@ -95,6 +96,8 @@ extension AppModel {
                         !previousIDs.contains($0.id) && $0.sourceLink == source
                             && $0.engineTaskID != nil && $0.status != .failed
                     }
+                    let created = tasks.filter { !previousIDs.contains($0.id) && $0.sourceLink == source }
+                    addedAny = addedAny || created.contains { ![.failed, .engineUnavailable].contains($0.status) }
                     do {
                         try OpenURLRouter.trashAddedTorrent(
                             link, fromFinder: contexts[link]?.finderTorrent == true,
@@ -104,6 +107,7 @@ extension AppModel {
                         openURLIssue = String(localized: "任务已添加，但原种子未能移到废纸篓。请检查文件访问权限。")
                     }
                 }
+                if playAddedSound, addedAny { soundEffects?.play(.taskAdded) }
             }
             return nil
         }
@@ -127,6 +131,7 @@ extension AppModel {
         }
         tasks.insert(contentsOf: newTasks, at: 0)
         selectedTaskID = newTasks.first?.id ?? selectedTaskID
+        if playAddedSound, !newTasks.isEmpty { soundEffects?.play(.taskAdded) }
         return nil
     }
 }

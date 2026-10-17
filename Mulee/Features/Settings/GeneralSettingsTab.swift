@@ -13,6 +13,7 @@ struct GeneralSettingsTab: View {
     @State private var shortcutIssue: String?
     @State private var shortcutRefresh = 0
     @State private var badgeNotAllowed = false
+    @State private var systemUISoundsEnabled = SoundEffects.systemUISoundsEnabled
     @State private var language = AppLanguage.read(
         defaults: .standard, domain: Bundle.main.bundleIdentifier ?? ""
     )
@@ -106,6 +107,14 @@ struct GeneralSettingsTab: View {
                 Toggle("下载完成时通知", isOn: $model.notifyOnComplete)
                 Toggle("下载失败时通知", isOn: $model.notifyOnFailure)
                 Toggle("通知声音", isOn: $model.notificationSound)
+                Toggle(isOn: $model.uiSounds) {
+                    Text("操作音效")
+                    Text("添加、完成、失败、暂停等操作时播放提示音")
+                }
+                if !systemUISoundsEnabled {
+                    Text("系统设置里关闭了界面声音效果")
+                        .foregroundStyle(.secondary)
+                }
                 if app.notificationPermissionDenied {
                     Text("通知权限已关闭，下载完成和磁盘保护等提醒不会显示。请在系统设置中允许通知。")
                         .foregroundStyle(.secondary)
@@ -132,6 +141,7 @@ struct GeneralSettingsTab: View {
         .formStyle(.grouped)
         .sheet(isPresented: $isShowingStatistics) { TransferStatisticsSettingsView() }
         .task(id: scenePhase) {
+            systemUISoundsEnabled = SoundEffects.systemUISoundsEnabled
             await app.notificationService?.refreshAuthorization()
             guard !AppEnvironment.isRunningUnitTests else { return }
             let settings = await UNUserNotificationCenter.current().notificationSettings()

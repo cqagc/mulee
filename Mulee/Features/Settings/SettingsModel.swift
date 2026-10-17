@@ -69,6 +69,7 @@ final class SettingsModel {
         static let notifyOnComplete = "general.notifyOnComplete"
         static let notifyOnFailure = "general.notifyOnFailure"
         static let notificationSound = "general.notificationSound"
+        static let uiSounds = "general.uiSounds"
         static let whenAllDone = "general.whenAllDone"
         static let pauseOnSleep = "general.pauseOnSleep"
         static let dockBadge = "general.dockBadge"
@@ -170,6 +171,7 @@ final class SettingsModel {
     var watchClipboard: Bool { didSet { defaults.set(watchClipboard, forKey: Key.watchClipboard) } }
     var notifyOnComplete: Bool { didSet { defaults.set(notifyOnComplete, forKey: Key.notifyOnComplete) } }
     var notifyOnFailure: Bool { didSet { defaults.set(notifyOnFailure, forKey: Key.notifyOnFailure) } }
+    var uiSounds: Bool { didSet { defaults.set(uiSounds, forKey: Key.uiSounds) } }
     var notificationSound: Bool { didSet { defaults.set(notificationSound, forKey: Key.notificationSound) } }
     var whenAllDone: WhenAllDoneAction { didSet { defaults.set(whenAllDone.rawValue, forKey: Key.whenAllDone) } }
     var pauseOnSleep: Bool { didSet { defaults.set(pauseOnSleep, forKey: Key.pauseOnSleep) } }
@@ -297,6 +299,7 @@ final class SettingsModel {
         pauseOnSleep = Self.bool(defaults, Key.pauseOnSleep, true)
         dockBadge = Self.raw(defaults, Key.dockBadge, .active)
         completionShortcut = defaults.string(forKey: Key.completionShortcut) ?? ""
+        uiSounds = Self.bool(defaults, Key.uiSounds, true)
         notificationSound = Self.bool(defaults, Key.notificationSound, false)
         notifyOnFailure = Self.bool(defaults, Key.notifyOnFailure, true)
         notifyOnComplete = Self.bool(defaults, Key.notifyOnComplete, true)
