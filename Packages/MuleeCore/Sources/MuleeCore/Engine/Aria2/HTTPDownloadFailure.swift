@@ -33,12 +33,12 @@ public enum HTTPDownloadFailure: Error, Sendable, Equatable, LocalizedError {
         switch self {
         case .invalidCertificate: String(localized: "服务器的安全证书无效，Mulee 不会继续连接", bundle: .module)
         case .needsLogin: String(localized: "服务器需要认证，请输入账号和密码后重试。", bundle: .module)
-        case .expiredLink: "链接已过期或无权访问，请换个链接继续。"
-        case .missingFile: "文件已被移走或删除，请换个链接继续。"
-        case .webPage: "服务器把下载换成了网页，请获取新的下载链接。"
-        case .resourceChanged: "文件在服务器上变了，需要确认后从头下载。"
-        case .unknownIdentity: "无法确认是同一个文件，需要确认后从头下载。"
-        case .status(let code): "服务器响应异常（HTTP \(code)）。"
+        case .expiredLink: String(localized: "链接已过期或无权访问，请换个链接继续。", bundle: .module)
+        case .missingFile: String(localized: "文件已被移走或删除，请换个链接继续。", bundle: .module)
+        case .webPage: String(localized: "服务器把下载换成了网页，请获取新的下载链接。", bundle: .module)
+        case .resourceChanged: String(localized: "文件在服务器上变了，需要确认后从头下载。", bundle: .module)
+        case .unknownIdentity: String(localized: "无法确认是同一个文件，需要确认后从头下载。", bundle: .module)
+        case .status(let code): String(localized: "服务器响应异常（HTTP \(code)）。", bundle: .module)
         }
     }
 }

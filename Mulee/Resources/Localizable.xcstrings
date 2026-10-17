@@ -22337,7 +22337,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This private torrent already exists. tracker entries won’t be merged. Use the existing task."
+            "value": "This private torrent already exists. Tracker entries won’t be merged. Use the existing task."
           }
         },
         "zh-Hant": {
@@ -22395,7 +22395,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This torrent already exists, but its public status couldn’t be confirmed. tracker entries won’t be merged. Use the existing task."
+            "value": "This torrent already exists, but its public status couldn’t be confirmed. Tracker entries won’t be merged. Use the existing task."
           }
         },
         "zh-Hant": {
@@ -28119,6 +28119,673 @@
           "stringUnit": {
             "state": "translated",
             "value": "再試行"
+          }
+        }
+      }
+    },
+    "亮色": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "亮色"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "亮色"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライト"
+          }
+        }
+      }
+    },
+    "暗色": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暗色"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暗色"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダーク"
+          }
+        }
+      }
+    },
+    "代理设置未能应用，请稍后重新应用。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理设置未能应用，请稍后重新应用。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proxy settings couldn’t be applied. Try applying them again later."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法套用代理設定，請稍後重新套用。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロキシ設定を適用できませんでした。しばらくしてから再度適用してください。"
+          }
+        }
+      }
+    },
+    "代理账号未能保存，原设置已保留；请解锁钥匙串后重试。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "代理账号未能保存，原设置已保留；请解锁钥匙串后重试。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The proxy account couldn’t be saved. Your previous settings were kept. Unlock Keychain and try again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法儲存代理帳號，已保留原設定；請解鎖鑰匙圈後重試。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロキシアカウントを保存できませんでした。以前の設定は保持されています。キーチェーンのロックを解除して再試行してください。"
+          }
+        }
+      }
+    },
+    "在浏览器里重新点下载，Mulee 会接住新链接。等待五分钟内同网站或同文件名的链接。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在浏览器里重新点下载，Mulee 会接住新链接。等待五分钟内同网站或同文件名的链接。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start the download again in your browser. Mulee will wait up to five minutes for a new link from the same website or with the same filename."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請在瀏覽器中重新點選下載，Mulee 會接收新連結。將等待五分鐘，接收相同網站或相同檔名的連結。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザでもう一度ダウンロードを開始してください。同じサイトまたは同じファイル名の新しいリンクを、Muleeが5分間待ち受けます。"
+          }
+        }
+      }
+    },
+    "已启用": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已启用"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enabled"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已啟用"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効"
+          }
+        }
+      }
+    },
+    "已清除手动校验值。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已清除手动校验值。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The manual checksum was cleared."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已清除手動總和檢查碼。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手動のチェックサムを消去しました。"
+          }
+        }
+      }
+    },
+    "无法更新或保存 tracker 列表，已保留上次结果": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法更新或保存 tracker 列表，已保留上次结果"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The tracker list couldn’t be updated or saved. The previous results were kept."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法更新或儲存 tracker 清單，已保留上次結果"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トラッカーリストを更新または保存できませんでした。前回の結果は保持されています。"
+          }
+        }
+      }
+    },
+    "无法读取文件进行校验，请检查文件是否仍在原位置。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取文件进行校验，请检查文件是否仍在原位置。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file couldn’t be read for verification. Check that it’s still in its original location."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法讀取檔案進行驗證，請確認檔案仍在原位置。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検証するファイルを読み取れません。元の場所にファイルがあるか確認してください。"
+          }
+        }
+      }
+    },
+    "暂时无法读取": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时无法读取"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Currently unavailable"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫時無法讀取"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在取得できません"
+          }
+        }
+      }
+    },
+    "校验值不一致，未完成文件已保留，请重新下载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "校验值不一致，未完成文件已保留，请重新下载。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The checksum doesn’t match. The incomplete file was kept. Download the file again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "總和檢查碼不符，已保留未完成檔案，請重新下載。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チェックサムが一致しません。未完了のファイルは保持されています。もう一度ダウンロードしてください。"
+          }
+        }
+      }
+    },
+    "校验值不一致，请重新下载": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "校验值不一致，请重新下载"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The checksum doesn’t match. Download the file again"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "總和檢查碼不符，請重新下載"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チェックサムが一致しません。もう一度ダウンロードしてください"
+          }
+        }
+      }
+    },
+    "校验值不一致，请重新下载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "校验值不一致，请重新下载。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The checksum doesn’t match. Download the file again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "總和檢查碼不符，請重新下載。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チェックサムが一致しません。もう一度ダウンロードしてください。"
+          }
+        }
+      }
+    },
+    "校验值已保存。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "校验值已保存。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The checksum was saved."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已儲存總和檢查碼。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チェックサムを保存しました。"
+          }
+        }
+      }
+    },
+    "校验通过": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "校验通过"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verification passed"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "驗證通過"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検証に成功しました"
+          }
+        }
+      }
+    },
+    "此构建未包含 Chrome 扩展。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此构建未包含 Chrome 扩展。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This build doesn’t include the Chrome extension."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此版本未包含 Chrome 擴充功能。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このビルドにはChrome拡張機能が含まれていません。"
+          }
+        }
+      }
+    },
+    "等待校验": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等待校验"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for verification"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等待驗證"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検証待ち"
+          }
+        }
+      }
+    },
+    "认证已保存，任务将重试下载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "认证已保存，任务将重试下载。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Authentication was saved. The task will retry the download."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已儲存驗證資訊，任務將重新嘗試下載。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認証情報を保存しました。ダウンロードを再試行します。"
+          }
+        }
+      }
+    },
+    "请输入有效的 HTTP 代理地址，例如 http://proxy.example.org:8080。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入有效的 HTTP 代理地址，例如 http://proxy.example.org:8080。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid HTTP proxy address, such as http://proxy.example.org:8080."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請輸入有效的 HTTP 代理位址，例如 http://proxy.example.org:8080。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効なHTTPプロキシアドレスを入力してください（例：http://proxy.example.org:8080）。"
+          }
+        }
+      }
+    },
+    "请输入有效的 HTTP 或 HTTPS 下载链接。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请输入有效的 HTTP 或 HTTPS 下载链接。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter a valid HTTP or HTTPS download link."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請輸入有效的 HTTP 或 HTTPS 下載連結。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "有効なHTTPまたはHTTPSのダウンロードリンクを入力してください。"
+          }
+        }
+      }
+    },
+    "部分订阅更新失败，已保留上次结果": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分订阅更新失败，已保留上次结果"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some subscriptions couldn’t be updated. The previous results were kept."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分訂閱更新失敗，已保留上次結果"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一部の購読を更新できませんでした。前回の結果は保持されています。"
+          }
+        }
+      }
+    },
+    "链接已更新，任务将继续下载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接已更新，任务将继续下载。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The link was updated. The download will resume."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連結已更新，任務將繼續下載。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクを更新しました。ダウンロードを再開します。"
+          }
+        }
+      }
+    },
+    "镜像地址已添加，正在下载同一个文件。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "镜像地址已添加，正在下载同一个文件。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The mirror was added. Downloading the same file."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已新增鏡像位址，正在下載同一個檔案。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ミラーアドレスを追加しました。同じファイルをダウンロードしています。"
           }
         }
       }

@@ -17,7 +17,7 @@ struct TaskChecksumView: View {
             Button("保存校验值") { save() }
                 .disabled(isWorking || model.coordinator == nil)
             if let result = task.checksumVerification {
-                Text(result.matches == true ? "校验通过" : result.matches == false ? "校验值不一致，请重新下载。" : result.errorMessage ?? "等待校验")
+                Text(result.matches == true ? String(localized: "校验通过") : result.matches == false ? String(localized: "校验值不一致，请重新下载。") : result.errorMessage ?? String(localized: "等待校验"))
                     .font(.caption)
                     .fixedSize(horizontal: false, vertical: true)
                 if result.matches == false {
@@ -50,7 +50,7 @@ struct TaskChecksumView: View {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         let checksum = DownloadChecksum.parse(text)
         guard text.isEmpty || checksum != nil else {
-            message = "校验值格式无效，请粘贴完整的 MD5、SHA-1 或 SHA-256。"
+            message = String(localized: "校验值格式无效，请粘贴完整的 MD5、SHA-1 或 SHA-256。")
             return
         }
         isWorking = true
@@ -58,7 +58,7 @@ struct TaskChecksumView: View {
             defer { isWorking = false }
             do {
                 try await coordinator.setChecksum(task.id, checksum: checksum)
-                message = text.isEmpty ? "已清除手动校验值。" : "校验值已保存。"
+                message = text.isEmpty ? String(localized: "已清除手动校验值。") : String(localized: "校验值已保存。")
             } catch {
                 message = EngineStatusPresentation.errorMessage(error)
             }

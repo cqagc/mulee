@@ -17,12 +17,6 @@ struct NewTaskSheet: View {
 
     private var draft: NewTaskModel { suppliedDraft ?? model.newTaskDraft }
 
-    private func recognitionMessage(_ row: SmartPasteParser.Row) -> String {
-        if row.isInfoHash { return String(localized: "已识别为磁力链接") }
-        if row.isTorrentFile { return String(localized: "已识别种子文件") }
-        return row.message
-    }
-
     var body: some View {
         @Bindable var draft = draft
 
@@ -64,16 +58,18 @@ struct NewTaskSheet: View {
                 .padding(.bottom, 8)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(draft.inputRows, id: \.line) { row in
-                        Text("第 \(row.line) 行：\(recognitionMessage(row))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                if !draft.visibleInputRows.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(Array(draft.visibleInputRows.enumerated()), id: \.offset) { _, row in
+                            Text("第 \(row.line) 行：\(row.message)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(12)
                 if draft.links.isEmpty {
                     ContentUnavailableView("等待粘贴链接", systemImage: MuleeSymbol.add.name)
                 } else {

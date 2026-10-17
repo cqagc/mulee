@@ -87,13 +87,13 @@ public struct IncompleteHTTPTransfer: Codable, Sendable, Equatable {
         }
         guard Aria2FileSafety.isInside(file, directory: directory),
               file.deletingLastPathComponent().standardizedFileURL == directory.standardizedFileURL else {
-            throw EngineError.invalidResponse("未完成文件路径不在任务目录中")
+            throw EngineError.invalidResponse(String(localized: "未完成文件路径不在任务目录中", bundle: .module))
         }
         var target = destination.appendingPathComponent(file.lastPathComponent)
         if FileManager.default.fileExists(atPath: target.path) {
             switch duplicateAction {
             case .ask:
-                throw EngineError.invalidResponse("目标已有同名文件，请选择重命名或覆盖后重试。")
+                throw EngineError.invalidResponse(String(localized: "目标已有同名文件，请选择重命名或覆盖后重试。", bundle: .module))
             case .overwrite:
                 break
             case .rename:
@@ -112,10 +112,10 @@ public struct IncompleteHTTPTransfer: Codable, Sendable, Equatable {
 
     public mutating func finishMove(from file: URL) throws -> URL {
         if let completedFile { return completedFile }
-        guard let target = pendingFile else { throw EngineError.invalidResponse("缺少成品移动记录") }
+        guard let target = pendingFile else { throw EngineError.invalidResponse(String(localized: "缺少成品移动记录", bundle: .module)) }
         let manager = FileManager.default
         guard Aria2FileSafety.isInside(file, directory: directory) else {
-            throw EngineError.invalidResponse("未完成文件路径不在任务目录中")
+            throw EngineError.invalidResponse(String(localized: "未完成文件路径不在任务目录中", bundle: .module))
         }
         if manager.fileExists(atPath: file.path) {
             // 两个目录在同一保存卷；rename 原子替换，不做跨卷复制。

@@ -8,6 +8,9 @@ public enum SmartPasteParser {
         public let context: DownloadRequestContext
         public let message: String
         public var isInfoHash: Bool = false
+        public var requiresAttention: Bool = false
+
+        public var showsRecognitionResult: Bool { links.count != 1 || requiresAttention }
 
         public var isTorrentFile: Bool {
             !links.isEmpty && links.allSatisfy {
@@ -37,17 +40,15 @@ public enum SmartPasteParser {
             do {
                 let urls: [String]
                 let context: DownloadRequestContext
-                var message: String
+                var unknownOptions: [String] = []
                 if isCurl {
                     let result = try CurlCommandParser.parse(input)
                     urls = result.urls
                     context = result.context
-                    message = "已识别 cURL 请求"
-                    if !result.unknownOptions.isEmpty { message += "；已忽略选项：" + result.unknownOptions.joined(separator: "、") }
+                    unknownOptions = result.unknownOptions
                 } else {
                     urls = [InfoHashLink.magnet(for: input) ?? input]
                     context = DownloadRequestContext()
-                    message = "已识别下载链接"
                 }
                 var expanded: [String] = []
                 for url in urls {
@@ -60,11 +61,20 @@ public enum SmartPasteParser {
                     expanded.append(contentsOf: batch)
                 }
                 let links = expanded.flatMap(LinkParser.parse)
-                if !isCurl, !links.isEmpty, links.allSatisfy({
+                let isTorrent = !isCurl && !links.isEmpty && links.allSatisfy {
                     if case .torrentFile = $0 { return true }
                     return false
-                }) {
-                    message = "已识别种子文件"
+                }
+                func recognitionMessage(count: Int) -> String {
+                    if isCurl {
+                        if !unknownOptions.isEmpty {
+                            let options = unknownOptions.joined(separator: ", ")
+                            return String(localized: "已识别 cURL 请求（\(count) 个链接）；已忽略选项：\(options)", bundle: .module)
+                        }
+                        return String(localized: "已识别 cURL 请求（\(count) 个链接）", bundle: .module)
+                    }
+                    if isTorrent { return String(localized: "已识别种子文件（\(count) 个）", bundle: .module) }
+                    return String(localized: "已识别下载链接（\(count) 个）", bundle: .module)
                 }
                 let firstURL = urls.first.flatMap { URL(string: $0) }
                 let hasCredentials = context.requestCookie != nil || context.headers.keys.contains {
@@ -77,24 +87,25 @@ public enum SmartPasteParser {
                 if hasOtherHosts {
                     for link in links {
                         var scoped = context
-                        var reason = message
+                        var reason = recognitionMessage(count: 1)
                         if let firstURL, let url = URL(string: link.original), !HTTPResourceProbe.sameHost(firstURL, url) {
                             scoped = context.withoutCookie
                             scoped.headers = scoped.headers.filter {
                                 !["authorization", "proxy-authorization"].contains($0.key.lowercased())
                             }
-                            reason += "；地址与首个下载地址的主机或端口不同，未附加登录凭据。"
+                            reason = String(localized: "\(reason)；地址与首个下载地址的主机或端口不同，未附加登录凭据。", bundle: .module)
                         }
-                        rows.append(Row(line: line, links: [link], context: scoped, message: reason + "（1 个）"))
+                        rows.append(Row(line: line, links: [link], context: scoped, message: reason, requiresAttention: true))
                     }
                 } else {
                     rows.append(Row(line: line, links: links, context: context,
-                                    message: links.isEmpty ? "未识别到可下载的链接，请检查地址或文件类型。" : message + "（\(links.count) 个）",
-                                    isInfoHash: !isCurl && InfoHashLink.magnet(for: input) != nil))
+                                    message: links.isEmpty ? String(localized: "未识别到可下载的链接，请检查地址或文件类型。", bundle: .module) : recognitionMessage(count: links.count),
+                                    isInfoHash: !isCurl && InfoHashLink.magnet(for: input) != nil,
+                                    requiresAttention: !unknownOptions.isEmpty))
                 }
             } catch BatchURLExpander.ExpansionError.tooMany {
                 return [Row(line: line, links: [], context: DownloadRequestContext(),
-                            message: "下载地址展开总量超过 1000 个，请缩小范围或分批添加。")]
+                            message: String(localized: "下载地址展开总量超过 1000 个，请缩小范围或分批添加。", bundle: .module))]
             } catch {
                 rows.append(Row(line: line, links: [], context: DownloadRequestContext(), message: error.localizedDescription))
             }

@@ -80,12 +80,12 @@ final class PublicTrackerController {
                 let failures = try await self.service.refresh(subscriptions: subscriptions, force: force)
                 self.cache = await self.service.snapshot()
                 guard !Task.isCancelled else { return }
-                self.issue = failures > 0 ? "部分订阅更新失败，已保留上次结果" : nil
+                self.issue = failures > 0 ? String(localized: "部分订阅更新失败，已保留上次结果") : nil
                 self.apply()
                 await self.applyTask?.value
             } catch {
                 guard !Task.isCancelled else { return }
-                self.issue = "无法更新或保存 tracker 列表，已保留上次结果"
+                self.issue = String(localized: "无法更新或保存 tracker 列表，已保留上次结果")
             }
         }
     }

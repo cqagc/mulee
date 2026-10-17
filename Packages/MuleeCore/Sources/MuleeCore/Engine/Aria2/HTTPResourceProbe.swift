@@ -129,7 +129,7 @@ public enum HTTPResourceProbe {
             if HTTPDownloadFailure.isCertificateError(error) { throw HTTPDownloadFailure.invalidCertificate }
             throw error
         }
-        guard let response = response as? HTTPURLResponse else { throw EngineError.invalidResponse("无法读取 HTTP 响应") }
+        guard let response = response as? HTTPURLResponse else { throw EngineError.invalidResponse(String(localized: "无法读取 HTTP 响应", bundle: .module)) }
         return response
     }
 }

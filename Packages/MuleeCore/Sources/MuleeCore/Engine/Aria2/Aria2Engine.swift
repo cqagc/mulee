@@ -148,7 +148,7 @@ public actor Aria2Engine: DownloadEngine {
             repeat {
                 status = try await taskStatus(engineTaskID, using: client)
                 if ["paused", "error", "complete", "removed"].contains(status.status) { break }
-                guard ContinuousClock.now < deadline else { throw EngineError.invalidResponse("等待暂停下载超时") }
+                guard ContinuousClock.now < deadline else { throw EngineError.invalidResponse(String(localized: "等待暂停下载超时", bundle: .module)) }
                 try await Task.sleep(for: .milliseconds(25))
             } while true
         }
@@ -197,7 +197,7 @@ public actor Aria2Engine: DownloadEngine {
             .array([.string(url.absoluteString)]), .integer(0)
         ])
         guard changed.count == 2, changed[1] == 1 else {
-            throw EngineError.invalidResponse("无法替换下载链接")
+            throw EngineError.invalidResponse(String(localized: "无法替换下载链接", bundle: .module))
         }
         try rekeyIncomplete(engineTaskID, to: id, transfer: transfer)
         return id

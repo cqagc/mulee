@@ -30,7 +30,7 @@ public actor DownloadRequestCookieStore {
         if status == errSecItemNotFound { return nil }
         try check(status)
         guard let data = result as? Data, let value = String(data: data, encoding: .utf8) else {
-            throw EngineError.invalidResponse("无法读取下载 Cookie")
+            throw EngineError.invalidResponse(String(localized: "无法读取下载 Cookie", bundle: .module))
         }
         return value
     }
@@ -52,7 +52,7 @@ public actor DownloadRequestCookieStore {
     private func check(_ status: OSStatus) throws {
         guard status == errSecSuccess else {
             // 不携带查询内容或 Cookie；锁定等错误保留原项目，供稍后重试。
-            throw EngineError.invalidResponse("下载 Cookie 钥匙串访问失败（\(status)）")
+            throw EngineError.invalidResponse(String(localized: "下载 Cookie 钥匙串访问失败（\(status)）", bundle: .module))
         }
     }
 }

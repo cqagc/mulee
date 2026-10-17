@@ -4,7 +4,12 @@ public enum BatchURLExpander {
     public enum ExpansionError: String, Error, LocalizedError {
         case tooMany = "单条链接展开超过 1000 个，请缩小范围。"
         case invalidRange = "批量范围无效，请使用递增的数字或字母范围。"
-        public var errorDescription: String? { rawValue }
+        public var errorDescription: String? {
+            switch self {
+            case .tooMany: String(localized: "单条链接展开超过 1000 个，请缩小范围。", bundle: .module)
+            case .invalidRange: String(localized: "批量范围无效，请使用递增的数字或字母范围。", bundle: .module)
+            }
+        }
     }
 
     public static func expand(_ text: String, limit: Int = 1000) throws -> [String] {

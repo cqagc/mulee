@@ -27,7 +27,7 @@ struct Aria2ErrorDescriptions: Sendable {
         case 19: description = String(localized: "域名解析失败", bundle: .module)
         case 22: description = String(localized: "服务器响应异常", bundle: .module)
         case 24: description = String(localized: "需要登录认证", bundle: .module)
-        case 32: description = "校验值不一致，请重新下载"
+        case 32: description = String(localized: "校验值不一致，请重新下载", bundle: .module)
         default: description = String(localized: "下载出错", bundle: .module)
         }
         return String(localized: "\(description)（aria2 错误码 \(number)）", bundle: .module)

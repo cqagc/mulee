@@ -47,6 +47,8 @@ final class NewTaskModel {
         parseInput()
     }
 
+    var visibleInputRows: [SmartPasteParser.Row] { inputRows.filter(\.showsRecognitionResult) }
+
     var parsedLinks: [ParsedLink] { links.map(\.link) }
     var linkCount: Int { links.count }
     var downloadTaskCount: Int {

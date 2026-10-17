@@ -67,12 +67,12 @@ struct HTTPProxySettingsSection: View {
             try await model.coordinator?.refreshHTTPProxy()
             actual = HTTPProxyConfiguration(mode: settings.httpProxyMode, manualURL: settings.httpProxyURL)
             message = nil
-        } catch { message = "代理设置未能应用，请稍后重新应用。" }
+        } catch { message = String(localized: "代理设置未能应用，请稍后重新应用。") }
     }
 
     private func save() {
         guard let url = HTTPProxyConfiguration.manualURL(address), let host = url.host else {
-            message = "请输入有效的 HTTP 代理地址，例如 http://proxy.example.org:8080。"
+            message = String(localized: "请输入有效的 HTTP 代理地址，例如 http://proxy.example.org:8080。")
             return
         }
         // 口令不随地址进入 UserDefaults；地址里的登录信息也转存到钥匙串。
@@ -96,7 +96,7 @@ struct HTTPProxySettingsSection: View {
                 address = url.absoluteString
                 password = ""
                 await refresh()
-            } catch { message = "代理账号未能保存，原设置已保留；请解锁钥匙串后重试。" }
+            } catch { message = String(localized: "代理账号未能保存，原设置已保留；请解锁钥匙串后重试。") }
         }
     }
 }

@@ -163,6 +163,30 @@ import Testing
         #expect(draft.canStartDownload)
     }
 
+    @Test func routineRecognitionRowsAreHidden() {
+        let draft = NewTaskModel(inputText: "https://example.com/file.zip\nfile:///tmp/sample.torrent\n" + String(repeating: "a", count: 40)
+            + "\ncurl https://example.com/other.zip -H 'X-Test: sample'")
+        #expect(draft.inputRows.count == 4)
+        #expect(draft.visibleInputRows.isEmpty)
+        #expect(draft.linkCount == 4)
+    }
+
+    @Test func onlyExceptionalRecognitionRowsAreShown() {
+        let draft = NewTaskModel(inputText: "https://example.com/normal.zip\nhttps://example.com/[1-1].zip\nhttps://example.com/[2-3].zip\ninvalid\ncurl https://example.com/file | cat\ncurl https://example.com/other --unknown=value")
+        #expect(draft.visibleInputRows.map(\.line) == [3, 4, 5, 6])
+        #expect(draft.visibleInputRows.map { $0.links.count } == [2, 0, 0, 1])
+        draft.inputText = "https://example.com/file.zip"
+        #expect(draft.visibleInputRows.isEmpty)
+    }
+
+    @Test func debugSampleTorrentDoesNotDuplicateHistory() {
+        let draft = NewTaskModel(inputText: DebugLaunchOptions.samplePasteText)
+        let app = AppModel(tasks: MockData.tasks, preventsSleepWhileDownloading: false)
+        draft.refreshDuplicateWarnings(in: app)
+        #expect(draft.links.filter { $0.link.kind == .bittorrent }.count == 1)
+        #expect(draft.links.filter { $0.link.kind == .bittorrent }.allSatisfy { $0.duplicateMessage == nil })
+    }
+
     @Test func diskConfirmationIsBoundToSizeAndDirectory() throws {
         let draft = NewTaskModel(parser: { _ in NewTaskPreviewData.links }, metadataProvider: ExampleTorrentMetadataProvider())
         #expect(!draft.checkDisk { size, _ in size > 0 })

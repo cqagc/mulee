@@ -723,7 +723,7 @@ final class DownloadCoordinator {
                         }
                     }
                     guard verification.matches == true else {
-                        throw EngineError.invalidResponse("校验值不一致，未完成文件已保留，请重新下载。")
+                        throw EngineError.invalidResponse(String(localized: "校验值不一致，未完成文件已保留，请重新下载。"))
                     }
                 }
                 guard generation == token, task == nil || model.tasks.contains(where: {
@@ -820,6 +820,8 @@ final class DownloadCoordinator {
         for task in model.tasks where task.deletedAt == nil && ([.completed, .seeding].contains(task.status)
             || (task.kind == .http && task.status == .failed && task.checksum != nil
                 && (task.errorMessage?.contains("校验值不一致") == true
+                    || task.errorMessage?.contains(String(localized: "校验值不一致，未完成文件已保留，请重新下载。")) == true
+                    || task.errorMessage?.contains(String(localized: "校验值不一致，请重新下载")) == true
                     || task.totalBytes.map { $0 > 0 && task.receivedBytes >= $0 } == true))) {
             guard let file = task.savePath, !checkedCompletions.contains(task.id), checksumJobs[task.id] == nil else { continue }
             if let result = task.checksumVerification, result.actual != nil, result.expected == task.checksum {
@@ -838,7 +840,7 @@ final class DownloadCoordinator {
                     return
                 } catch {
                     if let expected {
-                        verification = ChecksumVerification(expected: expected, errorMessage: "无法读取文件进行校验，请检查文件是否仍在原位置。")
+                        verification = ChecksumVerification(expected: expected, errorMessage: String(localized: "无法读取文件进行校验，请检查文件是否仍在原位置。"))
                     }
                 }
                 guard let self, !Task.isCancelled, self.generation == token else { return }

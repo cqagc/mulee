@@ -5,7 +5,7 @@ import SwiftUI
 /// Browser installation remains an explicit user action.
 struct BrowserExtensionSection: View {
     @Environment(\.scenePhase) private var scenePhase
-    @State private var safariStatus = "正在读取…"
+    @State private var safariStatus = String(localized: "正在读取…")
     @State private var issue: String?
     @State private var showsChromeInstructions = false
     private let identifier = "com.cqagc.mulee.safari-extension"
@@ -44,10 +44,10 @@ struct BrowserExtensionSection: View {
     private func refreshSafariState() async {
         do {
             let state = try await SFSafariExtensionManager.stateOfSafariExtension(withIdentifier: identifier)
-            safariStatus = state.isEnabled ? "已启用" : "未启用"
+            safariStatus = state.isEnabled ? String(localized: "已启用") : String(localized: "未启用")
             issue = nil
         } catch {
-            safariStatus = "暂时无法读取"
+            safariStatus = String(localized: "暂时无法读取")
             issue = error.localizedDescription
         }
     }
@@ -67,7 +67,7 @@ struct BrowserExtensionSection: View {
         guard let resources = Bundle.main.resourceURL else { return }
         let directory = resources.appending(path: "BrowserExtensions/chrome", directoryHint: .isDirectory)
         guard FileManager.default.fileExists(atPath: directory.path) else {
-            issue = "此构建未包含 Chrome 扩展。"
+            issue = String(localized: "此构建未包含 Chrome 扩展。")
             return
         }
         NSWorkspace.shared.activateFileViewerSelecting([directory])

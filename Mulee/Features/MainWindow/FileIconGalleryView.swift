@@ -6,9 +6,9 @@ struct FileIconGalleryView: View {
     var body: some View {
         ScrollView {
             HStack(alignment: .top, spacing: 0) {
-                FileIconGalleryPanel(title: "亮色", colorScheme: .light)
+                FileIconGalleryPanel(title: String(localized: "亮色"), colorScheme: .light)
                     .environment(\.colorScheme, .light)
-                FileIconGalleryPanel(title: "暗色", colorScheme: .dark)
+                FileIconGalleryPanel(title: String(localized: "暗色"), colorScheme: .dark)
                     .environment(\.colorScheme, .dark)
             }
         }

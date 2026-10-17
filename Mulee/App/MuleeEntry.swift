@@ -9,9 +9,9 @@ import SwiftUI
             // 命令行只输出结论，不记录物理接口、局域网或 WAN 地址。
             let result: String
             switch snapshot.publicIPv4Status {
-            case .unknown: result = "未确认"
-            case .noPublicIPv4: result = "运营商没有分配公网 IPv4"
-            case .publicIPv4: result = "正常"
+            case .unknown: result = String(localized: "未确认")
+            case .noPublicIPv4: result = String(localized: "运营商没有分配公网 IPv4")
+            case .publicIPv4: result = String(localized: "正常")
             }
             print(result)
             return

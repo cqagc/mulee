@@ -15,7 +15,16 @@ public enum CurlCommandParser {
         case cookieFile = "Cookie 文件不会被读取，请复制包含 Cookie 请求头的请求。"
         case noURL = "未找到可下载的地址，请检查 cURL 请求。"
         case invalid = "请求头或来源地址无效，请检查请求内容。"
-        public var errorDescription: String? { rawValue }
+        public var errorDescription: String? {
+            switch self {
+            case .unsafe: String(localized: "命令含有 Shell 操作符，无法安全识别。请只复制 cURL 请求。", bundle: .module)
+            case .quotes: String(localized: "命令的引号或转义不完整，请重新复制完整请求。", bundle: .module)
+            case .argument: String(localized: "请求选项缺少参数，请重新复制完整请求。", bundle: .module)
+            case .cookieFile: String(localized: "Cookie 文件不会被读取，请复制包含 Cookie 请求头的请求。", bundle: .module)
+            case .noURL: String(localized: "未找到可下载的地址，请检查 cURL 请求。", bundle: .module)
+            case .invalid: String(localized: "请求头或来源地址无效，请检查请求内容。", bundle: .module)
+            }
+        }
     }
 
     public static func parse(_ text: String) throws -> Result {

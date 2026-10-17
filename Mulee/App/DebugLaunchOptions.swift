@@ -51,7 +51,7 @@ enum DebugLaunchOptions {
     static var usesProxiedNetwork: Bool { defaults.bool(forKey: "MuleeProxiedNetwork") }
 
     static let samplePasteText = """
-        magnet:?xt=urn:btih:dd8255ecdc7ca55fb0bbf81323d87062db1f6d1c&dn=Big+Buck+Bunny
+        magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=Big+Buck+Bunny
         ed2k://|file|雾港奇谭 繁中版.rar|612000000|9F3A0C5E7D21B84A6C0E93F15B71DC21|/
         thunder://QUFodHRwczovL2V4YW1wbGUuY29tL3NpbnRlbC1vc3QuemlwWlo=
         https://www.bilibili.com/video/BV1xx411c7XX

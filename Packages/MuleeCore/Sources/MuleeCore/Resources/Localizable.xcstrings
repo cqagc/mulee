@@ -5336,6 +5336,1359 @@
           }
         }
       }
+    },
+    "校验值不一致，请重新下载": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "校验值不一致，请重新下载"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The checksum doesn’t match. Download the file again"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "總和檢查碼不符，請重新下載"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チェックサムが一致しません。もう一度ダウンロードしてください"
+          }
+        }
+      }
+    },
+    "%@；地址与首个下载地址的主机或端口不同，未附加登录凭据。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@；地址与首个下载地址的主机或端口不同，未附加登录凭据。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@. The host or port differs from the first download address, so login credentials weren’t attached."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@；位址的主機或連接埠與第一個下載位址不同，因此未附加登入憑證。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@。最初のダウンロード先とホストまたはポートが異なるため、ログイン情報を付加していません。"
+          }
+        }
+      }
+    },
+    "Cookie 文件不会被读取，请复制包含 Cookie 请求头的请求。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cookie 文件不会被读取，请复制包含 Cookie 请求头的请求。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cookie files won’t be read. Copy a request that includes a Cookie header."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不會讀取 Cookie 檔案，請複製包含 Cookie 標頭的請求。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cookieファイルは読み込みません。Cookieヘッダーを含むリクエストをコピーしてください。"
+          }
+        }
+      }
+    },
+    "tracker 列表超过大小上限（512 KB）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tracker 列表超过大小上限（512 KB）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The tracker list exceeds the size limit (512 KB)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tracker 清單超過大小上限（512 KB）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トラッカーリストのサイズが上限（512 KB）を超えています"
+          }
+        }
+      }
+    },
+    "tracker 数量超过上限": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tracker 数量超过上限"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The number of trackers exceeds the limit"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tracker 數量超過上限"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トラッカー数が上限を超えています"
+          }
+        }
+      }
+    },
+    "下载 Cookie 钥匙串访问失败（%d）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载 Cookie 钥匙串访问失败（%d）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t access download cookies in Keychain (%d)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法存取鑰匙圈中的下載 Cookie（%d）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーチェーンのダウンロード用Cookieにアクセスできません（%d）"
+          }
+        }
+      }
+    },
+    "下载地址展开总量超过 1000 个，请缩小范围或分批添加。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载地址展开总量超过 1000 个，请缩小范围或分批添加。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More than 1,000 download links were generated. Use a smaller range or add them in batches."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下載位址展開總數超過 1000 個，請縮小範圍或分批新增。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展開後のダウンロードリンクが合計1,000件を超えています。範囲を狭めるか、分けて追加してください。"
+          }
+        }
+      }
+    },
+    "仅音频": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅音频"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio only"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅音訊"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声のみ"
+          }
+        }
+      }
+    },
+    "单条链接展开超过 1000 个，请缩小范围。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单条链接展开超过 1000 个，请缩小范围。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A single link expands to more than 1,000 links. Use a smaller range."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "單一連結展開超過 1000 個，請縮小範圍。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1つのリンクの展開結果が1,000件を超えています。範囲を狭めてください。"
+          }
+        }
+      }
+    },
+    "命令含有 Shell 操作符，无法安全识别。请只复制 cURL 请求。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令含有 Shell 操作符，无法安全识别。请只复制 cURL 请求。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The command contains shell operators and can’t be parsed safely. Copy only the cURL request."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令含有 Shell 運算子，無法安全辨識。請只複製 cURL 請求。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シェル演算子が含まれているため、安全に解析できません。cURLリクエストだけをコピーしてください。"
+          }
+        }
+      }
+    },
+    "命令的引号或转义不完整，请重新复制完整请求。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令的引号或转义不完整，请重新复制完整请求。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The command has incomplete quotes or escapes. Copy the complete request again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "命令的引號或跳脫字元不完整，請重新複製完整請求。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "引用符またはエスケープが不完全です。リクエスト全体をもう一度コピーしてください。"
+          }
+        }
+      }
+    },
+    "已识别 cURL 请求（%lld 个链接）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已识别 cURL 请求（%lld 个链接）"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recognized cURL request (%lld link)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recognized cURL request (%lld links)"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已辨識 cURL 請求（%lld 個連結）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cURLリクエストを認識しました（%lld件のリンク）"
+          }
+        }
+      }
+    },
+    "已识别 cURL 请求（%lld 个链接）；已忽略选项：%@": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已识别 cURL 请求（%lld 个链接）；已忽略选项：%@"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recognized cURL request (%lld link); ignored options: %@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recognized cURL request (%lld links); ignored options: %@"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已辨識 cURL 請求（%lld 個連結）；已忽略選項：%@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cURLリクエストを認識しました（%lld件のリンク）。無視したオプション：%@"
+          }
+        }
+      }
+    },
+    "已识别下载链接（%lld 个）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已识别下载链接（%lld 个）"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recognized %lld download link"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recognized %lld download links"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已辨識下載連結（%lld 個）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のダウンロードリンクを認識しました"
+          }
+        }
+      }
+    },
+    "已识别种子文件（%lld 个）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已识别种子文件（%lld 个）"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recognized %lld torrent file"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Recognized %lld torrent files"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已辨識種子檔（%lld 個）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のTorrentファイルを認識しました"
+          }
+        }
+      }
+    },
+    "建议文件名不能包含路径": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建议文件名不能包含路径"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The suggested filename can’t contain a path"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "建議檔名不能包含路徑"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "推奨ファイル名にパスを含めることはできません"
+          }
+        }
+      }
+    },
+    "批量范围无效，请使用递增的数字或字母范围。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "批量范围无效，请使用递增的数字或字母范围。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The batch range is invalid. Use an ascending range of numbers or letters."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "批次範圍無效，請使用遞增的數字或字母範圍。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一括指定の範囲が無効です。数字または英字を昇順で指定してください。"
+          }
+        }
+      }
+    },
+    "文件在服务器上变了，需要确认后从头下载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件在服务器上变了，需要确认后从头下载。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file on the server has changed. Confirm to download it again from the beginning."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器上的檔案已變更，需要確認後從頭下載。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバ上のファイルが変更されています。確認してから最初からダウンロードしてください。"
+          }
+        }
+      }
+    },
+    "文件已被移走或删除，请换个链接继续。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件已被移走或删除，请换个链接继续。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file was moved or deleted. Use another link to continue."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "檔案已被移動或刪除，請更換連結以繼續。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルは移動または削除されました。別のリンクで続行してください。"
+          }
+        }
+      }
+    },
+    "无法替换下载链接": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法替换下载链接"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download link couldn’t be replaced"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法替換下載連結"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードリンクを置き換えられません"
+          }
+        }
+      }
+    },
+    "无法确认是同一个文件，需要确认后从头下载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法确认是同一个文件，需要确认后从头下载。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file’s identity couldn’t be confirmed. Confirm to download it again from the beginning."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法確認是否為同一個檔案，需要確認後從頭下載。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同じファイルか確認できません。確認してから最初からダウンロードしてください。"
+          }
+        }
+      }
+    },
+    "无法读取 HTTP 响应": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取 HTTP 响应"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The HTTP response couldn’t be read"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法讀取 HTTP 回應"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTP応答を読み取れません"
+          }
+        }
+      }
+    },
+    "无法读取下载 Cookie": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取下载 Cookie"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The download cookies couldn’t be read"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法讀取下載 Cookie"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード用Cookieを読み取れません"
+          }
+        }
+      }
+    },
+    "无法读取视频格式，仍可跟随全局设置添加。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取视频格式，仍可跟随全局设置添加。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video formats couldn’t be loaded. You can still add the task using global settings."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法讀取影片格式，仍可依全域設定新增。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画形式を取得できません。全体設定を使用してタスクを追加できます。"
+          }
+        }
+      }
+    },
+    "服务器响应异常（HTTP %lld）。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器响应异常（HTTP %lld）。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unexpected server response (HTTP %lld)."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器回應異常（HTTP %lld）。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバから予期しない応答がありました（HTTP %lld）。"
+          }
+        }
+      }
+    },
+    "服务器把下载换成了网页，请获取新的下载链接。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "服务器把下载换成了网页，请获取新的下载链接。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server returned a web page instead of the download. Get a new download link."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "伺服器回傳了網頁而非下載檔案，請取得新的下載連結。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバがファイルの代わりにWebページを返しました。新しいダウンロードリンクを取得してください。"
+          }
+        }
+      }
+    },
+    "未完成文件路径不在任务目录中": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未完成文件路径不在任务目录中"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The incomplete file is outside the task directory"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未完成檔案的路徑不在任務目錄中"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未完了ファイルのパスがタスクのディレクトリ外にあります"
+          }
+        }
+      }
+    },
+    "未找到可下载的地址，请检查 cURL 请求。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未找到可下载的地址，请检查 cURL 请求。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No download address was found. Check the cURL request."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到可下載的位址，請檢查 cURL 請求。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード先が見つかりません。cURLリクエストを確認してください。"
+          }
+        }
+      }
+    },
+    "未识别到可下载的链接，请检查地址或文件类型。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未识别到可下载的链接，请检查地址或文件类型。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No download link was recognized. Check the address or file type."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未辨識到可下載的連結，請檢查位址或檔案類型。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードリンクを認識できません。アドレスまたはファイルの種類を確認してください。"
+          }
+        }
+      }
+    },
+    "来源页面链接无效": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来源页面链接无效"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The source page link is invalid"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "來源頁面連結無效"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロード元ページのリンクが無効です"
+          }
+        }
+      }
+    },
+    "浏览器下载登录状态无效": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浏览器下载登录状态无效"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The browser’s download login data is invalid"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "瀏覽器下載登入狀態無效"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザのダウンロード用ログイン情報が無効です"
+          }
+        }
+      }
+    },
+    "目标位置已有同名文件，请选择保留或覆盖": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目标位置已有同名文件，请选择保留或覆盖"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A file with the same name exists at the destination. Choose whether to keep or overwrite it"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目標位置已有同名檔案，請選擇保留或覆寫"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存先に同名のファイルがあります。保持するか上書きするか選択してください"
+          }
+        }
+      }
+    },
+    "目标已有同名文件，请选择重命名或覆盖后重试。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目标已有同名文件，请选择重命名或覆盖后重试。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A file with the same name exists at the destination. Choose rename or overwrite, then try again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目標已有同名檔案，請選擇重新命名或覆寫後重試。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存先に同名のファイルがあります。名前の変更または上書きを選択して再試行してください。"
+          }
+        }
+      }
+    },
+    "私有种子不允许追加 tracker": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私有种子不允许追加 tracker"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trackers can’t be added to a private torrent"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "私有種子不允許新增 tracker"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライベートTorrentにトラッカーを追加することはできません"
+          }
+        }
+      }
+    },
+    "种子元数据尚未就绪，请稍后重试": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "种子元数据尚未就绪，请稍后重试"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrent metadata isn’t ready. Try again later"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "種子中繼資料尚未就緒，請稍後重試"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torrentメタデータの準備ができていません。しばらくしてから再試行してください"
+          }
+        }
+      }
+    },
+    "等待暂停下载超时": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等待暂停下载超时"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timed out waiting for the download to pause"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等待暫停下載逾時"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードの一時停止を待機中にタイムアウトしました"
+          }
+        }
+      }
+    },
+    "缺少成品移动记录": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缺少成品移动记录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The completed file’s move record is missing"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缺少完成檔案的移動記錄"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了ファイルの移動記録がありません"
+          }
+        }
+      }
+    },
+    "视频格式需要登录，传递登录状态后可重新打开面板；仍可跟随全局设置添加。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频格式需要登录，传递登录状态后可重新打开面板；仍可跟随全局设置添加。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in to load video formats, then reopen this panel after passing your login state. You can still add the task using global settings."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影片格式需要登入，傳遞登入狀態後可重新開啟面板；仍可依全域設定新增。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画形式の取得にはログインが必要です。ログイン状態を渡してからパネルを開き直してください。全体設定を使用して追加することもできます。"
+          }
+        }
+      }
+    },
+    "订阅地址无效，请填写 HTTP 或 HTTPS 地址": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅地址无效，请填写 HTTP 或 HTTPS 地址"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The subscription address is invalid. Enter an HTTP or HTTPS address"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "訂閱位址無效，請填寫 HTTP 或 HTTPS 位址"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購読先のアドレスが無効です。HTTPまたはHTTPSのアドレスを入力してください"
+          }
+        }
+      }
+    },
+    "订阅未返回有效的 tracker 列表": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅未返回有效的 tracker 列表"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The subscription didn’t return a valid tracker list"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "訂閱未傳回有效的 tracker 清單"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "購読先から有効なトラッカーリストが返されませんでした"
+          }
+        }
+      }
+    },
+    "请求头或来源地址无效，请检查请求内容。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请求头或来源地址无效，请检查请求内容。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The headers or source address are invalid. Check the request."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請求標頭或來源位址無效，請檢查請求內容。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ヘッダーまたはダウンロード元アドレスが無効です。リクエストの内容を確認してください。"
+          }
+        }
+      }
+    },
+    "请求头格式无效": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请求头格式无效"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The request header format is invalid"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請求標頭格式無效"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リクエストヘッダーの形式が無効です"
+          }
+        }
+      }
+    },
+    "请求选项缺少参数，请重新复制完整请求。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请求选项缺少参数，请重新复制完整请求。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A request option is missing its argument. Copy the complete request again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請求選項缺少參數，請重新複製完整請求。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リクエストのオプションに引数がありません。リクエスト全体をもう一度コピーしてください。"
+          }
+        }
+      }
+    },
+    "读取视频格式超时，仍可跟随全局设置添加。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "读取视频格式超时，仍可跟随全局设置添加。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading video formats timed out. You can still add the task using global settings."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "讀取影片格式逾時，仍可依全域設定新增。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動画形式の取得がタイムアウトしました。全体設定を使用してタスクを追加できます。"
+          }
+        }
+      }
+    },
+    "链接已过期或无权访问，请换个链接继续。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "链接已过期或无权访问，请换个链接继续。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The link has expired or access was denied. Use another link to continue."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連結已過期或沒有存取權限，請更換連結以繼續。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンクの有効期限が切れたか、アクセスが拒否されました。別のリンクで続行してください。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

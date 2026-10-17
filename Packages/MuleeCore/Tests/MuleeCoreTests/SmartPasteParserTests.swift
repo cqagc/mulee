@@ -6,7 +6,7 @@ import Testing
     @Test func localTorrentPathsShareTotalExpansionLimit() {
         let rows = SmartPasteParser.parse("https://example.com/[1-1000].zip\n/tmp/sample.torrent")
         #expect(rows.flatMap(\.links).isEmpty)
-        #expect(rows.first?.message.contains("1000") == true)
+        #expect(rows.first?.message.replacingOccurrences(of: ",", with: "").contains("1000") == true)
     }
 
     @Test func absoluteTorrentPathsKeepSpacesUnicodeHashAndLiteralRanges() throws {
@@ -25,8 +25,26 @@ import Testing
     @Test func torrentFilesHaveTheirOwnRecognitionMessage() throws {
         let rows = SmartPasteParser.parse("file:///tmp/sample.torrent")
         #expect(rows.first?.links.count == 1)
-        #expect(rows.first?.message == "已识别种子文件（1 个）")
-        #expect(SmartPasteParser.parse("https://example.com/sample.zip").first?.message == "已识别下载链接（1 个）")
+        #expect(rows.first?.isTorrentFile == true)
+        let download = SmartPasteParser.parse("https://example.com/sample.zip").first
+        #expect(download?.isTorrentFile == false)
+        #expect(rows.first?.message.isEmpty == false)
+        #expect(rows.first?.message != download?.message)
+    }
+
+    @Test func recognitionVisibilityUsesParseResults() {
+        let normal = SmartPasteParser.parse("https://example.com/[1-1].zip")
+        #expect(normal.first?.showsRecognitionResult == false)
+        let expanded = SmartPasteParser.parse("https://example.com/[1-2].zip")
+        #expect(expanded.first?.showsRecognitionResult == true)
+        let ignored = SmartPasteParser.parse("curl https://example.com/file --unknown=value")
+        #expect(ignored.first?.requiresAttention == true)
+        #expect(ignored.first?.message.contains("--unknown") == true)
+        #expect(SmartPasteParser.parse("curl https://example.com/file | cat").first?.showsRecognitionResult == true)
+        #expect(SmartPasteParser.parse("invalid").first?.showsRecognitionResult == true)
+        let scoped = SmartPasteParser.parse("curl https://one.example/a https://two.example/b -b sid=sample")
+        #expect(scoped.count == 2)
+        #expect(scoped.allSatisfy { $0.showsRecognitionResult })
     }
 
     @Test func curlHeadersQuotesAndContinuation() throws {
@@ -108,7 +126,7 @@ import Testing
             if URL(string: url)?.host?.lowercased() == "evil.example" {
                 #expect(context.requestCookie == nil)
                 #expect(context.headers["Authorization"] == nil)
-                #expect(message.contains("登录凭据"))
+                #expect(message != rows.first?.message)
             } else {
                 #expect(context.requestCookie == "sid=secret")
                 #expect(context.headers["Authorization"] == "Bearer test")
@@ -119,7 +137,7 @@ import Testing
     @Test func totalExpansionLimitAcrossRows() {
         let rows = SmartPasteParser.parse("https://example.com/[1-1000].bin\nhttps://example.com/[1-1000].bin")
         #expect(rows.flatMap(\.links).isEmpty)
-        #expect(rows.last?.message.contains("1000") == true)
+        #expect(rows.last?.message.replacingOccurrences(of: ",", with: "").contains("1000") == true)
     }
 
     @Test func totalExpansionStopsBeforeAllocatingAllURLs() {
@@ -128,7 +146,7 @@ import Testing
         let rows = SmartPasteParser.parse(text)
         #expect(start.duration(to: .now) < .seconds(1))
         #expect(rows.flatMap(\.links).isEmpty)
-        #expect(rows.last?.message.contains("1000") == true)
+        #expect(rows.last?.message.replacingOccurrences(of: ",", with: "").contains("1000") == true)
         let curl = "curl " + Array(repeating: "https://example.com/[1-1000].bin", count: 10_000).joined(separator: " ")
         let curlStart = ContinuousClock.now
         #expect(SmartPasteParser.parse(curl).flatMap(\.links).isEmpty)

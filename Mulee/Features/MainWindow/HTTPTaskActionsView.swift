@@ -44,7 +44,7 @@ struct HTTPTaskActionsView: View {
                     guard let url = URL(string: replacement.trimmingCharacters(in: .whitespacesAndNewlines)),
                           ["http", "https"].contains(url.scheme?.lowercased() ?? ""), url.host != nil,
                           url.user == nil, url.password == nil else {
-                        message = "请输入有效的 HTTP 或 HTTPS 下载链接。"
+                        message = String(localized: "请输入有效的 HTTP 或 HTTPS 下载链接。")
                         return
                     }
                     checkedURL = url
@@ -54,7 +54,7 @@ struct HTTPTaskActionsView: View {
                 .disabled(isWorking || replacement.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.coordinator == nil)
                 Button("从浏览器抓取新链接") {
                     model.waitForBrowserHTTPReplacement(task.id)
-                    message = "在浏览器里重新点下载，Mulee 会接住新链接。等待五分钟内同网站或同文件名的链接。"
+                    message = String(localized: "在浏览器里重新点下载，Mulee 会接住新链接。等待五分钟内同网站或同文件名的链接。")
                 }
                 .disabled(isWorking || model.coordinator == nil)
                 if model.waitingHTTPReplacement?.taskID == task.id {
@@ -124,7 +124,7 @@ struct HTTPTaskActionsView: View {
             do {
                 try await coordinator.retryHTTPAuthentication(task.id, credential: credential)
                 showsAuthentication = false
-                message = "认证已保存，任务将重试下载。"
+                message = String(localized: "认证已保存，任务将重试下载。")
             } catch { message = EngineStatusPresentation.errorMessage(error) }
         }
     }
@@ -139,7 +139,7 @@ struct HTTPTaskActionsView: View {
             do {
                 try await coordinator.addHTTPMirror(task.id, url: url)
                 mirror = ""
-                message = "镜像地址已添加，正在下载同一个文件。"
+                message = String(localized: "镜像地址已添加，正在下载同一个文件。")
             } catch { message = EngineStatusPresentation.errorMessage(error) }
         }
     }
@@ -153,7 +153,7 @@ struct HTTPTaskActionsView: View {
             do {
                 try await coordinator.replaceHTTPLink(task.id, newURL: url, restartFromScratch: restart, requestContext: checkedContext)
                 replacement = ""
-                message = "链接已更新，任务将继续下载。"
+                message = String(localized: "链接已更新，任务将继续下载。")
             } catch let failure as HTTPDownloadFailure where failure == .resourceChanged || failure == .unknownIdentity {
                 message = failure.localizedDescription
                 needsRestartConfirmation = true

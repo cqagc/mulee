@@ -23,7 +23,13 @@ public enum YtDlpFormats {
         case failed = "无法读取视频格式，仍可跟随全局设置添加。"
         case login = "视频格式需要登录，传递登录状态后可重新打开面板；仍可跟随全局设置添加。"
         case timeout = "读取视频格式超时，仍可跟随全局设置添加。"
-        public var errorDescription: String? { rawValue }
+        public var errorDescription: String? {
+            switch self {
+            case .failed: String(localized: "无法读取视频格式，仍可跟随全局设置添加。", bundle: .module)
+            case .login: String(localized: "视频格式需要登录，传递登录状态后可重新打开面板；仍可跟随全局设置添加。", bundle: .module)
+            case .timeout: String(localized: "读取视频格式超时，仍可跟随全局设置添加。", bundle: .module)
+            }
+        }
     }
 
     public static func fetch(
@@ -116,7 +122,7 @@ public enum YtDlpFormats {
             let audio = format["acodec"] as? String ?? "none"
             guard video != "none" || audio != "none" else { return nil }
             let height = (format["height"] as? NSNumber)?.intValue
-            let resolution = height.map { "\($0)p" } ?? (format["resolution"] as? String) ?? "仅音频"
+            let resolution = height.map { "\($0)p" } ?? (format["resolution"] as? String) ?? String(localized: "仅音频", bundle: .module)
             let bytes = (format["filesize"] as? NSNumber)?.int64Value ?? (format["filesize_approx"] as? NSNumber)?.int64Value
             return YtDlpFormat(id: id, resolution: String(resolution.prefix(80)),
                                codec: String((video == "none" ? audio : video + (audio == "none" ? "" : " / " + audio)).prefix(160)),

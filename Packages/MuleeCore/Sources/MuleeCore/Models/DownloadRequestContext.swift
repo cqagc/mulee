@@ -51,18 +51,18 @@ public struct DownloadRequestContext: Sendable, Hashable, Codable {
                   (48...57).contains(byte) || (65...90).contains(byte) || (97...122).contains(byte)
                       || "!#$%&'*+-.^_`|~".utf8.contains(byte)
               } }) else {
-            throw EngineError.invalidResponse("请求头格式无效")
+            throw EngineError.invalidResponse(String(localized: "请求头格式无效", bundle: .module))
         }
         if let suggestedFilename {
             guard !suggestedFilename.isEmpty, ![".", ".."].contains(suggestedFilename),
                   !suggestedFilename.contains("/"), !suggestedFilename.contains("\\") else {
-                throw EngineError.invalidResponse("建议文件名不能包含路径")
+                throw EngineError.invalidResponse(String(localized: "建议文件名不能包含路径", bundle: .module))
             }
         }
         if let referer {
             guard ["http", "https"].contains(referer.scheme?.lowercased() ?? ""),
                   referer.host != nil, referer.user == nil, referer.password == nil else {
-                throw EngineError.invalidResponse("来源页面链接无效")
+                throw EngineError.invalidResponse(String(localized: "来源页面链接无效", bundle: .module))
             }
         }
     }

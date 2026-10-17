@@ -24,7 +24,7 @@ public struct DownloadCookieRequest: Codable, Sendable, CustomStringConvertible,
               ["http", "https"].contains(request.url.scheme?.lowercased() ?? ""), request.url.host != nil,
               request.url.user == nil, request.url.password == nil, !request.cookie.isEmpty,
               !request.cookie.utf8.contains(where: { $0 < 32 || $0 == 127 }) else {
-            throw EngineError.invalidResponse("浏览器下载登录状态无效")
+            throw EngineError.invalidResponse(String(localized: "浏览器下载登录状态无效", bundle: .module))
         }
         return request
     }
