@@ -51,13 +51,13 @@
 
 Mulee supports HTTP / HTTPS / FTP, BitTorrent and magnet links, eD2k, and video downloads. Downloads share a queue and settings. It is free and open source, and will never include ads.
 
-Mulee supports **Apple Silicon Macs running macOS 26 or later**. The app is available in English, Simplified Chinese, and Traditional Chinese.
+Mulee supports **Apple Silicon Macs running macOS 26 or later**. The interface supports English, Simplified Chinese, Traditional Chinese, and Japanese, selectable in Settings.
 
 > [!IMPORTANT]
 > Mulee is a download tool. Only download content you have the right to access. Mulee does not include resource search.
 
 > [!NOTE]
-> Mulee is an early release in the 0.1.x series. The current project version is **0.1.3**.
+> Mulee is an early release in the 0.1.x series. The current project version is **0.1.11**.
 
 ---
 
@@ -81,16 +81,17 @@ All tasks shown are sample data. Click an image to view it at full size.
 
 | Feature | Description |
 |---|---|
-| HTTP / HTTPS / FTP | aria2 handles multi-connection downloads, resuming, and restoring tasks after a restart. |
-| BitTorrent / magnet / .torrent | libtorrent 2.0 supports file selection and seeding policies: throttle or stop at a 1:1 share ratio, with an optional exemption for private torrents. Public tracker subscriptions are supported. |
-| eD2k | Uses aMule 3.1 (`amuled`). Downloads of rare files can wait for sources for weeks. Shows queue position, source counts, when a complete source was last seen, and source activity over the past 14 days. Waiting for sources is a normal task state. |
-| Video | Uses yt-dlp, with Bilibili and YouTube as the main supported sites. Bilibili danmaku can be converted to ASS subtitles. Mulee downloads and verifies yt-dlp, Deno, and ffmpeg itself. |
+| HTTP / HTTPS / FTP | aria2 supports multi-connection downloads, resuming after a restart, Metalink, mirrors, proxies, checksums, link replacement to resume downloads, and download rules. HTTP video downloads can play while downloading. |
+| BitTorrent / magnet / .torrent | libtorrent 2.0 supports file selection, public tracker subscriptions and editing, peer bans, torrent creation, watch folders, playback while downloading, and copying magnet links. Seeding policies use share ratio and time limits, with separate settings for private torrents. |
+| eD2k | Uses aMule 3.1 (`amuled`). Downloads of rare files can wait for sources for weeks; task details show queue position, source counts, when a complete source was last seen, and source activity over the past 14 days. |
+| Video | yt-dlp supports Bilibili parts and collections and individual video selection from YouTube playlists, subtitles, audio-only downloads, time ranges, and embedding metadata, thumbnails, and chapters; Bilibili danmaku can be converted to ASS subtitles. Mulee downloads and verifies yt-dlp, Deno, ffmpeg, and ffprobe itself. |
 | Thunder links | Decodes `thunder://` links and passes the original URL to the appropriate engine. |
 | Automatic extraction | 7-Zip extracts completed downloads, stores password-rule secrets in Keychain, and repairs garbled GBK / Big5 / Shift-JIS filenames. |
+| Queue & organization | Per-task speed limits and priorities, stalled tasks yielding their slots, queue ordering, sorting, tags, smart lists, Recently Deleted, and tracking of moved files. Global speed and concurrency limits apply across download types. |
 | Network diagnostics | Checks whether P2P traffic goes through a proxy and whether listening ports accept incoming connections. Includes an eD2k direct rule to copy and instructions for port forwarding. |
-| macOS integration | Default handler for magnet / ed2k / thunder / .torrent, Chrome and Safari extensions, live menu bar speeds, and sleep prevention while downloading. |
+| macOS integration | Default handler for magnet / ed2k / thunder / .torrent, Chrome / Safari extensions, live speed in the menu bar, Dock badge and menu, torrent previews in Finder, Shortcuts, interface sounds and notifications. Downloads pause when their disk is disconnected or the Mac sleeps, and finished files carry their source for Gatekeeper checks. |
 
-The app bundles four helpers built from pinned source versions: `aria2c`, `mulee-torrentd`, `amuled`, and `7zz`. Their dynamic dependencies are limited to system libraries. The distributed app is Developer ID signed and notarized by Apple.
+The app bundles four download helpers built from pinned source versions (`aria2c`, `mulee-torrentd`, `amuled`, and `7zz`), plus Safari and Quick Look preview extensions. The four helpers dynamically link only system libraries; aria2 has Metalink enabled and uses the system libxml2. The distributed app is Developer ID signed and notarized by Apple.
 
 ---
 

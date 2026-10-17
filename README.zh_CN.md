@@ -51,13 +51,13 @@
 
 Mulee 支持 HTTP / HTTPS / FTP、BT / 磁力链接、电驴和视频下载。不同类型的下载共用队列和设置。免费开源，永不加广告。
 
-仅支持 **Apple 芯片、macOS 26 及以上**。界面支持简体中文、繁体中文和英文。
+仅支持 **Apple 芯片、macOS 26 及以上**。界面支持简体中文、繁体中文、英文和日语，可在设置里选择。
 
 > [!IMPORTANT]
 > Mulee 是下载工具，不内置资源搜索。请只下载你有权获取的内容。
 
 > [!NOTE]
-> 当前为 0.1.x 早期版本，项目版本是 **0.1.3**。
+> 当前为 0.1.x 早期版本，项目版本是 **0.1.11**。
 
 ---
 
@@ -81,16 +81,17 @@ Mulee 支持 HTTP / HTTPS / FTP、BT / 磁力链接、电驴和视频下载。�
 
 | 功能 | 说明 |
 |---|---|
-| HTTP / HTTPS / FTP | aria2 引擎，多连接下载、断点续传，重启后恢复任务。 |
-| BT / 磁力 / .torrent | libtorrent 2.0 引擎，可选择下载文件；分享率达到 1:1 后降速或停止，私有种子可不受此限制。支持公共 tracker 订阅。 |
-| 电驴 ed2k | 使用 aMule 3.1（`amuled`），冷门资源可以挂几周等待来源。显示排队名次、来源数、完整来源最后出现时间和近 14 天来源记录。等待来源是正常任务状态。 |
-| 视频 | 使用 yt-dlp，主要支持 Bilibili / YouTube；B 站弹幕可转为 ASS 字幕。yt-dlp、Deno、ffmpeg 由 Mulee 自行下载并校验。 |
+| HTTP / HTTPS / FTP | aria2 引擎，支持多连接下载、重启后续传、Metalink、镜像地址、代理、校验值、换链续传和下载规则。HTTP 视频也可边下边播。 |
+| BT / 磁力 / .torrent | libtorrent 2.0 引擎，支持文件选择、公共 tracker 订阅与编辑、封禁节点、制作种子、监视文件夹、边下边播和复制磁力链接。做种策略支持分享率和时长限制，私有种子可单独设置。 |
+| 电驴 ed2k | 使用 aMule 3.1（`amuled`），冷门资源可以持续等待来源；详情显示排队名次、来源数、完整来源最后出现时间和近 14 天来源记录。 |
+| 视频 | yt-dlp 支持勾选 Bilibili 分 P、合集和 YouTube 播放列表中的视频，选择字幕、仅下载音频或指定时间段，以及嵌入元数据、封面和章节；B 站弹幕可转为 ASS 字幕。yt-dlp、Deno、ffmpeg、ffprobe 由 Mulee 自行下载并校验。 |
 | 迅雷链接 | 解析 `thunder://` 中的原始链接，交给对应引擎。 |
 | 自动解压 | 7-Zip 解压已完成的下载，密码规则中的密码存入钥匙串，修复 GBK / Big5 / Shift-JIS 文件名乱码。 |
+| 队列与整理 | 支持单任务限速与优先级、卡住让位、调整队列顺序、排序、标签、智能列表、最近删除和文件移动后跟踪。全局限速与同时下载数对各类下载合计生效。 |
 | 网络诊断 | 检查 P2P 流量是否经过代理、监听端口能否从外部连入。附有可复制的电驴直连规则和端口转发说明。 |
-| macOS 集成 | 可设为 magnet / ed2k / thunder / .torrent 默认打开程序，提供 Chrome / Safari 扩展、菜单栏实时速度和下载时防止睡眠。 |
+| macOS 集成 | 可设为 magnet / ed2k / thunder / .torrent 默认打开程序，提供 Chrome / Safari 扩展、菜单栏实时速度、Dock 徽标与菜单、访达空格预览种子、快捷指令、操作音效和通知。保存磁盘断开或 Mac 睡眠时暂停下载，下载的文件带来源标记，供 Gatekeeper 检查。 |
 
-App 附带四个辅助程序：`aria2c`、`mulee-torrentd`、`amuled`、`7zz`。它们由固定版本的源码编译，只动态链接系统库。分发的 App 使用 Developer ID 签名，并经过 Apple 公证。
+App 附带由固定版本源码编译的四个下载辅助程序（`aria2c`、`mulee-torrentd`、`amuled`、`7zz`），以及 Safari 扩展和 Quick Look 预览扩展。四个辅助程序只动态链接系统库；aria2 已启用 Metalink，使用系统 libxml2。分发的 App 使用 Developer ID 签名，并经过 Apple 公证。
 
 ---
 
