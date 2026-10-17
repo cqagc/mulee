@@ -39,7 +39,7 @@
         "message": "接管浏览器下载"
     },
     "takeoverHint": {
-        "message": "默认关闭。匹配的浏览器下载会取消并交给 Mulee 确认；仅为你明确允许的网站交接登录状态。"
+        "message": "默认关闭。开启时申请下载权限，并可选允许检查请求方法。先暂停浏览器下载，交接失败或超过 10 秒则尝试恢复。"
     },
     "takeoverUnavailable": {
         "message": "此浏览器未提供下载接管 API。请使用右键菜单或手动选择链接发送到 Mulee。"
@@ -48,10 +48,10 @@
         "message": "接管的文件扩展名（空格或逗号分隔）"
     },
     "save": {
-        "message": "保存扩展名"
+        "message": "保存接管设置"
     },
     "saved": {
-        "message": "扩展名已保存。"
+        "message": "接管设置已保存。"
     },
     "confirmHint": {
         "message": "链接会交给本机 Mulee，在新建下载面板确认后才开始。"
@@ -121,5 +121,23 @@
     },
     "downloadCookiesFailed": {
         "message": "无法交接网站登录状态。请检查 Mulee 的原生交接配置后重试。"
+    },
+    "excludedSites": {
+        "message": "不接管的网站"
+    },
+    "excludedSitesHint": {
+        "message": "填写域名，用空格、逗号或换行分隔。*.example.com 仅匹配子域名；来源页或下载地址命中时，由浏览器下载。"
+    },
+    "invalidExcludedSites": {
+        "message": "网站列表格式有误。请填写域名或 *.example.com，不要填写网址或路径。"
+    },
+    "methodPermissionDenied": {
+        "message": "未允许检查请求方法，仍会接管匹配的下载。需要提交表单的下载可能无法交给 Mulee。"
+    },
+    "handoffTimeout": {
+        "message": "10 秒内未能确认交接，已尝试恢复浏览器下载。"
+    },
+    "nativeTakeoverHint": {
+        "message": "在 Mulee 的视频设置中安装 Chrome 辅助组件，并允许原生连接后，Mulee 未运行时浏览器会继续下载。未连接辅助组件时使用浏览器交接页，无法确认 Mulee 是否收到。"
     }
 }

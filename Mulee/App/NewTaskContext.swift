@@ -8,7 +8,11 @@ struct NewTaskContext {
     var requestContext = DownloadRequestContext()
     var videoFormatID: String?
     var videoFormatVideoOnly = false
+    var videoIdentity: String?
+    var saveDirectory: URL?
+    var videoOptions: YtDlpTaskOptions?
     var checksum: DownloadChecksum?
+    var finderTorrent = false
 }
 
 /// 仅保存在内存中；下一个匹配交接消耗等待状态。

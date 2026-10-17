@@ -134,6 +134,10 @@ actor Aria2HTTPServer {
             try await send(Data("HTTP/1.1 \(code) Error\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8), on: connection)
             return
         }
+        if path == "/auth.bin", headers["authorization"] != "Basic " + Data("user:password".utf8).base64EncodedString() {
+            try await send(Data("HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm=\"example\"\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8), on: connection)
+            return
+        }
         if path == "/page.bin" {
             let body = "<!doctype html><html>Login</html>"
             try await send(Data("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n".utf8), on: connection)

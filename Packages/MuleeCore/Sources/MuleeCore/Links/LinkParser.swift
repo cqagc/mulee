@@ -39,8 +39,8 @@ public enum LinkParser {
         for line in text.split(whereSeparator: \.isNewline) {
             let candidate = line.trimmingCharacters(in: .whitespaces)
             // 单独一行的绝对路径允许文件名含空格；多个路径仍按空白分开。
-            if candidate.hasPrefix("/"), candidate.lowercased().hasSuffix(".torrent"),
-               !candidate.contains("://"), !candidate.lowercased().contains(".torrent /"),
+            if candidate.hasPrefix("/"), [".torrent", ".metalink", ".meta4"].contains(where: { candidate.lowercased().hasSuffix($0) }),
+               !candidate.contains("://"), ![".torrent /", ".metalink /", ".meta4 /"].contains(where: { candidate.lowercased().contains($0) }),
                let link = parseCandidate(candidate) {
                 if seen.insert(link).inserted { links.append(link) }
             } else {
@@ -116,9 +116,16 @@ public enum LinkParser {
         }
         if candidate.hasPrefix("/") {
             let url = URL(fileURLWithPath: candidate)
+            if HTTPMetalink.recognizes(url) {
+                return .http(url: url, decodedFromThunder: decodedFromThunder, original: original)
+            }
             if !url.hasDirectoryPath, url.pathExtension.lowercased() == "torrent" {
                 return .torrentFile(url: url, original: original)
             }
+        }
+        if let url = URL(string: candidate), url.isFileURL, HTTPMetalink.recognizes(url),
+           url.host == nil || url.host == "" || url.host?.lowercased() == "localhost" {
+            return .http(url: url, decodedFromThunder: decodedFromThunder, original: original)
         }
         if let url = URL(string: candidate), url.isFileURL,
            url.host() == nil || url.host() == "" || url.host()?.lowercased() == "localhost",
@@ -132,6 +139,9 @@ public enum LinkParser {
               let host = url.host?.lowercased(), !host.isEmpty else { return nil }
 
         if scheme != "ftp" {
+            if HTTPMetalink.recognizes(url) {
+                return .http(url: url, decodedFromThunder: decodedFromThunder, original: original)
+            }
             if !url.hasDirectoryPath, url.pathExtension.lowercased() == "torrent" {
                 return .torrentFile(url: url, original: original)
             }

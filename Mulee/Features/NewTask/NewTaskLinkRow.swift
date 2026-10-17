@@ -1,6 +1,9 @@
+import AppKit
 import SwiftUI
 
 struct NewTaskLinkRow: View {
+    @Environment(AppModel.self) private var model
+    @Environment(MainWindowState.self) private var windowState: MainWindowState?
     @Bindable var item: NewTaskLinkModel
     let mergeTrackers: () async -> Void
 
@@ -61,11 +64,39 @@ struct NewTaskLinkRow: View {
                 .font(.caption)
                 .padding(12)
             }
+            if let message = item.existingDownloadMessage {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(message)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if item.link.kind == .video, let id = item.existingDownloadID {
+                        Button("显示任务") { showTask(id) }
+                    }
+                    if item.link.kind == .http, let file = item.existingDownloadFile {
+                        Button("在访达中显示") {
+                            NSWorkspace.shared.activateFileViewerSelecting([file])
+                        }
+                    }
+                }
+                .font(.caption)
+                .padding(12)
+            }
             // 种子通常包含多个文件，单个校验值只对 HTTP 下载有意义。
             if item.link.kind == .http {
                 NewTaskChecksumView(item: item)
             }
         }
+        .onChange(of: item.videoIdentity, initial: true) { item.refreshExistingDownload(in: model.tasks) }
+        .onChange(of: item.selectedVideoParts) { item.refreshExistingDownload(in: model.tasks) }
+        .onChange(of: model.tasks) { item.refreshExistingDownload(in: model.tasks) }
+    }
+
+    private func showTask(_ id: UUID) {
+        guard model.tasks.contains(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+        windowState?.selection = .all
+        windowState?.search = ""
+        model.selectedTaskID = id
+        model.isShowingNewTask = false
+        model.mainWindowRequest += 1
     }
 
 }

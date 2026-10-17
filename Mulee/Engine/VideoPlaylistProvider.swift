@@ -7,8 +7,10 @@ actor VideoPlaylistProvider {
     private let installer = ManagedToolInstaller()
 
     func entries(for url: URL, channel: YtDlpChannel) async throws -> [YtDlpPlaylistEntry] {
-        let cookies = try await VideoLoginStore.shared.cookies(for: .bilibili)
-        if let entries = await YtDlpPlaylist.fetchMetadata(url: url, cookies: cookies) {
+        let host = url.host?.lowercased() ?? ""
+        let site: VideoSite = VideoCookie.allows(domain: host, site: .youtube) || host == "youtu.be" ? .youtube : .bilibili
+        let cookies = try await VideoLoginStore.shared.cookies(for: site)
+        if site == .bilibili, let entries = await YtDlpPlaylist.fetchMetadata(url: url, cookies: cookies) {
             try Task.checkCancellation()
             return entries
         }

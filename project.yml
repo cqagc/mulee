@@ -50,6 +50,8 @@ targets:
       - package: Sparkle
       - target: MuleeSafariExtension
         embed: true
+      - target: MuleeQuickLook
+        embed: true
     info:
       path: Mulee/Resources/Info.plist
       properties:
@@ -66,6 +68,10 @@ targets:
             CFBundleTypeRole: Viewer
             LSHandlerRank: Alternate
             LSItemContentTypes: [org.bittorrent.torrent]
+          - CFBundleTypeName: Metalink 下载文件
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes: [org.metalinker.metalink]
         UTImportedTypeDeclarations:
           - UTTypeIdentifier: org.bittorrent.torrent
             UTTypeDescription: BitTorrent 种子文件
@@ -73,6 +79,12 @@ targets:
             UTTypeTagSpecification:
               public.filename-extension: [torrent]
               public.mime-type: [application/x-bittorrent]
+          - UTTypeIdentifier: org.metalinker.metalink
+            UTTypeDescription: Metalink 下载文件
+            UTTypeConformsTo: [public.xml]
+            UTTypeTagSpecification:
+              public.filename-extension: [metalink, meta4]
+              public.mime-type: [application/metalink+xml, application/metalink4+xml]
         NSServices:
           - NSMenuItem:
               default: 用 Mulee 下载
@@ -179,11 +191,52 @@ targets:
         SWIFT_APPROACHABLE_CONCURRENCY: YES
         SWIFT_STRICT_CONCURRENCY: complete
         ENABLE_USER_SCRIPT_SANDBOXING: NO
+  MuleeQuickLook:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: MuleeQuickLook
+        excludes: [Info.plist]
+      - path: Mulee/DesignSystem/MuleeSymbol.swift
+    entitlements:
+      path: MuleeQuickLook/MuleeQuickLook.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-only: true
+    dependencies:
+      - package: MuleeCore
+    info:
+      path: MuleeQuickLook/Info.plist
+      properties:
+        CFBundleDisplayName: Mulee
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionAttributes:
+            QLIsDataBasedPreview: false
+            QLSupportedContentTypes: [org.bittorrent.torrent]
+          NSExtensionPointIdentifier: com.apple.quicklook.preview
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PreviewViewController
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.cqagc.mulee.quicklook
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: YES
+        ENABLE_APP_SANDBOX: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+        SKIP_INSTALL: YES
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
+        SWIFT_STRICT_CONCURRENCY: complete
   MuleeTests:
     type: bundle.unit-test
     platform: macOS
     sources:
       - path: MuleeTests
+      - path: MuleeQuickLook/TorrentPreviewModel.swift
+      - path: MuleeQuickLook/TorrentPreviewRow.swift
+      - path: MuleeQuickLook/TorrentPreviewError.swift
     dependencies:
       - target: Mulee
       - package: Sparkle

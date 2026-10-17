@@ -73,7 +73,8 @@ final class OpenURLRouter {
             for link in request.links {
                 if model.acceptBrowserHTTPReplacement(link, context: context) { continue }
                 model.pendingNewTaskContexts[link] = NewTaskContext(
-                    sourcePageURL: request.sourcePageURL, password: request.password, requestContext: context
+                    sourcePageURL: request.sourcePageURL, password: request.password, requestContext: context,
+                    finderTorrent: Self.isLocalTorrent(link)
                 )
                 newLinks.append(link)
             }
@@ -91,5 +92,24 @@ final class OpenURLRouter {
         }
         #endif
         return true
+    }
+}
+
+// 只有明确来自系统打开或拖放的本地种子才能回收；粘贴路径与监视目录不带此标记。
+extension OpenURLRouter {
+    static func isLocalTorrent(_ link: ParsedLink) -> Bool {
+        if case .torrentFile(let url, _) = link {
+            return url.isFileURL && url.pathExtension.lowercased() == "torrent"
+        }
+        return false
+    }
+
+    static func trashAddedTorrent(
+        _ link: ParsedLink, fromFinder: Bool, enabled: Bool, succeeded: Bool,
+        trash: (URL) throws -> Void = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }
+    ) throws {
+        guard fromFinder, enabled, succeeded, isLocalTorrent(link),
+              case .torrentFile(let url, _) = link else { return }
+        try trash(url)
     }
 }

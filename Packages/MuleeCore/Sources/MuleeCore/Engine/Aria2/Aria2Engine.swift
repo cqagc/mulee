@@ -11,6 +11,9 @@ public actor Aria2Engine: DownloadEngine {
     private var configuration: Aria2Configuration?
     private var starting: Task<Void, any Error>?
     private var stopping: Task<Void, Never>?
+    private let proxyProvider: @Sendable () -> HTTPProxyConfiguration
+    private var proxyMonitor: Task<Void, Never>?
+    private var streamSelectors: [String: String] = [:]
     private var permissionMonitor: Task<Void, Never>?
     private var incompleteTransfers: [String: IncompleteHTTPTransfer] = [:]
     private var finalizedFiles: [String: URL] = [:]
@@ -19,9 +22,13 @@ public actor Aria2Engine: DownloadEngine {
     /// - Parameters:
     ///   - stateDirectory: 存放 aria2 配置、会话、日志的目录（App 传 Application Support/Mulee/aria2）。
     ///   - binaryURL: 指定 aria2c 路径；nil 时按 App 包内 Helpers、环境变量 MULEE_ARIA2C 依次查找。
-    public init(stateDirectory: URL, binaryURL: URL? = nil) {
+    public init(
+        stateDirectory: URL, binaryURL: URL? = nil,
+        proxyProvider: @escaping @Sendable () -> HTTPProxyConfiguration = { .current() }
+    ) {
         self.stateDirectory = stateDirectory
         self.binaryURL = binaryURL
+        self.proxyProvider = proxyProvider
     }
 
     public func start(options: EngineOptions) async throws {
@@ -54,6 +61,7 @@ public actor Aria2Engine: DownloadEngine {
         guard var updated = configuration else { throw EngineError.notRunning }
         let cacheChanged = max(0, updated.options.diskCacheMegabytes) != max(0, options.diskCacheMegabytes)
         updated.options = options
+        updated.proxy = proxyProvider()
         // Validate before changing the running process; disk-cache is startup-only.
         _ = try updated.contents()
         if cacheChanged {
@@ -83,6 +91,9 @@ public actor Aria2Engine: DownloadEngine {
         incompleteTaskID: UUID? = nil
     ) async throws -> String {
         let client = try runningClient()
+        if case .http(let url, _, _) = link, HTTPMetalink.recognizes(url) {
+            return try await addMetalink(url, directory: directory, paused: paused)
+        }
         guard case .http(let url, _, _) = link,
               let scheme = url.scheme?.lowercased(), ["http", "https", "ftp"].contains(scheme) else {
             throw EngineError.unsupportedLink
@@ -186,6 +197,110 @@ public actor Aria2Engine: DownloadEngine {
         }
         try rekeyIncomplete(engineTaskID, to: id, transfer: transfer)
         return id
+    }
+
+    public func refreshProxy() async throws {
+        let client = try runningClient()
+        guard var updated = configuration else { throw EngineError.notRunning }
+        let proxy = proxyProvider()
+        guard proxy != updated.proxy else { return }
+        let _: String = try await client.call("aria2.changeGlobalOption", [.object(proxy.aria2Options.mapValues(Aria2RPCValue.string))])
+        updated.proxy = proxy
+        try updated.write()
+        configuration = updated
+    }
+
+    private func addMetalink(_ url: URL, directory: URL?, paused: Bool) async throws -> String {
+        let client = try runningClient()
+        let data = try await HTTPMetalink.load(url, proxy: proxyProvider())
+        var values: [String: Aria2RPCValue] = ["pause": .string(paused ? "true" : "false")]
+        if let directory { values["dir"] = .string(directory.path) }
+        let ids: [String] = try await client.call("aria2.addMetalink", [.string(data.base64EncodedString()), .object(values)])
+        guard let id = ids.first else { throw EngineError.invalidResponse("Metalink 中没有可下载的文件") }
+        return id
+    }
+
+    public func addMirror(_ id: String, url: URL, original: HTTPResourceIdentity, context: DownloadRequestContext = .init()) async throws {
+        let client = try runningClient()
+        let status = try await taskStatus(id, using: client)
+        guard status.status == "active" else { throw EngineError.invalidResponse("仅正在下载的任务可以添加镜像地址") }
+        guard url.user == nil, url.password == nil else { throw EngineError.unsupportedLink }
+        // 镜像不继承原服务器的 Cookie 和认证头。
+        var safeContext = context.withoutCookie
+        safeContext.headers = safeContext.headers.filter { !["authorization", "proxy-authorization"].contains($0.key.lowercased()) }
+        safeContext.usesStoredHTTPCredentials = false
+        let options: [String: String] = try await client.call("aria2.getOption", [.string(id)])
+        let hasCredentials = (options["header"] ?? "").lowercased().components(separatedBy: "\n").contains {
+            $0.hasPrefix("authorization:") || $0.hasPrefix("cookie:") || $0.hasPrefix("proxy-authorization:")
+        }
+        var mirrorURL = url
+        if hasCredentials {
+            // aria2 的自定义头作用于整项任务；凭据任务只接受同源镜像。
+            guard let source = (status.files?.first?.uris?.first?.uri).flatMap({ URL(string: $0) }),
+                  HTTPResourceProbe.sameHost(source, url), source.scheme?.lowercased() == url.scheme?.lowercased() else {
+                throw EngineError.invalidResponse("此任务使用登录信息，只能添加同一服务器的镜像地址。")
+            }
+            let authenticated = Self.requestContext(headers: (options["header"] ?? "").components(separatedBy: "\n"))
+            let prepared = try await HTTPResourceProbe.prepareDownload(url, context: authenticated)
+            guard HTTPResourceProbe.sameHost(source, prepared.url), source.scheme?.lowercased() == prepared.url.scheme?.lowercased() else {
+                throw EngineError.invalidResponse("镜像跳转到了其他服务器，未附加原服务器的登录信息。")
+            }
+            mirrorURL = prepared.url
+            safeContext = prepared.context
+        }
+        let identity = try await HTTPResourceProbe.inspect(mirrorURL, context: safeContext)
+        try original.validateReplacement(identity)
+        let current = try await taskStatus(id, using: client)
+        guard current.status == "active" else { throw CancellationError() }
+        let changed: [Int] = try await client.call("aria2.changeUri", [
+            .string(id), .integer(1), .array([]), .array([.string(mirrorURL.absoluteString)])
+        ])
+        guard changed.count == 2, changed[1] == 1 else { throw EngineError.invalidResponse("未能添加镜像地址") }
+    }
+
+    public func setStreaming(_ id: String, enabled: Bool) async throws {
+        let client = try runningClient()
+        if enabled {
+            if streamSelectors[id] == nil {
+                let options: [String: String] = try await client.call("aria2.getOption", [.string(id)])
+                streamSelectors[id] = options["stream-piece-selector"] ?? "default"
+            }
+            let _: String = try await client.call("aria2.changeOption", [.string(id), .object(["stream-piece-selector": .string("inorder")])])
+        } else if let previous = streamSelectors[id] {
+            do {
+                let status = try await taskStatus(id, using: client)
+                // 停态结果不再选择分块，也不能 changeOption；恢复时按常规选项重建。
+                if ["complete", "error", "removed"].contains(status.status) {
+                    streamSelectors[id] = nil
+                    return
+                }
+                let _: String = try await client.call("aria2.changeOption", [.string(id), .object(["stream-piece-selector": .string(previous)])])
+                streamSelectors[id] = nil
+            } catch let error as EngineError {
+                guard case .rpc(let code, _) = error, code == 1 else { throw error }
+                // 删除任务可能先于播放清理；只在 GID 确实消失时忽略。
+                do { _ = try await taskStatus(id, using: client) }
+                catch let missing as EngineError {
+                    guard case .rpc(let code, _) = missing, code == 1 else { throw missing }
+                    streamSelectors[id] = nil
+                    return
+                }
+                throw error
+            }
+        }
+    }
+
+    public func streamingProgress(_ id: String) async throws -> (file: URL?, size: Int64, contiguous: Int64, finished: Bool) {
+        let status = try await taskStatus(id, using: runningClient())
+        guard ["active", "waiting", "paused", "complete"].contains(status.status) else {
+            throw EngineError.invalidResponse("下载已停止，无法继续缓冲")
+        }
+        let size = Int64(status.totalLength ?? "") ?? 0
+        let file = finalizedFiles[id] ?? status.files?.first.flatMap { $0.path.isEmpty ? nil : URL(filePath: $0.path) }
+        return (file, size, HTTPStreamingProgress.contiguousBytes(
+            bitfield: status.bitfield ?? "", numPieces: Int(status.numPieces ?? "") ?? 0,
+            pieceLength: Int64(status.pieceLength ?? "") ?? 0, totalLength: size
+        ), status.status == "complete")
     }
 
     public func setChecksum(_ engineTaskID: String, checksum: DownloadChecksum?) async throws -> String {
@@ -473,10 +588,11 @@ public actor Aria2Engine: DownloadEngine {
     }
 
     private func launch(options: EngineOptions) async throws {
-        let configuration = Aria2Configuration(
+        var configuration = Aria2Configuration(
             stateDirectory: stateDirectory, port: try Aria2Process.availablePort(),
             secret: Aria2Configuration.makeSecret(), options: options
         )
+        configuration.proxy = proxyProvider()
         try configuration.prepareStateDirectory()
         try configuration.protectStateFiles()
         let record = stateDirectory.appendingPathComponent("incomplete.json")
@@ -523,6 +639,15 @@ public actor Aria2Engine: DownloadEngine {
             }
             guard child.isRunning else { throw EngineError.launchFailed(String(localized: "aria2 进程提前退出", bundle: .module)) }
             client = rpc
+            // 轮询不需要跨执行器管理系统回调，且随子进程退出取消。
+            proxyMonitor = Task { [weak self] in
+                while !Task.isCancelled {
+                    do { try await Task.sleep(for: .seconds(30)) }
+                    catch { return }
+                    do { try await self?.refreshProxy() }
+                    catch { Aria2Process.logger.warning("更新 HTTP 代理失败，请在网络设置中重新应用。") }
+                }
+            }
             permissionMonitor = Task { [weak self] in
                 while !Task.isCancelled {
                     do {
@@ -637,6 +762,9 @@ public actor Aria2Engine: DownloadEngine {
 
     private func didExit(_ id: UUID) {
         guard process?.id == id else { return }
+        proxyMonitor?.cancel()
+        proxyMonitor = nil
+        streamSelectors.removeAll()
         permissionMonitor?.cancel()
         permissionMonitor = nil
         try? configuration?.protectStateFiles()
@@ -646,7 +774,7 @@ public actor Aria2Engine: DownloadEngine {
 
     private func logTail(_ url: URL) -> String {
         do {
-            return try String(contentsOf: url, encoding: .utf8)
+            return HTTPProxyConfiguration.redacted(try String(contentsOf: url, encoding: .utf8))
                 .split(separator: "\n").suffix(8).joined(separator: "\n")
         } catch {
             return String(localized: "无法读取 aria2.log：\(error.localizedDescription)", bundle: .module)

@@ -13,6 +13,38 @@ public enum ParsedLink: Sendable, Hashable {
     /// 重点视频站的页面链接。
     case video(url: URL, site: VideoSite, original: String)
 
+    /// 播放列表信息从 URL 派生，保持既有 video 枚举与调用方兼容。
+    public var playlistID: String? {
+        guard case .video(let url, .youtube, _) = self else { return nil }
+        return URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?
+            .first { $0.name == "list" && $0.value?.isEmpty == false }?.value
+    }
+
+    public var youtubeVideoID: String? {
+        guard case .video(let url, .youtube, _) = self else { return nil }
+        let value: String?
+        if url.host?.lowercased() == "youtu.be" {
+            value = url.path.split(separator: "/").first.map(String.init)
+        } else if ["shorts", "embed", "live"].contains(url.path.split(separator: "/").first.map(String.init) ?? "") {
+            value = url.path.split(separator: "/").dropFirst().first.map(String.init)
+        } else {
+            value = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "v" }?.value
+        }
+        guard let value, !value.isEmpty, value.utf8.count <= 128,
+              value.utf8.allSatisfy({ (48...57).contains($0) || (65...90).contains($0) || (97...122).contains($0) || $0 == 45 || $0 == 95 }) else { return nil }
+        return value
+    }
+
+    /// 只留下单视频定位信息，格式探测和下载都不能意外展开列表。
+    public var singleVideoURL: URL? {
+        guard case .video(let url, let site, _) = self else { return nil }
+        guard site == .youtube else { return url }
+        guard let id = youtubeVideoID else { return nil }
+        var components = URLComponents(string: "https://www.youtube.com/watch")
+        components?.queryItems = [URLQueryItem(name: "v", value: id)]
+        return components?.url
+    }
+
     /// 对应的任务类型。
     public var kind: TaskKind {
         switch self {

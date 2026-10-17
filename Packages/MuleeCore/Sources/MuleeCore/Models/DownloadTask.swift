@@ -4,6 +4,8 @@ import Foundation
 public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
     public enum PauseReason: String, Sendable, Hashable, Codable {
         case diskSpace
+        case volumeUnavailable
+        case systemSleep
         case schedule
     }
 
@@ -42,9 +44,12 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
     public var sourcePageURL: URL?
     /// 历史中的上下文不包含 Cookie；有 Cookie 时按本任务 ID 从钥匙串读取。
     public var requestContext: DownloadRequestContext?
+    public var hasHTTPCredentials: Bool?
     public var hasRequestCookie: Bool?
     public var httpIdentity: HTTPResourceIdentity?
+    public var videoIdentity: String?
     public var httpValidationError: String?
+    public var videoOptions: YtDlpTaskOptions?
     public var checksum: DownloadChecksum?
     public var checksumVerification: ChecksumVerification?
     /// 引擎内部的任务标识（例如 aria2 的 GID）；还没交给引擎时为 nil。

@@ -39,7 +39,7 @@
         "message": "Intercept browser downloads"
     },
     "takeoverHint": {
-        "message": "Off by default. Matching browser downloads are cancelled and sent to Mulee for confirmation. Sign-in is shared only for websites you explicitly allow."
+        "message": "Off by default. Enabling requests download access and optional request method access. Downloads pause first and resume if handoff fails or takes more than 10 seconds."
     },
     "takeoverUnavailable": {
         "message": "This browser does not provide the download interception API. Use the context menu or select links to send to Mulee."
@@ -48,10 +48,10 @@
         "message": "File extensions to intercept (spaces or commas)"
     },
     "save": {
-        "message": "Save extensions"
+        "message": "Save interception settings"
     },
     "saved": {
-        "message": "Extensions saved."
+        "message": "Interception settings saved."
     },
     "confirmHint": {
         "message": "Links open in Mulee on this Mac. Downloads start only after you confirm."
@@ -121,5 +121,23 @@
     },
     "downloadCookiesFailed": {
         "message": "Could not share website sign-in. Check the native handoff setup in Mulee and retry."
+    },
+    "excludedSites": {
+        "message": "Websites to leave in the browser"
+    },
+    "excludedSitesHint": {
+        "message": "Enter domains separated by spaces, commas or new lines. *.example.com matches subdomains only. A matching source page or download address stays in the browser."
+    },
+    "invalidExcludedSites": {
+        "message": "Enter domains or *.example.com, without a scheme or path."
+    },
+    "methodPermissionDenied": {
+        "message": "Request method access was not granted. Matching downloads will still be intercepted. Downloads that submit forms may not work in Mulee."
+    },
+    "handoffTimeout": {
+        "message": "Handoff was not confirmed within 10 seconds. The extension tried to resume the browser download."
+    },
+    "nativeTakeoverHint": {
+        "message": "Install the Chrome helper in Mulee’s Video settings and allow native access to keep downloads in the browser when Mulee is not running. Without the helper, the browser handoff page cannot confirm receipt by Mulee."
     }
 }

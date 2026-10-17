@@ -48,6 +48,7 @@ public struct IncompleteHTTPTransfer: Codable, Sendable, Equatable {
 
     public func prepare() throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try (directory.deletingLastPathComponent() as NSURL).setResourceValue(true, forKey: .isExcludedFromBackupKey)
     }
 
     public mutating func recordWorkingFile(_ file: URL) {

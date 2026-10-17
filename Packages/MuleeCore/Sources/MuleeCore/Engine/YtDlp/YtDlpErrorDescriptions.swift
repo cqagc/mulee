@@ -7,6 +7,7 @@ struct YtDlpErrorDescriptions: Sendable {
     }
 
     static func message(_ raw: String) -> String {
+        let raw = HTTPProxyConfiguration.redacted(raw)
         let text = raw.lowercased()
         let description: String
         if ["sign in", "login", "cookies", "private video", "members-only", "age-restricted", "registered users", "authentication", "http error 401"].contains(where: text.contains) {

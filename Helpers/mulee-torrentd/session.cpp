@@ -151,6 +151,15 @@ void Session::prepare(lt::add_torrent_params& params,
     });
 }
 
+void Session::apply_task_limits(Torrent& torrent) {
+    const auto& metadata = torrent.metadata;
+    int upload = metadata.user_upload_limit;
+    if (metadata.policy_upload_limit > 0)
+        upload = upload > 0 ? std::min(upload, metadata.policy_upload_limit) : metadata.policy_upload_limit;
+    torrent.handle.set_download_limit(metadata.user_download_limit);
+    torrent.handle.set_upload_limit(upload);
+}
+
 void Session::apply_download_mode(Torrent& torrent) {
     auto& handle = torrent.handle;
     handle.set_flags(torrent.metadata.sequential_download ? lt::torrent_flags::sequential_download
@@ -192,18 +201,18 @@ void Session::apply_download_mode(Torrent& torrent) {
     }
 }
 
-// 文件进度只计已校验的完整 piece；改名等磁盘操作完成后才发布完成状态。
+// 进度包含未完成 piece 的块，但完成改名必须等相关 piece 全部校验通过。
 void Session::update_incomplete_files(Torrent& torrent) {
     if (updating_incomplete_ || stopping_) return;
     auto info = torrent.handle.torrent_file();
     if (!info) return;
-    auto status = torrent.handle.status();
+    auto status = torrent.handle.status(lt::torrent_handle::query_pieces);
     if (status.state == lt::torrent_status::checking_files
         || status.state == lt::torrent_status::checking_resume_data) return;
     updating_incomplete_ = true;
     try {
         std::vector<std::int64_t> done;
-        torrent.handle.file_progress(done, lt::torrent_handle::piece_granularity);
+        torrent.handle.file_progress(done);
         bool changed = false;
         for (auto index : info->files().file_range()) {
             int i = static_cast<int>(index);
@@ -218,6 +227,16 @@ void Session::update_incomplete_files(Torrent& torrent) {
             if (!original) continue;
             std::string logical(original->as_string());
             bool complete = done.at(i) >= info->files().file_size(index);
+            if (complete && info->files().file_size(index) > 0) {
+                auto first = info->map_file(index, 0, 1).piece;
+                auto last = info->map_file(index, info->files().file_size(index) - 1, 1).piece;
+                for (int piece = static_cast<int>(first); piece <= static_cast<int>(last); ++piece) {
+                    if (piece >= status.pieces.size() || !status.pieces[lt::piece_index_t{piece}]) {
+                        complete = false;
+                        break;
+                    }
+                }
+            }
             auto target = complete ? logical : logical + ".mulee";
             if (target == current) continue;
             if (fs::exists(fs::path(status.save_path) / target))
@@ -277,6 +296,7 @@ void Session::restore() {
         }
         handle.set_max_connections(per_torrent_connections);
         auto inserted = torrents_.emplace(id, Torrent{handle, metadata, params.peers, count});
+        apply_task_limits(inserted.first->second);
         apply_junk_filter(inserted.first->second);
         apply_download_mode(inserted.first->second);
         refresh_trackers(inserted.first->second);

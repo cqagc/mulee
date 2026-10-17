@@ -126,7 +126,8 @@ final class NewTaskModel {
 
     var downloadLinks: [ParsedLink] {
         links.flatMap { item in
-            item.selectedVideoEntries.isEmpty ? [item.link] : item.selectedVideoEntries.map(\.link)
+            if item.requiresVideoSelection { return item.selectedVideoEntries.map(\.link) }
+            return item.selectedVideoEntries.isEmpty ? [item.link] : item.selectedVideoEntries.map(\.link)
         }
     }
 
@@ -144,10 +145,25 @@ final class NewTaskModel {
             var context = contexts[item.link] ?? NewTaskContext()
             context.requestContext = item.requestContext
             context.checksum = item.checksum
+            context.videoOptions = item.link.kind == .video ? item.videoOutputOptions : nil
             context.videoFormatID = item.selectedVideoFormat?.id
             context.videoFormatVideoOnly = item.selectedVideoFormat?.videoOnly ?? false
+            context.videoIdentity = item.videoIdentity
             expandedContexts[item.link] = context
-            for entry in item.selectedVideoEntries { expandedContexts[entry.link] = context }
+            for entry in item.selectedVideoEntries {
+                var entryContext = context
+                entryContext.videoIdentity = entry.videoIdentity ?? (entry.url == item.videoFormatURL ? item.videoIdentity : nil)
+                if item.showsPlaylistSubfolder, item.playlistSubfolder, let title = item.playlistTitle {
+                    let folder = FileNameSanitizer.sanitize(title)
+                    let rule = DownloadRule(name: "", subdirectory: folder)
+                    if let directory = rule.saveDirectory(under: saveDirectory),
+                       directory.resolvingSymlinksInPath().deletingLastPathComponent().pathComponents
+                        == saveDirectory.resolvingSymlinksInPath().pathComponents {
+                        entryContext.saveDirectory = directory
+                    }
+                }
+                expandedContexts[entry.link] = entryContext
+            }
         }
         model.addTasks(
             from: downloadLinks.filter { link in
@@ -221,6 +237,7 @@ final class NewTaskModel {
     func refreshDuplicateWarnings(in model: AppModel) {
         var seenHashes = Set<String>()
         for item in links {
+            item.refreshExistingDownload(in: model.tasks)
             guard let hash = item.infoHash else { continue }
             let existing = NewTaskLinkModel.existingTorrent(infoHash: hash, tasks: model.tasks)
             let repeated = !seenHashes.insert(hash).inserted
@@ -317,7 +334,7 @@ final class NewTaskModel {
     }
 
     static func torrentFileText(_ urls: [URL]) -> String {
-        urls.filter { $0.isFileURL && $0.pathExtension.lowercased() == "torrent" }
+        urls.filter { $0.isFileURL && HTTPMetalink.isDownloadFile($0) }
             .map(\.path).joined(separator: "\n")
     }
 
@@ -334,7 +351,7 @@ final class NewTaskModel {
             return SmartPasteParser.parse(url.absoluteString).contains(where: { !$0.links.isEmpty }) ? url.absoluteString : nil
         }
         guard url.host == nil || url.host == "" || url.host?.lowercased() == "localhost" else { return nil }
-        if url.pathExtension.lowercased() == "torrent" { return url.path }
+        if HTTPMetalink.isDownloadFile(url) { return url.path }
         guard ["webloc", "magnet"].contains(url.pathExtension.lowercased()) else { return nil }
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
@@ -355,7 +372,7 @@ final class NewTaskModel {
             let value = line.trimmingCharacters(in: .whitespacesAndNewlines)
             guard let url = URL(string: value), url.isFileURL,
                   url.host == nil || url.host == "" || url.host?.lowercased() == "localhost",
-                  url.pathExtension.lowercased() == "torrent" else { return line }
+                  HTTPMetalink.isDownloadFile(url) else { return line }
             return url.path
         }.joined(separator: "\n")
     }
@@ -378,6 +395,9 @@ final class NewTaskModel {
         let sourceLinks = parser?(inputText) ?? inputRows.flatMap(\.links).map { link -> ParsedLink in
             if case .torrentFile(let url, _) = link, url.isFileURL {
                 return .torrentFile(url: url, original: url.absoluteString)
+            }
+            if case .http(let url, let decoded, _) = link, url.isFileURL, HTTPMetalink.recognizes(url) {
+                return .http(url: url, decodedFromThunder: decoded, original: url.absoluteString)
             }
             return link
         }

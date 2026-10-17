@@ -13,6 +13,7 @@ struct MainWindowView: View {
             .focusedSceneValue(\.mainWindowState, state)
             .sheet(isPresented: $model.isShowingNewTask) {
                 NewTaskSheet()
+                    .environment(state)
             }
             .overlay {
                 if state.isDropTargeted { NewTaskDropHint() }

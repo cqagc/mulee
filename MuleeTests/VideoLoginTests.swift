@@ -142,4 +142,61 @@ import Testing
         #expect(app.tasks.map(\.sourceLink) == [parts[0].url.absoluteString, parts[2].url.absoluteString])
         #expect(app.tasks.map(\.name) == ["P1 示例部分 1", "P3 示例部分 3"])
     }
+
+    @Test func nativeLinkHandoffValidatesAndRequiresRunningApp() throws {
+        let entry = "mulee://add?url=https%3A%2F%2Fexample.org%2Fa.zip&referrer=https%3A%2F%2Fexample.org%2Fpage&ua=ExampleBrowser&filename=a.zip"
+        let payload = try JSONSerialization.data(withJSONObject: ["type": "openLinks", "url": entry])
+        let url = try #require(VideoNativeMessaging.linkURL(from: payload))
+        let request = try #require(OpenURLRequest.parse(url, detectPagePassword: false))
+        #expect(request.links.count == 1)
+        #expect(request.sourcePageURL?.absoluteString == "https://example.org/page")
+        #expect(request.requestContext.userAgent == "ExampleBrowser")
+        var opened: [URL] = []
+        #expect(VideoNativeMessaging.openLinks(payload, isAppRunning: { true }, open: { opened.append($0); return true }))
+        #expect(opened == [url])
+        opened = []
+        #expect(!VideoNativeMessaging.openLinks(payload, isAppRunning: { false }, open: { opened.append($0); return true }))
+        #expect(opened.isEmpty)
+        #expect(!VideoNativeMessaging.openLinks(payload, isAppRunning: { true }, open: { _ in false }))
+    }
+
+    @Test func nativeLinkHandoffRejectsUnsafeAndUnknownFields() throws {
+        for value in ["file:///tmp/private.torrent", "mulee://add?url=file%3A%2F%2F%2Ftmp%2Fprivate.torrent",
+                      "mulee://add?url=https%3A%2F%2Fexample.org%2Fa.zip&unexpected=value",
+                      "mulee://add?url=https%3A%2F%2Fexample.org%2Fa.zip&ua=bad%0Aheader",
+                      "mulee://add?url=https%3A%2F%2Fexample.org%2Fa.zip&token=invalid",
+                      String(repeating: "x", count: OpenURLRequest.maximumBytes + 1)] {
+            let payload = try JSONSerialization.data(withJSONObject: ["type": "openLinks", "url": value])
+            #expect(VideoNativeMessaging.linkURL(from: payload) == nil)
+        }
+        for object: [String: Any] in [
+            ["type": "openLinks", "url": "mulee://add?url=https%3A%2F%2Fexample.org%2Fa.zip", "extra": true],
+            ["type": "openLinks", "url": 42], ["type": "unknown", "url": "mulee://add"]
+        ] {
+            #expect(VideoNativeMessaging.linkURL(from: try JSONSerialization.data(withJSONObject: object)) == nil)
+        }
+    }
+
+    @Test func nativeLinkFramesAcceptLargeEntriesButKeepCookieLimits() throws {
+        #expect(VideoNativeMessaging.maximumFrameBytes == OpenURLRequest.maximumBytes + 128)
+        let entry = "mulee://add?url=https%3A%2F%2Fexample.org%2Fa.zip&text="
+            + String(repeating: "a", count: VideoCookieRequest.maximumBytes + 1)
+        let data = try JSONSerialization.data(withJSONObject: ["type": "openLinks", "url": entry])
+        var length = UInt32(data.count).littleEndian
+        var frame = withUnsafeBytes(of: &length) { Data($0) }
+        frame.append(data)
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: file) }
+        try frame.write(to: file)
+        let input = try FileHandle(forReadingFrom: file)
+        defer { try? input.close() }
+        let received = try VideoNativeMessaging.readPayload(from: input)
+        #expect(VideoNativeMessaging.linkURL(from: received) != nil)
+        #expect(throws: (any Error).self) { try VideoCookieRequest.parse(received) }
+        var oversized = UInt32(VideoNativeMessaging.maximumFrameBytes + 1).littleEndian
+        try withUnsafeBytes(of: &oversized) { try Data($0).write(to: file) }
+        let invalid = try FileHandle(forReadingFrom: file)
+        defer { try? invalid.close() }
+        #expect(throws: (any Error).self) { try VideoNativeMessaging.readPayload(from: invalid) }
+    }
 }

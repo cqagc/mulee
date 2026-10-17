@@ -130,7 +130,13 @@ struct TaskPresentation {
         case .extracting: String(localized: "解压中")
         case .seeding: "↑ \(Self.rate(task.uploadRate))"
         case .completed: extractionStatus ?? String(localized: "已完成")
-        case .paused: task.pauseReason == .diskSpace ? String(localized: "因磁盘空间不足已暂停") : String(localized: "已暂停")
+        case .paused:
+            switch task.pauseReason {
+            case .diskSpace: String(localized: "因磁盘空间不足已暂停")
+            case .volumeUnavailable: String(localized: "保存位置所在的磁盘已断开")
+            case .systemSleep: String(localized: "因系统睡眠已暂停")
+            default: String(localized: "已暂停")
+            }
         case .failed: String(localized: "需要处理")
         case .queued: String(localized: "排队中")
         case .engineUnavailable: String(localized: "引擎未接入")

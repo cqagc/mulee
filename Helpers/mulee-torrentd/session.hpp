@@ -126,6 +126,7 @@ private:
     void mark_completed(Torrent& torrent);
     void prepare(lt::add_torrent_params& params, const std::shared_ptr<std::atomic<std::int64_t>>& count);
     void apply_download_mode(Torrent& torrent);
+    void apply_task_limits(Torrent& torrent);
     void update_incomplete_files(Torrent& torrent);
     json::object add_trackers(Torrent& torrent, const json::object& params);
     void sample_diagnostics(Torrent& torrent);

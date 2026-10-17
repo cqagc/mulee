@@ -16,6 +16,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var servicesProvider: DownloadServicesProvider?
     private var settingsRuntime: SettingsRuntime?
     private var diskReserveMonitor: DiskReserveMonitor?
+    private var volumeAvailabilityMonitor: VolumeAvailabilityMonitor?
+    private var systemSleepController: SystemSleepController?
+    private var dockPresenter: DockPresenter?
     private var notificationService: NotificationService?
     private var whenAllDoneController: WhenAllDoneController?
     private var slowModeController: SlowModeController?
@@ -128,6 +131,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         )
         notificationService = NotificationService(model: model, settings: settings)
         diskReserveMonitor = DiskReserveMonitor(model: model, settings: settings)
+        volumeAvailabilityMonitor = VolumeAvailabilityMonitor(model: model, settings: settings)
+        systemSleepController = SystemSleepController(model: model, settings: settings)
+        dockPresenter = DockPresenter(model: model, settings: settings)
+        model.completionShortcutRunner = CompletionShortcutRunner(
+            settings: settings,
+            completedIDs: Set(model.activeTasks.filter { [.completed, .seeding, .extracting].contains($0.status) }.map(\.id))
+        ) { [weak model] title, body in
+            model?.notificationService?.sendSystem(title: title, body: body)
+        }
         whenAllDoneController = WhenAllDoneController(model: model, settings: settings)
         slowModeController = SlowModeController(model: model, settings: settings)
         transferScheduleController = TransferScheduleController(model: model, settings: settings)
@@ -168,6 +180,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 videoConfiguration: VideoEngineConfiguration.configuration(from: settings)
             )
             if !Task.isCancelled {
+                await volumeAvailabilityMonitor?.refresh()
+                volumeAvailabilityMonitor?.start()
+                systemSleepController?.start()
+                dockPresenter?.start()
                 diskReserveMonitor?.start()
                 transferScheduleController?.start()
             }
@@ -178,6 +194,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         handoffTask?.cancel()
         openURLRouter?.stopCookieCleanup()
     }
+
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? {
+        guard let model else { return nil }
+        let menu = NSMenu()
+        for (title, action) in [
+            (String(localized: "新建下载"), #selector(dockNewDownload)),
+            (String(localized: "暂停全部"), #selector(dockPauseAll)),
+            (String(localized: "继续全部"), #selector(dockResumeAll)),
+            (String(localized: "慢速模式"), #selector(dockToggleSlowMode))
+        ] {
+            let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+            item.target = self
+            if action == #selector(dockToggleSlowMode) { item.state = model.isSlowModeActive ? .on : .off }
+            menu.addItem(item)
+        }
+        return menu
+    }
+
+    @objc private func dockNewDownload() {
+        model?.mainWindowRequest += 1
+        model?.isShowingNewTask = true
+        NSApp.activate()
+    }
+
+    @objc private func dockPauseAll() { model?.pauseAll() }
+    @objc private func dockResumeAll() { model?.resumeAll() }
+    @objc private func dockToggleSlowMode() { model?.slowModeController?.toggle() }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         !(settings?.closeKeepsRunning ?? true)
@@ -234,6 +277,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         isTerminating = true
         shutdownProgress.begin()
         settingsRuntime?.stop()
+        volumeAvailabilityMonitor?.stop()
+        systemSleepController?.stop()
+        dockPresenter?.stop()
+        model?.completionShortcutRunner?.stop()
         diskReserveMonitor?.stop()
         notificationService?.stop()
         whenAllDoneController?.cancel()
@@ -275,6 +322,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private func prepareForUpdate() async -> Bool {
         transferScheduleController?.stop()
         model?.transferStatistics?.save()
+        volumeAvailabilityMonitor?.stop()
+        systemSleepController?.stop()
+        dockPresenter?.stop()
+        model?.completionShortcutRunner?.stop()
         diskReserveMonitor?.stop()
         notificationService?.stop()
         whenAllDoneController?.cancel()

@@ -54,7 +54,7 @@ struct OpenURLRequest {
                 requestContext: context, cookieToken: cookieToken
             )
         }
-        guard url.isFileURL ? url.pathExtension.lowercased() == "torrent"
+        guard url.isFileURL ? HTTPMetalink.isDownloadFile(url)
             : ["magnet", "ed2k", "thunder"].contains(url.scheme?.lowercased() ?? "") else { return nil }
         var text = url.absoluteString
         if url.scheme?.lowercased() == "ed2k" {
@@ -71,6 +71,7 @@ struct OpenURLRequest {
 
     static func isRemote(_ link: ParsedLink) -> Bool {
         if case .torrentFile(let url, _) = link { return !url.isFileURL }
+        if case .http(let url, _, _) = link { return !url.isFileURL }
         return true
     }
 }

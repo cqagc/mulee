@@ -12,17 +12,24 @@ public enum YtDlpPlaylist {
     public static func fetch(
         url: URL, binary: URL, cookies: [VideoCookie] = [], timeout: Duration = .seconds(20)
     ) async throws -> [YtDlpPlaylistEntry] {
-        guard (VideoCookie.allows(domain: url.host ?? "", site: .bilibili) || url.host == "b23.tv"),
+        let host = url.host?.lowercased() ?? ""
+        let site: VideoSite = VideoCookie.allows(domain: host, site: .youtube) || host == "youtu.be" ? .youtube : .bilibili
+        guard (VideoCookie.allows(domain: host, site: site) || host == "b23.tv" || host == "youtu.be"),
               ["http", "https"].contains(url.scheme ?? ""), url.user == nil, url.password == nil else {
             throw EngineError.unsupportedLink
         }
-        let cookieFile = cookies.isEmpty ? nil : try YtDlpCookieFile(cookies: cookies, site: .bilibili)
+        let cookieFile = cookies.isEmpty ? nil : try YtDlpCookieFile(cookies: cookies, site: site)
         defer { try? cookieFile?.remove() }
         var arguments = ["--ignore-config", "--flat-playlist", "--yes-playlist", "-J", "--no-warnings",
                          "--no-cache-dir", "--socket-timeout", "10", "--retries", "0"]
+        if site == .youtube { arguments += ["--playlist-end", "1000"] }
         if let cookieFile { arguments += ["--cookies", cookieFile.url.path] }
         var listing = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        let query = listing?.queryItems?.filter { $0.name != "p" }
+        let query = listing?.queryItems?.filter { site == .youtube ? !["v", "index", "start_radio"].contains($0.name) : $0.name != "p" }
+        if site == .youtube {
+            listing?.host = "www.youtube.com"
+            listing?.path = "/playlist"
+        }
         listing?.queryItems = query
         arguments += ["--", listing?.url?.absoluteString ?? url.absoluteString]
         let child = try YtDlpProcess(binary: binary, arguments: arguments, cleanupURL: cookieFile?.url)
@@ -43,6 +50,7 @@ public enum YtDlpPlaylist {
                         throw EngineError.invalidResponse(String(localized: "无法获取视频列表，请稍后重试", bundle: .module))
                     }
                     let entries = try parse(data, source: url)
+                    if site == .youtube { return entries }
                     let source = url.host == "b23.tv" ? (entries.first?.url ?? url) : url
                     return await YtDlpBilibiliMetadata.enrich(entries, source: source, cookies: cookies)
                 }
@@ -65,10 +73,28 @@ public enum YtDlpPlaylist {
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw EngineError.invalidResponse(String(localized: "视频列表格式无效", bundle: .module))
         }
-        guard let entries = object["entries"] as? [[String: Any]] else { return [] }
-        guard entries.count <= 1_000 else {
+        guard let rawEntries = object["entries"] as? [Any] else { return [] }
+        guard rawEntries.count <= 1_000 else {
             throw EngineError.invalidResponse(String(localized: "视频列表超出限制", bundle: .module))
         }
+        if VideoCookie.allows(domain: source.host?.lowercased() ?? "", site: .youtube) || source.host?.lowercased() == "youtu.be" {
+            let playlistTitle = (object["title"] as? String).map { String($0.prefix(512)) }
+            var seen = Set<URL>()
+            return rawEntries.enumerated().compactMap { offset, value in
+                guard let entry = value as? [String: Any], let id = entry["id"] as? String,
+                      let candidate = URL(string: "https://www.youtube.com/watch?v=" + id) else { return nil }
+                let link = ParsedLink.video(url: candidate, site: .youtube, original: candidate.absoluteString)
+                guard link.youtubeVideoID == id, let url = link.singleVideoURL, seen.insert(url).inserted else { return nil }
+                let duration = (entry["duration"] as? NSNumber)?.doubleValue
+                let extractor = (entry["extractor_key"] as? String) ?? (entry["ie_key"] as? String)
+                return YtDlpPlaylistEntry(
+                    index: offset + 1, title: String((entry["title"] as? String ?? "").prefix(512)),
+                    url: url, site: .youtube, duration: duration.flatMap { $0.isFinite && $0 > 0 ? $0 : nil },
+                    playlistTitle: playlistTitle, videoIdentity: extractor.map { $0 + ":" + id }
+                )
+            }
+        }
+        guard let entries = rawEntries as? [[String: Any]] else { return [] }
         var seen = Set<URL>()
         return entries.enumerated().compactMap { offset, entry in
             let index = offset + 1

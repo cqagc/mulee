@@ -34,6 +34,8 @@ final class AppModel {
     var whenAllDoneAction: WhenAllDoneAction = .none
     var whenAllDoneSecondsRemaining: Int?
     var isPerformingWhenAllDone = false
+    @ObservationIgnored var automaticPauseStore = QueuePauseStore(defaults: AppEnvironment.isRunningUnitTests ? nil : .standard)
+    @ObservationIgnored var completionShortcutRunner: CompletionShortcutRunner?
     @ObservationIgnored var userPausedTaskIDs: Set<DownloadTask.ID> = []
     @ObservationIgnored weak var diskReserveMonitor: DiskReserveMonitor?
     @ObservationIgnored weak var notificationService: NotificationService?
@@ -182,6 +184,7 @@ final class AppModel {
         userPausedTaskIDs.insert(id)
         whenAllDoneController?.userDidInteract()
         if let index = tasks.firstIndex(where: { $0.id == id }) {
+            automaticPauseStore.setManuallyPaused(true, for: tasks[index])
             tasks[index].pauseReason = nil
         }
         if let coordinator {
@@ -197,7 +200,13 @@ final class AppModel {
         userPausedTaskIDs.remove(id)
         whenAllDoneController?.userDidInteract()
         if let index = tasks.firstIndex(where: { $0.id == id }) {
-            tasks[index].pauseReason = nil
+            automaticPauseStore.setManuallyPaused(false, for: tasks[index])
+            if downloadSettings?.transferScheduleEnabled != true {
+                automaticPauseStore.remove(.schedule, for: tasks[index])
+                if tasks[index].pauseReason == .schedule { tasks[index].pauseReason = nil }
+            }
+            tasks[index].pauseReason = automaticPauseStore.displayReason(for: tasks[index])
+            if tasks[index].pauseReason != nil { return }
         }
         if let coordinator {
             Task { await coordinator.resume(id) }

@@ -1,9 +1,12 @@
+import AppKit
 import Darwin
 import Foundation
 import MuleeCore
 
 /// Chrome 以扩展 origin 启动 App 可执行文件；此模式在创建 UI 前退出。
 nonisolated enum VideoNativeMessaging {
+    // 在读取正文前限流；为 1 MiB 入口 URL 留出 JSON 信封空间。
+    static let maximumFrameBytes = 1_048_704
     static let host = "com.cqagc.mulee.video_login"
     // 与 Chrome manifest 的公开 key 对应；不是秘密或授权令牌。
     static let extensionID = "oibbkfbekjeedglnamajelikapoimdcj"
@@ -24,7 +27,7 @@ nonisolated enum VideoNativeMessaging {
     static func readPayload(from input: FileHandle) throws -> Data {
         let header = try readExactly(4, from: input)
         let length = header.withUnsafeBytes { $0.loadUnaligned(as: UInt32.self).littleEndian }
-        guard length > 0, length <= VideoCookieRequest.maximumBytes else { throw EngineError.unsupportedLink }
+        guard length > 0, length <= maximumFrameBytes else { throw EngineError.unsupportedLink }
         return try readExactly(Int(length), from: input)
     }
 
@@ -39,20 +42,46 @@ nonisolated enum VideoNativeMessaging {
         return data
     }
 
+    /// 复用 Safari 的严格入口校验，原生消息不额外放宽 URL 协议或字段。
+    @MainActor static func linkURL(from payload: Data) -> URL? {
+        guard let object = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
+              object.count == 2, object["type"] as? String == "openLinks",
+              let value = object["url"] as? String else { return nil }
+        return BrowserExtensionRequest.validatedURL(from: ["url": value])
+    }
+
+    /// 仅向正在运行的主程序交接；宿主自身不能被当作主程序在线。
+    @MainActor static func openLinks(
+        _ payload: Data,
+        isAppRunning: () -> Bool = {
+            guard let bundleID = Bundle.main.bundleIdentifier else { return false }
+            return NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).contains {
+                $0.processIdentifier != ProcessInfo.processInfo.processIdentifier && !$0.isTerminated
+            }
+        },
+        open: (URL) -> Bool = { NSWorkspace.shared.open($0) }
+    ) -> Bool {
+        guard let url = linkURL(from: payload), isAppRunning() else { return false }
+        return open(url)
+    }
+
     static func run(arguments: [String]) async -> Never {
         guard acceptsOrigin(arguments) else { exit(1) }
         let accepted: Bool
         do {
             let payload = try readPayload(from: .standardInput)
-            if let object = try JSONSerialization.jsonObject(with: payload) as? [String: Any],
-               object["type"] as? String == "downloadCookies" {
+            let object = try JSONSerialization.jsonObject(with: payload) as? [String: Any]
+            if object?["type"] as? String == "openLinks" {
+                accepted = await openLinks(payload)
+            } else if object?["type"] as? String == "downloadCookies" {
                 let request = try DownloadCookieRequest.parse(payload)
                 try DownloadCookieHandoff.save(request, directory: DownloadCookieHandoff.directory())
+                accepted = true
             } else {
                 let request = try VideoCookieRequest.parse(payload)
                 try await VideoLoginStore.shared.save(request)
+                accepted = true
             }
-            accepted = true
         } catch {
             accepted = false
         }

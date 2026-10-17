@@ -5,6 +5,19 @@ struct DiskReserveBanner: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
+        if model.tasks.contains(where: { $0.deletedAt == nil && $0.pauseReason == .volumeUnavailable }) {
+            VStack(alignment: .leading, spacing: 4) {
+                Label("保存位置所在的磁盘已断开", systemImage: MuleeSymbol.statusFailed.name)
+                    .font(.callout.weight(.semibold))
+                Text("该磁盘的下载已暂停。重新连接磁盘后会自动继续，也可以换保存目录；手动暂停的任务请手动继续。")
+                    .foregroundStyle(.secondary)
+            }
+            .font(.caption)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(Color(nsColor: .controlBackgroundColor))
+            .accessibilityElement(children: .combine)
+        }
         ForEach(model.diskReserveWarnings) { warning in
             VStack(alignment: .leading, spacing: 4) {
                 Label(warning.isPaused ? String(localized: "因磁盘空间不足已暂停") : String(localized: "磁盘空间快到保护线"),

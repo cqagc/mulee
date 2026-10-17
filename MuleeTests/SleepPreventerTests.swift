@@ -59,4 +59,21 @@ import Testing
         preventer = nil
         #expect(provider.released == [1])
     }
+    @Test func lowPowerModeReleasesAndDoesNotAcquireAssertion() {
+        let provider = FakeProvider()
+        var lowPower = false
+        let preventer = SleepPreventer(provider: provider, lowPowerMode: { lowPower })
+        preventer.update(isActive: true)
+        #expect(preventer.isPreventingSleep)
+        lowPower = true
+        preventer.update(isActive: true)
+        #expect(!preventer.isPreventingSleep)
+        #expect(provider.released == [1])
+        preventer.update(isActive: true)
+        #expect(provider.created == 1)
+        lowPower = false
+        preventer.update(isActive: true)
+        #expect(provider.created == 2)
+    }
+
 }

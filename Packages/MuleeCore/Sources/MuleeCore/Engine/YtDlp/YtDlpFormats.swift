@@ -30,18 +30,27 @@ public enum YtDlpFormats {
         url: URL, site: VideoSite, binary: URL, cookies: [VideoCookie] = [],
         deno: URL? = nil, timeout: Duration = .seconds(20)
     ) async throws -> [YtDlpFormat] {
+        try await fetchMetadata(url: url, site: site, binary: binary, cookies: cookies, deno: deno, timeout: timeout).formats
+    }
+
+    public static func fetchMetadata(
+        url: URL, site: VideoSite, binary: URL, cookies: [VideoCookie] = [],
+        deno: URL? = nil, timeout: Duration = .seconds(20)
+    ) async throws -> YtDlpVideoMetadata {
         guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""), url.host != nil,
               url.user == nil, url.password == nil else { throw EngineError.unsupportedLink }
+        let source = ParsedLink.video(url: url, site: site, original: url.absoluteString)
+        guard let videoURL = source.singleVideoURL else { throw EngineError.unsupportedLink }
         let cookieFile = cookies.isEmpty ? nil : try YtDlpCookieFile(cookies: cookies, site: site)
         defer { try? cookieFile?.remove() }
         var arguments = ["--ignore-config", "-J", "--skip-download", "--no-playlist", "--no-warnings",
                          "--no-cache-dir", "--socket-timeout", "10", "--retries", "0"]
         if let cookieFile { arguments += ["--cookies", cookieFile.url.path] }
         if let deno { arguments += ["--js-runtimes", "deno:" + deno.path] }
-        arguments += ["--", url.absoluteString]
+        arguments += ["--", videoURL.absoluteString]
         let child = try YtDlpProcess(binary: binary, arguments: arguments, cleanupURL: cookieFile?.url)
         return try await withTaskCancellationHandler {
-            try await withThrowingTaskGroup(of: [YtDlpFormat].self) { group in
+            try await withThrowingTaskGroup(of: YtDlpVideoMetadata.self) { group in
                 group.addTask {
                     var data = Data()
                     for await chunk in child.output {
@@ -60,7 +69,7 @@ public enum YtDlpFormats {
                         }
                         throw ListingError.failed
                     }
-                    return try parse(data)
+                    return try YtDlpVideoMetadata.parse(data)
                 }
                 group.addTask {
                     try await Task.sleep(for: timeout)
@@ -80,6 +89,16 @@ public enum YtDlpFormats {
         } onCancel: {
             Task { await child.terminate() }
         }
+    }
+
+    static func videoIdentity(in data: Data) -> String? {
+        guard data.count <= 8_388_608,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let extractor = object["extractor_key"] as? String, !extractor.isEmpty,
+              let id = object["id"] as? String, !id.isEmpty,
+              extractor.utf8.count <= 128, id.utf8.count <= 512,
+              !(extractor + id).unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else { return nil }
+        return extractor + ":" + id
     }
 
     public static func parse(_ data: Data) throws -> [YtDlpFormat] {

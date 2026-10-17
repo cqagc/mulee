@@ -6,6 +6,7 @@ struct Aria2Configuration: Sendable {
     let port: UInt16
     let secret: String
     var options: EngineOptions
+    var proxy = HTTPProxyConfiguration(mode: .off)
 
     var fileURL: URL { stateDirectory.appendingPathComponent("aria2.conf") }
     var sessionURL: URL { stateDirectory.appendingPathComponent("aria2.session") }
@@ -22,13 +23,13 @@ struct Aria2Configuration: Sendable {
 
     var runtimeOptions: [String: String] {
         let connections = min(16, max(1, options.connectionsPerServer))
-        return [
+        return proxy.aria2Options.merging([
             "dir": options.downloadDirectory.path,
             "max-concurrent-downloads": String(max(1, options.maxConcurrentDownloads)),
             "max-connection-per-server": String(connections),
             "split": String(connections),
             "max-overall-download-limit": String(max(0, options.downloadLimit))
-        ]
+        ]) { _, new in new }
     }
 
     func contents() throws -> String {
@@ -37,6 +38,7 @@ struct Aria2Configuration: Sendable {
             "rpc-listen-all": "false",
             "rpc-listen-port": String(port),
             "rpc-secret": secret,
+            "rpc-max-request-size": "8M",
             "disable-ipv6": "true",
             "min-split-size": "1M",
             "continue": "true",
@@ -61,7 +63,8 @@ struct Aria2Configuration: Sendable {
             "connect-timeout": "30",
             "timeout": "60",
             "stop-with-process": String(ProcessInfo.processInfo.processIdentifier),
-            "no-proxy": "localhost,127.0.0.1,::1"
+            "follow-metalink": "true",
+            "no-netrc": "true"
         ]) { _, new in new }
         if FileManager.default.fileExists(atPath: sessionURL.path) {
             values["input-file"] = sessionURL.path

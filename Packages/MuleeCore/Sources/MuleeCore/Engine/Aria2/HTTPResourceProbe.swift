@@ -25,12 +25,13 @@ public enum HTTPResourceProbe {
         try context.validate()
         guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""),
               url.host != nil, url.user == nil, url.password == nil else { throw EngineError.unsupportedLink }
-        let response = try await inspectResponse(url, context: context)
+        let response = try await inspectResponse(url, context: authenticatedContext(url, context: context))
         return try identity(response: response, expectsHTML: expectsHTML)
     }
 
     /// aria2 的通用 header 会跟随重定向；先解析最终地址，再按原主机限制凭据。
     static func prepareDownload(_ url: URL, context: DownloadRequestContext) async throws -> (url: URL, context: DownloadRequestContext) {
+        let context = try authenticatedContext(url, context: context)
         try context.validate()
         let hasCredentials = context.requestCookie != nil || context.headers.keys.contains {
             ["authorization", "proxy-authorization"].contains($0.lowercased())
@@ -42,9 +43,23 @@ public enum HTTPResourceProbe {
         var scoped = context
         if !sameHost(url, finalURL) || url.scheme?.lowercased() != finalURL.scheme?.lowercased() {
             scoped = context.withoutCookie
+            scoped.usesStoredHTTPCredentials = false
             scoped.headers = scoped.headers.filter { !["authorization", "proxy-authorization"].contains($0.key.lowercased()) }
         }
         return (finalURL, scoped)
+    }
+
+    static func authenticatedContext(
+        _ url: URL, context: DownloadRequestContext,
+        credentialLoader: (String) throws -> HTTPCredentialStore.Credential? = { try HTTPCredentialStore.load(host: $0) }
+    ) throws -> DownloadRequestContext {
+        var context = context
+        if context.usesStoredHTTPCredentials == true, ["http", "https"].contains(url.scheme?.lowercased() ?? ""), let host = url.host,
+           !context.headers.keys.contains(where: { $0.lowercased() == "authorization" }),
+           let credential = try credentialLoader(host) {
+            context.headers["Authorization"] = credential.authorization
+        }
+        return context
     }
 
     private static func inspectResponse(_ url: URL, context: DownloadRequestContext) async throws -> HTTPURLResponse {
@@ -74,12 +89,14 @@ public enum HTTPResourceProbe {
 
     private static func response(_ url: URL, context: DownloadRequestContext, method: String) async throws -> HTTPURLResponse {
         let configuration = URLSessionConfiguration.ephemeral
+        let proxy = HTTPProxyConfiguration.current()
+        configuration.connectionProxyDictionary = proxy.sessionProxyDictionary
         configuration.httpCookieStorage = nil
         configuration.urlCredentialStorage = nil
         configuration.urlCache = nil
         configuration.timeoutIntervalForRequest = 30
         configuration.timeoutIntervalForResource = 60
-        let session = URLSession(configuration: configuration, delegate: HTTPProbeRedirectDelegate(), delegateQueue: nil)
+        let session = URLSession(configuration: configuration, delegate: HTTPProbeRedirectDelegate(proxy: proxy), delegateQueue: nil)
         defer { session.invalidateAndCancel() }
         var request = URLRequest(url: url)
         request.httpMethod = method
@@ -91,13 +108,31 @@ public enum HTTPResourceProbe {
         request.setValue("identity", forHTTPHeaderField: "Accept-Encoding")
         if method == "GET" { request.setValue("bytes=0-0", forHTTPHeaderField: "Range") }
         // 只等响应头，即使服务器忽略 Range 返回整文件，也不把正文读入内存。
-        let (_, response) = try await session.bytes(for: request)
+        let response: URLResponse
+        do { (_, response) = try await session.bytes(for: request) }
+        catch let error as URLError {
+            if HTTPDownloadFailure.isCertificateError(error) { throw HTTPDownloadFailure.invalidCertificate }
+            throw error
+        }
         guard let response = response as? HTTPURLResponse else { throw EngineError.invalidResponse("无法读取 HTTP 响应") }
         return response
     }
 }
 
-private final class HTTPProbeRedirectDelegate: NSObject, URLSessionTaskDelegate {
+final class HTTPProbeRedirectDelegate: NSObject, URLSessionTaskDelegate {
+    private let proxy: HTTPProxyConfiguration?
+
+    init(proxy: HTTPProxyConfiguration? = nil) { self.proxy = proxy }
+
+    func urlSession(
+        _ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge
+    ) async -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+        guard challenge.protectionSpace.isProxy(), challenge.previousFailureCount == 0,
+              challenge.protectionSpace.host.lowercased() == proxy?.url?.host?.lowercased(),
+              let credential = proxy?.credential else { return (.performDefaultHandling, nil) }
+        return (.useCredential, URLCredential(user: credential.username, password: credential.password, persistence: .none))
+    }
+
     func urlSession(
         _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
         newRequest request: URLRequest

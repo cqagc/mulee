@@ -14,6 +14,8 @@ public struct TorrentTaskInfo: Sendable, Equatable {
     public let diagnostics: TorrentDiagnostics?
     public let seedTimeSeconds: Int64
     public let seedInactiveSeconds: Int64
+    public var userDownloadLimit: Int64 = 0
+    public var userUploadLimit: Int64 = 0
 }
 
 /// 以一秒为最短间隔采样的 BT 连接诊断；磁盘指标属于整个会话。

@@ -1,6 +1,7 @@
 import Foundation
 
 public enum HTTPDownloadFailure: Error, Sendable, Equatable, LocalizedError {
+    case invalidCertificate
     case needsLogin
     case expiredLink
     case missingFile
@@ -19,9 +20,19 @@ public enum HTTPDownloadFailure: Error, Sendable, Equatable, LocalizedError {
         }
     }
 
+    public static func isCertificateError(_ error: URLError) -> Bool {
+        [.serverCertificateHasBadDate, .serverCertificateUntrusted, .serverCertificateHasUnknownRoot,
+         .serverCertificateNotYetValid, .clientCertificateRejected, .clientCertificateRequired].contains(error.code)
+    }
+
+    public static func requiresCredentials(status: TaskStatus, message: String?) -> Bool {
+        status == .failed && message == Self.needsLogin.localizedDescription
+    }
+
     public var errorDescription: String? {
         switch self {
-        case .needsLogin: "需要登录，请在浏览器登录后换个链接继续。"
+        case .invalidCertificate: "服务器的安全证书无效，Mulee 不会继续连接"
+        case .needsLogin: "服务器需要认证，请输入账号和密码后重试。"
         case .expiredLink: "链接已过期或无权访问，请换个链接继续。"
         case .missingFile: "文件已被移走或删除，请换个链接继续。"
         case .webPage: "服务器把下载换成了网页，请获取新的下载链接。"

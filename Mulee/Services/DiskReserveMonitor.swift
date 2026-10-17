@@ -62,7 +62,7 @@ final class DiskReserveMonitor {
         lastCheck = date
         checking = true
         defer { checking = false }
-        let tasks = model.tasks.filter { $0.deletedAt == nil && (Self.needsProtection($0) || $0.pauseReason == .diskSpace) }
+        let tasks = model.tasks.filter { $0.deletedAt == nil && (Self.needsProtection($0) || model.automaticPauseReasons(for: $0).contains(.diskSpace)) }
         var byVolume: [URL: [DownloadTask]] = [:]
         var taskVolumes: [DownloadTask.ID: Set<URL>] = [:]
         var unknownVolumes: Set<DownloadTask.ID> = []
@@ -90,7 +90,7 @@ final class DiskReserveMonitor {
             guard let available = try? capacity(key) else { continue }
             readableVolumes.insert(key)
             let wasProtected = protectedVolumes.contains(key)
-                || (byVolume[key] ?? []).contains { $0.pauseReason == .diskSpace }
+                || (byVolume[key] ?? []).contains { model.automaticPauseReasons(for: $0).contains(.diskSpace) }
             let blocked = settings.diskReserveEnabled && (available <= reserveBytes
                 || (wasProtected && available <= reserveBytes + 1_000_000_000))
             if blocked {
@@ -113,7 +113,7 @@ final class DiskReserveMonitor {
             let keys = taskVolumes[task.id] ?? []
             if !keys.isDisjoint(with: blockedVolumes), Self.needsProtection(task) {
                 await pause(task)
-            } else if task.pauseReason == .diskSpace,
+            } else if model.automaticPauseReasons(for: task).contains(.diskSpace),
                       !settings.diskReserveEnabled || (!unknownVolumes.contains(task.id)
                         && !keys.isEmpty && keys.isSubset(of: readableVolumes)
                         && keys.isDisjoint(with: blockedVolumes)) {
@@ -153,34 +153,28 @@ final class DiskReserveMonitor {
             return
         }
         if task.postDownload.extractionState == .queued, task.status == .completed { return }
-        if let coordinator = model.coordinator {
-            await coordinator.pauseForDiskSpace(task.id)
-        } else if let index = model.tasks.firstIndex(where: { $0.id == task.id }) {
-            model.tasks[index].pauseReason = .diskSpace
-            model.tasks[index].status = .paused
-            model.tasks[index].downloadRate = 0
-            model.tasks[index].uploadRate = 0
-        }
+        await model.pauseAutomatically(task.id, reason: .diskSpace)
     }
 
     private func resume(_ task: DownloadTask) async {
-        if task.postDownload.extractionState == .queued {
-            guard let index = model.tasks.firstIndex(where: { $0.id == task.id }) else { return }
-            model.tasks[index].pauseReason = nil
-            model.tasks[index].status = .completed
-        } else if let coordinator = model.coordinator {
-            await coordinator.resumeAfterDiskSpace(task.id)
-        } else if let index = model.tasks.firstIndex(where: { $0.id == task.id }) {
-            model.tasks[index].pauseReason = nil
-            model.tasks[index].status = task.kind == .ed2k ? .waitingForSources : .downloading
-        }
+        await model.resumeAutomatically(task.id, reason: .diskSpace)
     }
 
     private static func needsProtection(_ task: DownloadTask) -> Bool {
-        [.downloading, .queued, .waitingForSources, .postProcessing, .extracting].contains(task.status)
+        if [.downloading, .queued, .waitingForSources, .postProcessing, .extracting].contains(task.status) { return true }
+        guard task.status == .paused, task.pauseReason != nil else { return false }
+        // 做种被计划暂停时不写盘，不额外叠加磁盘保护。
+        return task.kind != .bittorrent || task.totalBytes.map { $0 <= 0 || task.receivedBytes < $0 } != false
     }
 
     nonisolated static func volumeURL(_ directory: URL) throws -> URL {
+        let path = directory.standardizedFileURL.path
+        if path.hasPrefix("/Volumes/") {
+            let volumes = FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: nil, options: []) ?? []
+            guard volumes.contains(where: { $0.path != "/" && (path == $0.path || path.hasPrefix($0.path + "/")) }) else {
+                throw CocoaError(.fileNoSuchFile)
+            }
+        }
         var existing = directory
         while !FileManager.default.fileExists(atPath: existing.path), existing.path != "/" {
             existing.deleteLastPathComponent()

@@ -32,6 +32,7 @@
     },
     "optional_permissions": [
         "downloads",
+        "webRequest",
         "cookies",
         "nativeMessaging"
     ],

@@ -18,6 +18,7 @@ public struct DownloadRequestContext: Sendable, Hashable, Codable {
     public var suggestedFilename: String?
     public var headers: [String: String]
     public var cookie: String?
+    public var usesStoredHTTPCredentials: Bool?
 
     public init(
         referer: URL? = nil, userAgent: String? = nil, suggestedFilename: String? = nil,
@@ -67,7 +68,7 @@ public struct DownloadRequestContext: Sendable, Hashable, Codable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case referer, userAgent, suggestedFilename, headers, duplicateAction
+        case referer, userAgent, suggestedFilename, headers, duplicateAction, usesStoredHTTPCredentials
     }
 
     public init(from decoder: any Decoder) throws {
@@ -77,6 +78,7 @@ public struct DownloadRequestContext: Sendable, Hashable, Codable {
         suggestedFilename = try container.decodeIfPresent(String.self, forKey: .suggestedFilename)
         headers = try container.decodeIfPresent([String: String].self, forKey: .headers) ?? [:]
         cookie = nil
+        usesStoredHTTPCredentials = try container.decodeIfPresent(Bool.self, forKey: .usesStoredHTTPCredentials)
         duplicateAction = try container.decodeIfPresent(DuplicateAction.self, forKey: .duplicateAction)
         self = withoutCookie
         headers = headers.filter { !["authorization", "proxy-authorization"].contains($0.key.lowercased()) }
@@ -84,6 +86,7 @@ public struct DownloadRequestContext: Sendable, Hashable, Codable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(usesStoredHTTPCredentials, forKey: .usesStoredHTTPCredentials)
         try container.encodeIfPresent(duplicateAction, forKey: .duplicateAction)
         try container.encodeIfPresent(referer, forKey: .referer)
         try container.encodeIfPresent(userAgent, forKey: .userAgent)

@@ -42,10 +42,14 @@ enum Aria2RPCModels: Sendable {
         let errorCode: String?
         let errorMessage: String?
         let files: [File]?
+        let bitfield: String?
+        let numPieces: String?
+        let pieceLength: String?
 
         static let keys = [
             "gid", "status", "dir", "totalLength", "completedLength", "downloadSpeed",
-            "uploadSpeed", "connections", "errorCode", "errorMessage", "files"
+            "uploadSpeed", "connections", "errorCode", "errorMessage", "files",
+            "bitfield", "numPieces", "pieceLength"
         ]
     }
 }

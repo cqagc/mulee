@@ -11,6 +11,7 @@ final class ExtractionCoordinator {
     private var activeJob: ExtractionJob?
     private var activeExtraction: Task<ExtractionOutcome, Never>?
     private var diskInterruptedJob: UUID?
+    private var volumeInterruptedJob: UUID?
     private var candidates: [DownloadTask.ID] = []
     private var manualRequests: Set<DownloadTask.ID> = []
     private var seenCompletions: Set<DownloadTask.ID> = []
@@ -56,6 +57,14 @@ final class ExtractionCoordinator {
     func cancelForDiskSpace(_ id: DownloadTask.ID) async {
         guard let job = activeJob, job.taskIDs.contains(id), let operation = activeExtraction else { return }
         diskInterruptedJob = job.id
+        operation.cancel()
+        let outcome = await operation.value
+        finishActive(outcome, job: job)
+    }
+
+    func cancelForUnavailableVolume(_ id: DownloadTask.ID) async {
+        guard let job = activeJob, job.taskIDs.contains(id), let operation = activeExtraction else { return }
+        volumeInterruptedJob = job.id
         operation.cancel()
         let outcome = await operation.value
         finishActive(outcome, job: job)
@@ -143,6 +152,9 @@ final class ExtractionCoordinator {
             activeExtraction = operation
             if Task.isCancelled { operation.cancel() }
             let outcome = await operation.value
+            if outcome.status == .succeeded, let source = model.tasks.first(where: { job.taskIDs.contains($0.id) }) {
+                await DownloadProvenance.apply(to: outcome.items, task: source)
+            }
             finishActive(outcome, job: job)
         }
         worker = nil
@@ -150,7 +162,12 @@ final class ExtractionCoordinator {
 
     private func finishActive(_ outcome: ExtractionOutcome, job: ExtractionJob) {
         guard activeJob?.id == job.id else { return }
-        if diskInterruptedJob == job.id, outcome.status != .succeeded {
+        if volumeInterruptedJob == job.id, outcome.status != .succeeded {
+            finish(outcome, job: job)
+            update(job.taskIDs) { task in
+                task.postDownload.extractionFailure = String(localized: "保存位置所在的磁盘已断开，解压已停止。重新连接磁盘后请检查已解出的内容，再手动重试。")
+            }
+        } else if diskInterruptedJob == job.id, outcome.status != .succeeded {
             var interrupted = outcome
             interrupted.status = .failed
             interrupted.failure = .cancelled
@@ -164,6 +181,7 @@ final class ExtractionCoordinator {
         activeJob = nil
         activeExtraction = nil
         diskInterruptedJob = nil
+        volumeInterruptedJob = nil
         model.flushTaskHistory()
     }
 
@@ -177,7 +195,7 @@ final class ExtractionCoordinator {
             return nil
         }
         for id in candidates {
-            if model.tasks.contains(where: { $0.id == id && $0.pauseReason == .diskSpace }) { continue }
+            if model.tasks.contains(where: { $0.id == id && $0.pauseReason != nil }) { continue }
             guard let task = model.tasks.first(where: { $0.id == id }), task.deletedAt == nil, task.status == .completed,
                   task.postDownload.autoExtract, Self.isReadyForExtraction(task), !Self.isFinished(task.postDownload), let archive = task.savePath else {
                 candidates.removeAll { $0 == id }

@@ -20,6 +20,7 @@ public struct TorrentEngineSettings: Sendable, Hashable {
     public var seedTimeLimitMinutes: Int
     public var seedInactiveLimitMinutes: Int
     public var privateMinSeedMinutes: Int
+    public var ipBlocklistURLPath: String = ""
     public var ipBlocklistPath: String
 
     public static let defaultJunkFilePatterns = [

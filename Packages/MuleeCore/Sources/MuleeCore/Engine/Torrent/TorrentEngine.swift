@@ -229,7 +229,26 @@ public actor TorrentEngine: DownloadEngine {
             isFinished: task.canApplySeedingPolicy,
             sequentialDownload: task.sequentialDownload ?? false,
             firstLastPriority: task.firstLastPriority ?? false, diagnostics: task.diagnostics,
-            seedTimeSeconds: task.seedTimeSeconds ?? 0, seedInactiveSeconds: task.seedInactiveSeconds ?? 0
+            seedTimeSeconds: task.seedTimeSeconds ?? 0, seedInactiveSeconds: task.seedInactiveSeconds ?? 0,
+            userDownloadLimit: task.userDownloadLimit ?? 0, userUploadLimit: task.userUploadLimit ?? 0
+        )
+    }
+
+    /// 元数据就绪后生成包含名称与 tracker 的磁力链接。
+    public func magnetURI(_ id: String) async throws -> String {
+        let client = try await runningClient()
+        let result: TorrentdMagnetResult = try await client.call("magnet_uri", TorrentdIDParameters(id: id))
+        return result.uri
+    }
+
+    /// 字节/秒；0 表示不限，实际上传上限同时受做种策略约束。
+    public func setTaskLimits(id: String, download: Int64, upload: Int64) async throws {
+        guard (0...Int64(Int32.max)).contains(download), (0...Int64(Int32.max)).contains(upload) else {
+            throw TorrentErrorDescriptions.error(for: "invalid_params")
+        }
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call(
+            "set_task_limits", TorrentdTaskLimitParameters(id: id, downloadLimit: download, uploadLimit: upload)
         )
     }
 
@@ -325,9 +344,9 @@ public actor TorrentEngine: DownloadEngine {
     }
 
     /// 导入 P2P / DAT 黑名单，保留用户手动封禁的 IP。
-    public func importIPBlocklist(from file: URL) async throws -> TorrentBlocklistResult {
+    public func importIPBlocklist(from file: URL, validateOnly: Bool = false) async throws -> TorrentBlocklistResult {
         let client = try await runningClient()
-        return try await client.call("import_ip_blocklist", TorrentdPathParameters(path: file.path))
+        return try await client.call("import_ip_blocklist", TorrentdBlocklistParameters(path: file.path, validateOnly: validateOnly))
     }
 
     /// 从文件或目录制作分块大小自动选择的 v1+v2 混合种子。
@@ -393,7 +412,7 @@ public actor TorrentEngine: DownloadEngine {
         for torrent in result.torrents {
             let action = SeedingPolicy.action(
                 ratio: torrent.ratio, isFinished: torrent.canApplySeedingPolicy, isPrivate: torrent.isPrivate,
-                paused: torrent.paused, uploadLimit: torrent.uploadLimit, settings: settings,
+                paused: torrent.paused, uploadLimit: torrent.policyUploadLimit ?? torrent.uploadLimit, settings: settings,
                 seedTimeSeconds: torrent.seedTimeSeconds ?? 0, seedInactiveSeconds: torrent.seedInactiveSeconds ?? 0
             )
             switch action {

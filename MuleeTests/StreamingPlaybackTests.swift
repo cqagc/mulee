@@ -41,12 +41,15 @@ import Testing
         #expect(StreamingPlayback.preferredPlayer(installed: ["com.apple.QuickTimePlayerX"]) == nil)
     }
 
-    @Test func HTTPAndVideoOnlyPlayFinishedProductsAndBTRequiresVideo() {
+    @Test func HTTPPlaysDuringDownloadAndVideoRequiresFinishedProduct() {
         var task = MockData.longTailTask
         task.kind = .http
         task.name = "sample.mp4"
         task.savePath = URL(filePath: "/tmp/sample.mp4")
         task.status = .downloading
+        task.engineTaskID = "http-fixture"
+        #expect(StreamingPlayback.canPlay(task))
+        task.status = .paused
         #expect(!StreamingPlayback.canPlay(task))
         task.status = .completed
         #expect(StreamingPlayback.canPlay(task))

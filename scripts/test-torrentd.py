@@ -61,10 +61,9 @@ def bdecode(data):
     return result
 
 
-def fixture(root, name, entries, multi=False, private=False):
+def fixture(root, name, entries, multi=False, private=False, piece_length=64 * 1024):
     """Generate v1 torrents with no trackers and real SHA-1 piece hashes."""
     content = b"".join(data for _, data in entries)
-    piece_length = 64 * 1024
     info = {
         "name": name,
         "piece length": piece_length,
@@ -697,12 +696,91 @@ def creation_progress_and_cancellation(binary, root):
     print("PASS 制作种子进度、200 ms 节流、立即取消与输出清理", flush=True)
 
 
+def second_round_bt_tests(binary, root):
+    root.mkdir()
+    payload = os.urandom(2 * 1024 * 1024)
+    torrent, task_id, seed_path = fixture(root, "block-progress.bin", [("", payload)], piece_length=len(payload))
+    seed = Daemon(binary, root / "seed-state")
+    port = seed.configure(seed_path)
+    seed.request("add", {"torrent_file": str(torrent)})
+    seed.complete(task_id)
+    uri = seed.request("magnet_uri", {"id": task_id})["uri"]
+    assert f"xt=urn:btih:{task_id}" in uri and "dn=block-progress.bin" in uri
+    seed.request("magnet_uri", {"id": "f" * 40}, error="not_found")
+    pending = "e" * 40
+    seed.request("add", {"magnet": f"magnet:?xt=urn:btih:{pending}", "paused": True})
+    seed.request("magnet_uri", {"id": pending}, error="metadata_pending")
+    seed.request("remove", {"id": pending, "delete_files": False})
+
+    def limits(download, upload):
+        seed.request("set_task_limits", {"id": task_id, "download_limit": download, "upload_limit": upload})
+        return seed.torrent(task_id)
+
+    assert limits(123456, 20000)["user_upload_limit"] == 20000
+    seed.request("set_upload_limit", {"id": task_id, "limit": 51200})
+    assert seed.torrent(task_id)["upload_limit"] == 20000
+    assert limits(123456, 100000)["upload_limit"] == 51200
+    assert limits(0, 0)["upload_limit"] == 51200
+    seed.request("set_upload_limit", {"id": task_id, "limit": 0})
+    assert seed.torrent(task_id)["upload_limit"] == 0
+    limits(123456, 20000)
+    for invalid in (-1, True, 2147483648, "1"):
+        seed.request("set_task_limits", {"id": task_id, "download_limit": invalid, "upload_limit": 0}, error="invalid_params")
+    for invalid in (-1, True, 2147483648, "1"):
+        seed.request("set_task_limits", {"id": task_id, "download_limit": 1, "upload_limit": invalid}, error="invalid_params")
+    seed.request("set_task_limits", {"id": task_id, "download_limit": 0}, error="invalid_params")
+    assert seed.torrent(task_id)["user_download_limit"] == 123456
+    seed.close("shutdown")
+    seed = Daemon(binary, seed.state)
+    restored = seed.torrent(task_id)
+    assert restored["user_download_limit"] == 123456 and restored["user_upload_limit"] == 20000
+    assert restored["download_limit"] == 123456 and restored["upload_limit"] == 20000
+    port = seed.configure(seed_path)
+    limits(0, 0)
+
+    local = root / "local.dat"
+    remote = root / "remote.dat"
+    local.write_text("local:192.0.2.1-192.0.2.2\n")
+    remote.write_text("remote:198.51.100.1-198.51.100.2\n")
+    seed.request("ban_ip", {"ip": "203.0.113.1"})
+    seed.configure(seed_path, ip_blocklist_path=str(local), ip_blocklist_url_path=str(remote))
+    before = json.loads((seed.state / "ip-filters.json").read_text())
+    assert len(before["imported"]) == 1 and len(before["subscribed"]) == 1 and len(before["banned"]) == 1
+    assert seed.request("import_ip_blocklist", {"path": str(remote), "validate_only": True})["blocked_ranges"] == 1
+    assert json.loads((seed.state / "ip-filters.json").read_text()) == before
+    remote.write_text("invalid\n")
+    seed.configure(seed_path, ip_blocklist_url_path=str(local))
+    valid_filters = (seed.state / "ip-filters.json").read_bytes()
+    seed.request("import_ip_blocklist", {"path": str(remote), "validate_only": True}, error="invalid_params")
+    assert (seed.state / "ip-filters.json").read_bytes() == valid_filters
+    port = seed.configure(seed_path, ip_blocklist_path="", ip_blocklist_url_path="")
+    seed.complete(task_id)
+
+    download = Daemon(binary, root / "download-state")
+    download.configure(root / "download", download_limit=32 * 1024)
+    download.request("add", {"magnet": f"magnet:?xt=urn:btih:{task_id}&x.pe=127.0.0.1:{port}", "mark_incomplete": True})
+    download.event("metadata_received", timeout=30)
+    # 大 piece 未完成时仍应报告其中已下载的块，连续已校验字节仍为零。
+    def partial_blocks():
+        file = download.request("files", {"id": task_id})["files"][0]
+        return file if 0 < file["done"] < len(payload) else None
+    partial = wait_for(partial_blocks, timeout=45, description="partial-piece block progress")
+    assert partial["contiguous_done"] == 0
+    assert partial["storage_path"].endswith(".mulee")
+    wait_for(lambda: download.torrent(task_id)["total_wanted_done"] > 0,
+             timeout=10, description="partial-block total progress sample")
+    download.close("shutdown")
+    seed.close("shutdown")
+    print("PASS W1-BT：magnet_uri、用户限速/策略取 min/恢复、黑名单合并/校验、未完成 piece 块进度与连续字节", flush=True)
+
+
 def run_tests(binary, root):
     creation_destination_safety_tests(binary, root / "creation-safety")
     creation_progress_and_cancellation(binary, root)
     rename_storage_conflict_tests(binary, root / "rename-conflicts")
     isolated_snapshot_conflict_tests(binary, root / "snapshot-conflicts")
     incomplete_file_tests(binary, root / "incomplete-files")
+    second_round_bt_tests(binary, root / "second-round-bt")
     management_tests(binary, root)
 
     data = os.urandom(5 * 1024 * 1024 + 123)

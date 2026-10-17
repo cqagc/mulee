@@ -4,16 +4,28 @@ public struct YtDlpPlaylistEntry: Sendable, Identifiable, Equatable {
     public let index: Int
     public let title: String
     public let url: URL
+    public let site: VideoSite
+    public let duration: Double?
+    public let playlistTitle: String?
+    public let videoIdentity: String?
     public var id: URL { url }
 
-    public init(index: Int, title: String, url: URL) {
+    public init(
+        index: Int, title: String, url: URL, site: VideoSite = .bilibili,
+        duration: Double? = nil, playlistTitle: String? = nil, videoIdentity: String? = nil
+    ) {
         self.index = index
         self.title = title
         self.url = url
+        self.site = site
+        self.duration = duration
+        self.playlistTitle = playlistTitle
+        self.videoIdentity = videoIdentity
     }
 
     public var displayTitle: String {
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if site == .youtube { return title.isEmpty ? "#\(index)" : "#\(index) \(title)" }
         guard !title.isEmpty else { return "P\(index)" }
         if url.path.hasPrefix("/bangumi/play/") { return title }
         let prefix = "P\(index)"
@@ -22,11 +34,17 @@ public struct YtDlpPlaylistEntry: Sendable, Identifiable, Equatable {
     }
 
     public var taskTitle: String {
+        if site == .youtube { return displayTitle }
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         return title.isEmpty ? "P\(index)" : title
     }
 
-    public var link: ParsedLink { .video(url: url, site: .bilibili, original: url.absoluteString) }
+    public var link: ParsedLink { .video(url: url, site: site, original: url.absoluteString) }
+
+    public var durationDescription: String? {
+        guard let duration, duration.isFinite, duration > 0, duration < 31_536_000 else { return nil }
+        return Duration.seconds(duration).formatted(.time(pattern: duration >= 3600 ? .hourMinuteSecond : .minuteSecond))
+    }
 
     public static func selectedPart(in url: URL) -> Int {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),

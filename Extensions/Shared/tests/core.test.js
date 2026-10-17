@@ -163,3 +163,41 @@ test("handoff context encodes request metadata and only accepts a 128-bit token"
     const [invalid] = links.buildBatches(["https://example.org/a.zip"], "", "", { token: "short" });
     assert.equal(new URL(invalid).searchParams.has("token"), false);
 });
+
+
+test("site exceptions normalize domains and use bounded subdomain wildcards", () => {
+    const sites = links.excludedSiteList("Example.COM, *.example.org example.com");
+    assert.deepEqual(sites, ["example.com", "*.example.org"]);
+    for (const url of ["https://example.com/a", "https://cdn.example.org/a", "https://a.b.example.org/a"]) {
+        assert.equal(links.isExcludedSite(url, sites), true);
+    }
+    for (const url of ["https://otherexample.com/a", "https://example.org/a", "https://example.org.evil.test/a", "invalid"]) {
+        assert.equal(links.isExcludedSite(url, sites), false);
+    }
+    assert.deepEqual(links.excludedSiteList(""), []);
+    for (const value of ["https://example.com", "example.com/path", "*example.com", "example.*", "-example.com", "example.com\\path", "%65xample.com"]) {
+        assert.throws(() => links.excludedSiteList(value), /invalidExcludedSites/);
+    }
+});
+
+test("request method records retain 200 latest URL and tab pairs for sixty seconds", () => {
+    let time = 0;
+    const methods = links.requestMethods(() => time);
+    const details = { url: "https://example.org/a.zip", tabId: 1, method: "POST" };
+    methods.record(details);
+    assert.equal(methods.get(details.url, 1), "POST");
+    assert.equal(methods.get(details.url, 2), undefined);
+    time = 59999;
+    assert.equal(methods.get(details.url, 1), "POST");
+    time = 60000;
+    assert.equal(methods.get(details.url, 1), undefined);
+    for (let index = 0; index <= 200; index++) methods.record({ ...details, tabId: index });
+    assert.equal(methods.get(details.url, 0), undefined);
+    assert.equal(methods.get(details.url, 1), "POST");
+    methods.record({ ...details, tabId: 1, method: "get" });
+    methods.record({ ...details, tabId: 201 });
+    assert.equal(methods.get(details.url, 1), "GET");
+    assert.equal(methods.get(details.url, 2), undefined);
+    methods.clear();
+    assert.equal(methods.get(details.url, 1), undefined);
+});

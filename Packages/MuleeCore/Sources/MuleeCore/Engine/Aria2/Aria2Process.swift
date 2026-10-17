@@ -18,8 +18,12 @@ struct Aria2Process: Sendable {
         var environment = ProcessInfo.processInfo.environment
         environment["LANG"] = "en_US.UTF-8"
         environment["LC_ALL"] = "en_US.UTF-8"
-        environment["no_proxy"] = "localhost,127.0.0.1,::1"
-        environment["NO_PROXY"] = "localhost,127.0.0.1,::1"
+        environment["no_proxy"] = configuration.proxy.aria2Options["no-proxy"] ?? "localhost,127.0.0.1,::1"
+        environment["NO_PROXY"] = configuration.proxy.aria2Options["no-proxy"] ?? "localhost,127.0.0.1,::1"
+        // 环境代理不能覆盖用户选择的直连或手动设置。
+        for key in ["http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "HTTP_PROXY", "HTTPS_PROXY", "FTP_PROXY", "ALL_PROXY"] {
+            environment.removeValue(forKey: key)
+        }
         process.environment = environment
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice

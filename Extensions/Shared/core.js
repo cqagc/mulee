@@ -15,6 +15,68 @@
             .map(item => item.replace(/^\./, "")).filter(item => /^[a-z0-9]+$/.test(item)))];
     }
 
+    function excludedSiteList(value) {
+        const entries = Array.isArray(value) ? value : String(value).split(/[\s,;，；]+/);
+        const result = [];
+        for (const entry of entries) {
+            if (!entry) continue;
+            const wildcard = entry.startsWith("*.");
+            const domain = wildcard ? entry.slice(2) : entry;
+            if (!domain || /[\\/:?#@%\s*]/.test(domain)) throw new Error("invalidExcludedSites");
+            let host;
+            try {
+                host = new URL("https://" + domain).hostname.toLowerCase().replace(/\.$/, "");
+            } catch {
+                throw new Error("invalidExcludedSites");
+            }
+            if (!host.split(".").every(label => /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label))) {
+                throw new Error("invalidExcludedSites");
+            }
+            result.push((wildcard ? "*." : "") + host);
+        }
+        return [...new Set(result)];
+    }
+
+    function isExcludedSite(value, sites) {
+        try {
+            const host = new URL(value).hostname.toLowerCase().replace(/\.$/, "");
+            return sites.some(site => site.startsWith("*.")
+                ? host.endsWith(site.slice(1)) : host === site);
+        } catch {
+            return false;
+        }
+    }
+
+    function requestMethods(now = () => Date.now()) {
+        const records = new Map();
+        const key = (url, tabID) => JSON.stringify([url, tabID]);
+        function prune() {
+            const cutoff = now() - 60000;
+            for (const [id, record] of records) {
+                if (record.time <= cutoff) records.delete(id);
+            }
+        }
+        return {
+            record(details) {
+                prune();
+                const id = key(details.url, details.tabId);
+                records.delete(id);
+                records.set(id, { url: details.url, method: details.method.toUpperCase(), time: now() });
+                while (records.size > 200) records.delete(records.keys().next().value);
+            },
+            get(url, tabID) {
+                prune();
+                if (Number.isInteger(tabID)) return records.get(key(url, tabID))?.method;
+                // Chrome 的 DownloadItem 没有 tabId；有任一非 GET 记录就留给浏览器。
+                const matches = [...records.values()].filter(record => record.url === url);
+                return matches.find(record => record.method !== "GET")?.method || matches.at(-1)?.method;
+            },
+            clear() {
+                records.clear();
+            }
+        };
+    }
+
     function remoteLink(value, depth = 0) {
         if (typeof value !== "string" || depth > 4 || /[\r\n\t\u0000]/.test(value)) return false;
         if (/^ed2k:\/\/\|file\|[^|]+\|[1-9]\d*\|[a-f0-9]{32}\|(?:[a-z]=[^|\s]+\|)*\/$/i.test(value)) return true;
@@ -156,7 +218,7 @@
         return batches;
     }
 
-    const api = { maximumLinks, maximumBytes, defaultExtensions, extensionList, remoteLink,
+    const api = { maximumLinks, maximumBytes, defaultExtensions, extensionList, excludedSiteList, isExcludedSite, requestMethods, remoteLink,
         isVideoPage, hasExtension, isDownloadable, normalizeURL, extractLinks, collectLinks, buildBatches };
     root.MuleeLinks = api;
     if (typeof module !== "undefined") module.exports = api;

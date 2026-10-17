@@ -48,8 +48,8 @@ unset CPATH CPLUS_INCLUDE_PATH C_INCLUDE_PATH LIBRARY_PATH PKG_CONFIG_PATH CMAKE
 export PKG_CONFIG_LIBDIR="$SDK/usr/lib/pkgconfig"
 FLAGS="-O2 -DNDEBUG -arch arm64 -mmacosx-version-min=26.0 -isysroot $SDK $PREFIX_FLAGS"
 ARGS=(--with-appletls --without-openssl --without-gnutls
-  --disable-bittorrent --disable-metalink --without-sqlite3
-  --without-libxml2 --without-libexpat --without-libssh2 --without-libcares
+  --disable-bittorrent --enable-metalink --without-sqlite3
+  --with-libxml2 --without-libexpat --without-libssh2 --without-libcares
   --disable-nls --with-libz --without-libuv --without-libnettle
   --without-libgmp --without-libgcrypt --disable-shared --disable-libaria2)
 mkdir -p "$CACHE"
@@ -85,6 +85,7 @@ if [ ! -f "$BUILD/complete" ] || [ ! -x "$BIN" ]; then
     CC="$CC" CXX="$CXX" CPPFLAGS= CFLAGS="$FLAGS" CXXFLAGS="$FLAGS -stdlib=libc++" \
       LDFLAGS="-arch arm64 -mmacosx-version-min=26.0 -isysroot $SDK -stdlib=libc++" \
       ZLIB_CFLAGS="-I$SDK/usr/include" ZLIB_LIBS="-L$SDK/usr/lib -lz" \
+      LIBXML2_CFLAGS="-I$SDK/usr/include/libxml2" LIBXML2_LIBS="-L$SDK/usr/lib -lxml2" \
       "$BUILD/source/configure" "${ARGS[@]}"
     make -j"${BUILD_JOBS:-8}" -C deps
     make -j"${BUILD_JOBS:-8}" -C src aria2c
@@ -115,6 +116,7 @@ verify_binary() {
   version="$("$binary" --version)"
   printf '%s\n' "$version" | grep 'Enabled Features:.*HTTPS' >/dev/null || error "缺少 HTTPS。"
   printf '%s\n' "$version" | grep 'Enabled Features:.*GZip' >/dev/null || error "缺少 GZip。"
+  printf '%s\n' "$version" | grep 'Enabled Features:.*Metalink' >/dev/null || error "缺少 Metalink。"
   printf '%s\n' "$version" | grep 'AppleTLS' >/dev/null || error "未使用 AppleTLS。"
 }
 # 原子替换，避免覆盖运行中的签名代码页。

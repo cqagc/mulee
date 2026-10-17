@@ -6,22 +6,49 @@ const linksAPI = globalThis.MuleeLinks;
 // Chrome 也提供 browser 命名空间，只能按扩展 URL 的协议区分 Safari。
 const isSafari = extensionAPI.runtime.getURL("").startsWith("safari-web-extension:");
 
-async function openEntry(url) {
+async function openEntry(url, requireConfirmation = false, assertActive = () => {}) {
+    if (requireConfirmation && !isSafari && extensionAPI.runtime.sendNativeMessage
+        && await extensionAPI.permissions.contains({ permissions: ["nativeMessaging"] })) {
+        let response;
+        let missingHost = false;
+        try {
+            response = await extensionAPI.runtime.sendNativeMessage("com.cqagc.mulee.video_login", { type: "openLinks", url });
+        } catch (error) {
+            // 仅宿主尚未安装时退回协议页；其他原生错误必须恢复浏览器下载。
+            if (!String(error.message).includes("Specified native messaging host not found")) throw new Error("sendFailed");
+            missingHost = true;
+        }
+        assertActive();
+        if (!missingHost) {
+            if (response?.ok === true) return;
+            throw new Error("sendFailed");
+        }
+    }
     if (extensionAPI.runtime.sendNativeMessage && isSafari) {
         try {
             const response = await extensionAPI.runtime.sendNativeMessage("com.cqagc.mulee", { url });
-            if (response?.ok) return;
+            if (response?.ok === true) return;
             throw new Error("nativeRejected");
         } catch (error) {
+            if (requireConfirmation) throw new Error("sendFailed");
             // A missing native host falls back to the browser's external-protocol prompt.
             console.info("Mulee native handoff unavailable");
         }
     }
     // A dedicated extension tab survives the external-protocol confirmation. It closes
     // after the browser loses focus to Mulee and the user returns; cancellation is manual.
+    assertActive();
     const tab = await extensionAPI.tabs.create({ url: extensionAPI.runtime.getURL("handoff.html"), active: true });
-    await extensionAPI.storage.session.set({ ["handoff-" + tab.id]: url });
-    await extensionAPI.tabs.sendMessage(tab.id, { type: "handoffReady" }).catch(() => {});
+    try {
+        assertActive();
+        await extensionAPI.storage.session.set({ ["handoff-" + tab.id]: url });
+        assertActive();
+        await extensionAPI.tabs.sendMessage(tab.id, { type: "handoffReady" }).catch(() => {});
+    } catch (error) {
+        await extensionAPI.storage.session.remove("handoff-" + tab.id).catch(() => {});
+        await extensionAPI.tabs.remove(tab.id).catch(() => {});
+        throw error;
+    }
 }
 
 async function sendLinks(links, referrer, text, context = {}) {
@@ -45,7 +72,10 @@ async function sendLinks(links, referrer, text, context = {}) {
         }
         batches = entries;
     }
-    for (const url of batches) await openEntry(url);
+    for (const url of batches) {
+        context.assertActive?.();
+        await openEntry(url, context.requireConfirmation, context.assertActive);
+    }
     return batches.length;
 }
 
@@ -91,17 +121,73 @@ extensionAPI.runtime.onMessage.addListener((message, sender, respond) => {
     return true;
 });
 
+const methods = linksAPI.requestMethods();
+
+function recordRequest(details) {
+    methods.record(details);
+}
+
+function registerRequests() {
+    const event = extensionAPI.webRequest?.onBeforeRequest;
+    if (!event?.addListener) return;
+    try {
+        if (event.hasListener?.(recordRequest)) return;
+        event.addListener(recordRequest, { urls: ["http://*/*", "https://*/*"] });
+    } catch {
+        // Safari 或尚未授权的浏览器可能提供命名空间却不允许监听。
+    }
+}
+
+function handoffWithTimeout(operation) {
+    let timer;
+    let expired = false;
+    const assertActive = () => {
+        if (expired) throw new Error("handoffTimeout");
+    };
+    return Promise.race([
+        Promise.resolve().then(() => operation(assertActive)),
+        new Promise((resolve, reject) => {
+            timer = setTimeout(() => {
+                expired = true;
+                reject(new Error("handoffTimeout"));
+            }, 10000);
+        })
+    ]).finally(() => clearTimeout(timer));
+}
+
 async function interceptDownload(item) {
-    const settings = await extensionAPI.storage.local.get({ takeover: false, extensions: linksAPI.defaultExtensions });
-    if (!settings.takeover || item.state !== "in_progress" || !linksAPI.remoteLink(item.finalUrl || item.url)) return;
+    const settings = await extensionAPI.storage.local.get({
+        takeover: false, extensions: linksAPI.defaultExtensions, excludedSites: []
+    });
+    const url = item.finalUrl || item.url;
+    if (!settings.takeover || item.state !== "in_progress" || !linksAPI.remoteLink(url)) return;
+    const sites = linksAPI.excludedSiteList(settings.excludedSites);
+    if ([item.referrer, item.url, url].some(value => linksAPI.isExcludedSite(value, sites))) return;
+    if ([item.url, url].some(value => {
+        const method = methods.get(value, item.tabId);
+        return method && method !== "GET";
+    })) return;
     const extensions = linksAPI.extensionList(settings.extensions);
-    if (!linksAPI.hasExtension(item.finalUrl || item.url, extensions)
+    if (!linksAPI.hasExtension(url, extensions)
         && !extensions.some(extension => item.filename?.toLowerCase().endsWith("." + extension))) return;
-    // Validate the complete request before cancelling the browser's transfer.
-    const context = { filename: item.filename || "", userAgent: globalThis.navigator?.userAgent || "" };
-    linksAPI.buildBatches([item.finalUrl || item.url], item.referrer || "", "", context);
-    await extensionAPI.downloads.cancel(item.id);
-    await sendLinks([item.finalUrl || item.url], item.referrer || "", "", context);
+    try {
+        await extensionAPI.downloads.pause(item.id);
+    } catch {
+        // 暂停失败时保留浏览器原来的下载，不尝试交接或取消。
+        return;
+    }
+    try {
+        const context = { filename: item.filename || "", userAgent: globalThis.navigator?.userAgent || "" };
+        await handoffWithTimeout(assertActive => sendLinks([url], item.referrer || "", "", {
+            ...context, requireConfirmation: true, assertActive
+        }));
+        await extensionAPI.downloads.cancel(item.id);
+    } catch (error) {
+        await extensionAPI.downloads.resume(item.id);
+        throw error;
+    }
+    // 取消成功后不能再恢复；清理历史失败只报告错误。
+    await extensionAPI.downloads.erase({ id: item.id });
 }
 
 // Optional permission may already exist when an MV3 worker restarts. Register
@@ -117,8 +203,13 @@ function onDownload(item) {
 }
 
 registerDownloads();
-extensionAPI.permissions.onAdded.addListener(registerDownloads);
+registerRequests();
+extensionAPI.permissions.onAdded.addListener(() => {
+    registerDownloads();
+    registerRequests();
+});
 extensionAPI.permissions.onRemoved.addListener(() => {
+    methods.clear();
     extensionAPI.permissions.contains({ permissions: ["downloads"] }).then(granted => {
         if (!granted) return extensionAPI.storage.local.set({ takeover: false });
     }).catch(reportIssue);

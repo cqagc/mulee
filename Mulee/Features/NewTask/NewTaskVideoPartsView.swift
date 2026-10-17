@@ -14,20 +14,36 @@ struct NewTaskVideoPartsView: View {
                 Text(error)
                     .foregroundStyle(.secondary)
             }
-            if item.videoParts.count > 1 {
+            if item.requiresVideoSelection {
                 HStack {
-                    Text("分 P / 合集")
+                    Text(item.link.playlistID == nil ? String(localized: "分 P / 合集") : String(localized: "播放列表"))
                     Spacer()
                     Button("全选", action: selectAll)
                     Button("全不选", action: deselectAll)
                 }
                 ForEach(item.videoParts) { part in
                     Toggle(isOn: selection(for: part)) {
-                        Text(part.displayTitle)
-                            .lineLimit(2)
-                            .help(part.displayTitle)
+                        HStack {
+                            Text(part.displayTitle)
+                                .lineLimit(2)
+                                .help(part.displayTitle)
+                            Spacer()
+                            if let duration = part.durationDescription {
+                                Text(duration)
+                                    .foregroundStyle(.secondary)
+                                    .monospacedDigit()
+                            }
+                        }
                     }
                     .toggleStyle(.checkbox)
+                }
+                if item.selectedVideoEntries.isEmpty {
+                    Text("请至少选择一集")
+                        .foregroundStyle(.secondary)
+                }
+                if item.showsPlaylistSubfolder {
+                    Toggle("放进以列表名命名的子文件夹", isOn: $item.playlistSubfolder)
+                        .toggleStyle(.checkbox)
                 }
             }
         }

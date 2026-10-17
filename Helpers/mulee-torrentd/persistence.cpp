@@ -134,6 +134,13 @@ Metadata Persistence::load_meta(const std::string& id) {
         if (auto value = object.if_contains("streaming_previous_priority"); value && value->is_int64()
             && value->as_int64() >= 0 && value->as_int64() <= 7)
             metadata.streaming_previous_priority = static_cast<int>(value->as_int64());
+        for (const auto& field : {std::make_pair("user_download_limit", &metadata.user_download_limit),
+            std::make_pair("user_upload_limit", &metadata.user_upload_limit),
+            std::make_pair("policy_upload_limit", &metadata.policy_upload_limit)}) {
+            if (auto value = object.if_contains(field.first); value && value->is_int64()
+                && value->as_int64() >= 0 && value->as_int64() <= 2147483647)
+                *field.second = static_cast<int>(value->as_int64());
+        }
         auto completed = object.if_contains("completed_at");
         if (completed && (completed->is_null() || completed->is_int64())) metadata.completed_at = *completed;
     } catch (const std::exception& error) {
@@ -171,6 +178,8 @@ void Persistence::save_meta(const std::string& id, const Metadata& metadata) {
     auto text = json::serialize(json::object{{"source", metadata.source}, {"added_at", metadata.added_at},
         {"completed_at", metadata.completed_at}, {"sequential_download", metadata.sequential_download},
         {"first_last_priority", metadata.first_last_priority},
+        {"user_download_limit", metadata.user_download_limit}, {"user_upload_limit", metadata.user_upload_limit},
+        {"policy_upload_limit", metadata.policy_upload_limit},
         {"mark_incomplete", metadata.mark_incomplete}, {"original_paths", metadata.original_paths},
         {"streaming_file", metadata.streaming_file},
         {"streaming_previous_priority", metadata.streaming_previous_priority}, {"junk_pending", metadata.junk_pending},

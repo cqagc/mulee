@@ -20,6 +20,7 @@ public actor YtDlpEngine: DownloadEngine {
     private var quality: YtDlpQuality
     private var cookiesURL: URL?
     private var cookieProvider: CookieProvider?
+    private var outputOptions = YtDlpOutputOptions()
     private var subtitles: YtDlpSubtitles
     private var options: EngineOptions?
     private var resolvedBinary: URL?
@@ -86,6 +87,10 @@ public actor YtDlpEngine: DownloadEngine {
         configure(quality: quality, cookiesURL: cookiesURL, subtitles: subtitles)
     }
 
+    public func configureOutput(_ options: YtDlpOutputOptions) {
+        outputOptions = options
+    }
+
     public func configureCookies(provider: CookieProvider?) {
         cookieProvider = provider
     }
@@ -145,8 +150,10 @@ public actor YtDlpEngine: DownloadEngine {
     }
 
     public func add(link: ParsedLink, directory: URL?, entry: YtDlpPlaylistEntry?, paused: Bool = false,
-                    formatID: String? = nil, formatVideoOnly: Bool = false) async throws -> String {
+                    formatID: String? = nil, formatVideoOnly: Bool = false,
+                    outputOptions: YtDlpTaskOptions? = nil) async throws -> String {
         try requireRunning()
+        try outputOptions?.validate()
         if let formatID, !YtDlpFormat.isValidID(formatID) { throw EngineError.unsupportedLink }
         guard case .video(let url, let site, _) = link,
               ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { throw EngineError.unsupportedLink }
@@ -156,7 +163,7 @@ public actor YtDlpEngine: DownloadEngine {
         let id = UUID().uuidString.lowercased()
         jobs.append(YtDlpJob(id: id, url: url, site: site, directory: destination, name: entry?.taskTitle ?? url.lastPathComponent,
                                 playlistIndex: entry?.index, playlistTitle: entry?.title,
-                                formatID: formatID, formatVideoOnly: formatVideoOnly, status: paused ? .paused : .queued))
+                                formatID: formatID, outputOptions: outputOptions, formatVideoOnly: formatVideoOnly, status: paused ? .paused : .queued))
         try persist()
         if !paused, options.downloadLimit > 0 { await requeueActive() }
         schedule()
@@ -259,6 +266,7 @@ public actor YtDlpEngine: DownloadEngine {
 
     private func run(_ id: String, token: UUID) async {
         let selectedQuality: YtDlpQuality = jobs.first(where: { $0.id == id })?.formatID == nil ? quality : .best
+        let selectedOutput = outputOptions
         let selectedSubtitles = subtitles
         let selectedChannel = channel
         let shouldUpdate = updatesEnabled
@@ -281,32 +289,39 @@ public actor YtDlpEngine: DownloadEngine {
             try Task.checkCancellation()
             guard tokens[id] == token, let current = jobs.first(where: { $0.id == id }),
                   let binary = resolvedBinary else { return }
+            try current.outputOptions?.validate()
             let cookies = try await cookieProvider?(current.site) ?? []
             try Task.checkCancellation()
             guard tokens[id] == token else { return }
-            if !cookies.isEmpty { cookieFile = try YtDlpCookieFile(cookies: cookies, site: current.site) }
-            let child = try YtDlpProcess(
-                binary: binary, arguments: arguments(
-                    for: current, deno: deno, quality: selectedQuality, subtitles: selectedSubtitles,
-                    taskCookiesURL: cookieFile?.url
-                ), cleanupURL: cookieFile?.url
-            )
-            children[id] = child
-            var pending = Data()
-            var errors = ""
-            for await chunk in child.output {
-                pending.append(chunk)
-                while let newline = pending.firstIndex(of: 10) {
-                    let line = String(decoding: pending[..<newline], as: UTF8.self)
-                    pending.removeSubrange(...newline)
-                    consume(line, id: id, token: token, errors: &errors)
+            var includeThumbnail = true
+            while true {
+                if !cookies.isEmpty { cookieFile = try YtDlpCookieFile(cookies: cookies, site: current.site) }
+                let child = try YtDlpProcess(
+                    binary: binary, arguments: arguments(
+                        for: current, deno: deno, quality: selectedQuality, subtitles: selectedSubtitles,
+                        output: selectedOutput, includeThumbnail: includeThumbnail, taskCookiesURL: cookieFile?.url
+                    ), cleanupURL: cookieFile?.url
+                )
+                children[id] = child
+                var pending = Data()
+                var errors = ""
+                for await chunk in child.output {
+                    pending.append(chunk)
+                    while let newline = pending.firstIndex(of: 10) {
+                        let line = String(decoding: pending[..<newline], as: UTF8.self)
+                        pending.removeSubrange(...newline)
+                        consume(line, id: id, token: token, errors: &errors)
+                    }
                 }
-            }
-            if !pending.isEmpty { consume(String(decoding: pending, as: UTF8.self), id: id, token: token, errors: &errors) }
-            await child.finish()
-            guard tokens[id] == token else { return }
-            children[id] = nil
-            if child.status != 0 {
+                if !pending.isEmpty { consume(String(decoding: pending, as: UTF8.self), id: id, token: token, errors: &errors) }
+                await child.finish()
+                guard tokens[id] == token else { return }
+                children[id] = nil
+                if child.status == 0 { break }
+                if includeThumbnail, selectedOutput.embedMetadata, YtDlpFinalName.isThumbnailFailure(errors) {
+                    includeThumbnail = false
+                    continue
+                }
                 let raw = cookieFile != nil ? String(localized: "使用登录状态下载失败，请重新传递登录状态后重试", bundle: .module)
                     : (errors.isEmpty ? String(localized: "yt-dlp 退出码 \(child.status)", bundle: .module) : errors)
                 if try await retry(id, token: token, raw: raw, channel: selectedChannel, updatesEnabled: shouldUpdate) { return }
@@ -316,16 +331,20 @@ public actor YtDlpEngine: DownloadEngine {
                   let path = progress[id]?.finalPath else {
                 throw EngineError.invalidResponse(String(localized: "yt-dlp 未返回最终文件路径", bundle: .module))
             }
-            let url = URL(fileURLWithPath: path)
+            let url = try YtDlpFinalName.resolve(
+                URL(fileURLWithPath: path), audioFormat: current.outputOptions?.audioOnly == true ? selectedOutput.audioFormat : nil
+            )
             guard YtDlpFileSafety.belongs(url, to: jobs[index]), FileManager.default.fileExists(atPath: url.path) else {
                 throw EngineError.invalidResponse(String(localized: "yt-dlp 返回的文件不属于此任务", bundle: .module))
             }
-            try await normalizeHEVC(
-                url, job: jobs[index], token: token, quality: selectedQuality,
-                codec: progress[id]?.videoCodec
-            )
+            if current.outputOptions?.audioOnly != true {
+                try await normalizeHEVC(
+                    url, job: jobs[index], token: token, quality: selectedQuality,
+                    codec: progress[id]?.videoCodec
+                )
+            }
             guard tokens[id] == token, let index = jobs.firstIndex(where: { $0.id == id }) else { return }
-            if jobs[index].site == .bilibili, selectedSubtitles.danmaku {
+            if jobs[index].site == .bilibili, selectedSubtitles.danmaku, current.outputOptions?.audioOnly != true {
                 try await convertDanmaku(url, job: jobs[index], token: token, videoSize: progress[id]?.videoSize)
             }
             guard tokens[id] == token, let index = jobs.firstIndex(where: { $0.id == id }) else { return }
@@ -431,25 +450,27 @@ public actor YtDlpEngine: DownloadEngine {
     }
 
     private func arguments(
-        for job: YtDlpJob, deno: URL?, quality: YtDlpQuality, subtitles: YtDlpSubtitles, taskCookiesURL: URL?
+        for job: YtDlpJob, deno: URL?, quality: YtDlpQuality, subtitles: YtDlpSubtitles,
+        output: YtDlpOutputOptions, includeThumbnail: Bool, taskCookiesURL: URL?
     ) -> [String] {
         var result = [
             "--ignore-config", "--no-simulate", "--newline", "--progress",
             "--no-colors", "--continue", "--no-overwrites", "--no-cache-dir",
             "--paths", job.directory.path,
-            "--output", job.id + "-" + (job.playlistIndex.map { "P\($0) " } ?? "") + "%(title).160B.%(ext)s",
+            "--output", job.id + "-" + (job.playlistIndex.map { "P\($0) " } ?? "") + output.filenamePreset.template,
             "--print", YtDlpProgress.metadataTemplate,
             "--print", YtDlpProgress.fileTemplate,
             "--progress-template", YtDlpProgress.downloadTemplate,
             "--progress-template", YtDlpProgress.postprocessTemplate
-        ] + YtDlpPlaylistEntry.arguments(for: job.url, site: job.site) + quality.arguments
-        if let formatID = job.formatID, YtDlpFormat.isValidID(formatID) {
-            result += ["--format", job.formatVideoOnly == true ? formatID + "+ba/" + formatID : formatID]
-        }
+        ] + YtDlpPlaylistEntry.arguments(for: job.url, site: job.site) + output.arguments(
+            quality: quality, site: job.site, task: job.outputOptions ?? .init(),
+            formatID: job.formatID, formatVideoOnly: job.formatVideoOnly == true,
+            bilibiliSubtitles: subtitles, includeThumbnail: includeThumbnail
+        )
+        result += HTTPProxyConfiguration.current().proxyArguments()
         if let ffmpegURL { result += ["--ffmpeg-location", ffmpegURL.path] }
         if let deno { result += ["--js-runtimes", "deno:" + deno.path] }
         if let url = taskCookiesURL ?? cookiesURL { result += ["--cookies", url.path] }
-        if job.site == .bilibili { result += subtitles.arguments }
         if let options {
             // HttpFD reads this many bytes then writes; disable automatic growth to keep it bounded.
             result += ["--buffer-size", String(Self.downloadBufferBytes(options)), "--no-resize-buffer"]

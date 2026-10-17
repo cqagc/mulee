@@ -24,6 +24,9 @@ final class StreamingPlayback {
             return task.engineTaskID != nil && [.downloading, .queued, .paused, .seeding, .completed].contains(task.status)
                 && (isVideo(task.name) || files.contains { isVideo($0.path) })
         }
+        if task.kind == .http, task.engineTaskID != nil, task.status == .downloading {
+            return isVideo(task.savePath?.lastPathComponent ?? task.name)
+        }
         return [.completed, .seeding].contains(task.status) && task.savePath.map {
             isVideo($0.lastPathComponent) && !IncompleteHTTPTransfer.isStagingFile($0)
         } == true
@@ -75,6 +78,7 @@ final class StreamingPlayback {
                 self.playing.remove(task.id)
             }
             var streamingIndex: Int?
+            var streamingHTTP: Aria2Engine?
             do {
                 if task.kind == .bittorrent {
                     guard let engine, let id = task.engineTaskID else { return }
@@ -117,6 +121,29 @@ final class StreamingPlayback {
                         if try await engine.taskInfo(id).isFinished { break }
                         try await Task.sleep(for: .seconds(1))
                     }
+                } else if task.kind == .http, task.status == .downloading,
+                          let engine = coordinator?.httpStreamingEngine(), let id = task.engineTaskID {
+                    streamingHTTP = engine
+                    self.buffering[task.id] = 0
+                    try await engine.setStreaming(id, enabled: true)
+                    var opened = false
+                    while !Task.isCancelled {
+                        let current = try await engine.streamingProgress(id)
+                        let threshold = Self.bufferThreshold(size: current.size)
+                        let progress = threshold > 0 ? min(1, Double(current.contiguous) / Double(threshold)) : 0
+                        if !opened {
+                            self.buffering[task.id] = progress
+                            if (progress >= 1 || current.finished), let file = current.file {
+                                try Task.checkCancellation()
+                                try await self.open(file, logicalName: task.name)
+                                opened = true
+                                self.buffering[task.id] = nil
+                                if !current.finished { self.playing.insert(task.id) }
+                            }
+                        }
+                        if current.finished { break }
+                        try await Task.sleep(for: .seconds(1))
+                    }
                 } else if let url = task.savePath {
                     try await self.open(url, logicalName: url.lastPathComponent)
                 }
@@ -124,6 +151,10 @@ final class StreamingPlayback {
                 // 用户取消只撤销缓冲和顺序模式，不关闭已打开的播放器。
             } catch {
                 self.issues[task.id] = String(localized: "暂时无法播放，请确认文件可用且已安装播放器。")
+            }
+            if let engine = streamingHTTP, let id = task.engineTaskID {
+                do { try await Task { try await engine.setStreaming(id, enabled: false) }.value }
+                catch { self.issues[task.id] = String(localized: "无法恢复下载分块策略，请稍后重试。") }
             }
             if let index = streamingIndex, let id = task.engineTaskID, let engine {
                 // 已取消的任务不能承担 RPC 清理：独立任务确保取消后仍撤销持久化的模式。

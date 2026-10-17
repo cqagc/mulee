@@ -29,8 +29,23 @@ enum OpenURLDropHandler {
     @discardableResult
     static func accept(_ pasteboard: NSPasteboard, model: AppModel) -> Bool {
         guard let text = text(from: pasteboard) else { return false }
+        for item in pasteboard.pasteboardItems ?? [] {
+            if let file = item.string(forType: .fileURL) {
+                registerFinderTorrents(file, model: model)
+            }
+        }
         model.showNewTask(prefill: text)
         return true
+    }
+
+    private static func registerFinderTorrents(_ text: String, model: AppModel) {
+        for parsed in SmartPasteParser.parse(text).flatMap(\.links) where OpenURLRouter.isLocalTorrent(parsed) {
+            guard case .torrentFile(let url, _) = parsed else { continue }
+            let link = ParsedLink.torrentFile(url: url, original: url.absoluteString)
+            var context = model.pendingNewTaskContexts[link] ?? NewTaskContext()
+            context.finderTorrent = true
+            model.pendingNewTaskContexts[link] = context
+        }
     }
 
     static func accept(_ providers: [NSItemProvider], model: AppModel) -> Bool {
@@ -49,12 +64,18 @@ enum OpenURLDropHandler {
                             else { continuation.resume(returning: value.flatMap { Self.text(from: $0) }) }
                         }
                     }
-                    if let text { texts.append(text) }
+                    if let text {
+                        if type == .fileURL { registerFinderTorrents(text, model: model) }
+                        texts.append(text)
+                    }
                 } catch {
                     model.openURLIssue = String(localized: "无法读取拖入的链接：\(error.localizedDescription)")
                 }
             }
-            if !texts.isEmpty { model.showNewTask(prefill: texts.joined(separator: "\n")) }
+            if !texts.isEmpty {
+                let text = texts.joined(separator: "\n")
+                model.showNewTask(prefill: text)
+            }
         }
         return true
     }

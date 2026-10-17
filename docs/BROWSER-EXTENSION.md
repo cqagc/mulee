@@ -62,16 +62,25 @@ Chrome 用 `tabs.create` / `tabs.update` 打开 `mulee://add`。首次出现「�
 
 ### 接管浏览器下载（默认关闭）
 
-Chrome 弹窗中的「下载接管设置」可开启「接管浏览器下载」，开启时才申请可选 `downloads` 权限；关闭时撤销权限。扩展名列表可以编辑，空格或逗号分隔，不区分大小写，默认覆盖压缩包、镜像、安装包、大视频和 `.torrent`。
-匹配浏览器开始的下载时，扩展先校验 URL，再取消该下载，把链接交给 Mulee 的确认面板；不会自动在 Mulee 开始下载。根据下载地址或浏览器已提供的文件名匹配，不按文件大小推断。
+Chrome 弹窗中的「下载接管设置」可开启「接管浏览器下载」，开启时才申请可选 `downloads` 权限；随后申请可选 `webRequest`、HTTP/HTTPS host 权限和原生连接权限，拒绝这组权限仍可接管。关闭时撤销 `downloads` 和 `webRequest` 权限；host 与原生连接权限可能仍供已授权的登录状态交接使用。扩展名列表可以编辑，空格或逗号分隔，不区分大小写，默认覆盖压缩包、镜像、安装包、大视频和 `.torrent`。
 
-需要登录 cookie、POST 请求或临时请求头的下载可能失败；失败时可临时关闭接管，再用浏览器下载。普通下载接管不传递 Cookie、请求体、Authorization 或其他请求头；下述视频登录状态需要单独开启。取消后的浏览器下载不会自动恢复，用户仍可重新点击原链接。
-Safari 没有提供对应 downloads API 时，接管开关禁用并显示原因，右键和工具栏选择仍可使用。
+匹配下载地址或浏览器已提供的文件名时，扩展先 `downloads.pause`，再校验并交接链接。交接成功才 `cancel` + `erase`；校验失败、交接失败或超过 10 秒则尝试 `resume`，浏览器继续下载。暂停本身失败时不接管。Mulee 中仍然需要确认，不会直接开始下载；恢复失败只报告错误，不取消浏览器任务。
+
+交接成功的判定按通道区分：
+- Safari 使用现有原生 handler 的 `{ok:true}` 回复，原生失败时恢复浏览器下载，不退回协议页。当前 Safari manifest 不开放 downloads 权限，接管开关禁用，右键和工具栏仍可使用；API 均做特性检测。
+- Chrome 已授权 `nativeMessaging` 且安装辅助组件时，现有宿主新增消息 `{type:"openLinks", url:"mulee://add?..."}`。`url` 沿用现有编码，包含链接、来源页、文字及 UA、文件名、一次性 Cookie token 等上下文；宿主复用 `BrowserExtensionRequest` / `OpenURLRequest` 校验。主程序未运行（不把宿主自身计为主程序）、校验失败或系统打开失败时回复 `{ok:false}`，浏览器恢复；成功打开才回复 `{ok:true}`。辅助组件安装入口沿用 Mulee 设置·视频的 Chrome 登录状态连接按钮，不自动安装。
+- Chrome 未授予原生权限或宿主未安装时，按主控裁决保留协议标签页交接：成功创建交接页并存好入口后即视为交接成功。**这个回退通道无法确认 Mulee 是否收到链接**，取消外部协议提示或 Mulee 未运行时不保证自动恢复。安装辅助组件并授予原生权限后才有上述在线检查。其他原生通信错误不会退回协议页，而会恢复浏览器下载。
+
+有 `webRequest` 权限时，仅在内存记录主框架及子资源请求的 URL、tabId、方法和记录时间，不读取请求体或请求头。按 URL + tabId 保存最近 200 条，60 秒过期，撤销权限时清空。原始 URL 或重定向后的 URL 对应请求不是 GET 时不接管；找不到记录时照常接管。Chrome 的 DownloadItem 没有 tabId，因此会保守检查同 URL 的所有近期记录，任一非 GET 就留在浏览器；提供 tabId 的平台按 URL + tabId 精确匹配。MV3 worker 重启后内存记录重新积累。
+
+「不接管的网站」保存在 `storage.local.excludedSites`，默认 `[]`。填写域名，用空格、逗号或换行分隔；大小写会统一，支持国际化域名。`example.com` 精确匹配该域名，`*.example.com` 匹配任意层级子域名，不含根域。下载来源页、原始地址或最终地址任一命中就由浏览器下载；不影响右键或弹窗主动发送。错误格式不保存。
+
+普通下载接管不传递请求体、Authorization 或临时请求头。按站点开启的 Cookie 交接和视频登录状态仍走各自授权的原生通道，Cookie 不进入 URL；没有方法记录时，POST 等需要原请求上下文的下载仍可能无法在 Mulee 使用。
 
 ## 权限与隐私
 
-基础权限仅 `contextMenus`、`activeTab`、`scripting`、`storage`。`activeTab` 只在用户操作时临时授权当前页面，`scripting` 只扫描当前页面，`storage.local` 只保存接管开关、扩展名列表和视频登录状态传递开关；临时交接 URL 使用 `storage.session`，取用后移除。不声明常驻 `<all_urls>` 或 host 权限。
-Chrome 仅在用户开启接管时申请 `downloads`；视频登录状态使用独立的可选授权，见下文。Safari 基础权限额外使用 `nativeMessaging`，只与随 App 内置的 handler 通信。
+基础权限仅 `contextMenus`、`activeTab`、`scripting`、`storage`。`activeTab` 只在用户操作时临时授权当前页面，`scripting` 只扫描当前页面，`storage.local` 只保存接管开关、扩展名列表、站点例外、视频登录状态传递开关及主动授权的下载站点；临时交接 URL 使用 `storage.session`，取用后移除。不声明常驻 `<all_urls>` 或 host 权限。
+Chrome 仅在用户开启接管时申请 `downloads`，并可选申请 `webRequest`、`nativeMessaging` 和 HTTP/HTTPS host 权限；视频登录状态使用独立的可选授权，见下文。Safari 基础权限额外使用 `nativeMessaging`，只与随 App 内置的 handler 通信。
 
 扩展不联网、不发送遥测，只把你点选的链接（或明确开启接管后匹配的下载）、来源地址及选中文字交给本机 Mulee。页面文字与链接均视为不可信输入，界面用 `textContent` 展示，禁止执行网页提供的代码。扩展资源采用仅本地脚本的 CSP，并禁止扩展发起网络连接。明确开启视频登录状态传递时，还会通过独立 native messaging 交接两站 Cookie。App 自身的下载行为仍须在新建面板中确认。
 
@@ -132,8 +141,22 @@ xcodegen generate
 xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS,arch=arm64' test
 ```
 
-打包脚本生成 `build/extensions/chrome/`、`build/extensions/mulee-chrome.zip` 及 `build/extensions/safari/`。脚本仅复制纯 JS / HTML / CSS / `_locales`，从 `Design/Brand/mulee-icon-1024.png` 用系统 `sips` 生成图标，不需要第三方依赖或 JS 打包工具。Chrome 和 Safari 使用同一份 Shared 代码；默认简体中文，并提供英文和繁体中文。App 构建阶段自动内置 Chrome 文件夹、zip 和安装说明；Safari target 构建阶段自动打包 Shared 资源并嵌入主 App。
+打包脚本生成 `build/extensions/chrome/`、`build/extensions/mulee-chrome.zip` 及 `build/extensions/safari/`。脚本仅复制纯 JS / HTML / CSS / `_locales`，从 `Design/Brand/mulee-icon-1024.png` 用系统 `sips` 生成图标，不需要第三方依赖或 JS 打包工具。Chrome 和 Safari 使用同一份 Shared 代码；默认简体中文，并提供英文、繁体中文和日文。App 构建阶段自动内置 Chrome 文件夹、zip 和安装说明；Safari target 构建阶段自动打包 Shared 资源并嵌入主 App。
 
 `BrowserExtensionRequestTests` 使用与 handler 相同的校验器，验证协议、额外字段、本地文件 / thunder、混合输入以及条数和字节限制。JS 测试覆盖识别、去重、编码往返、分批及边界。
 
 构建后检查 `Mulee.app/Contents/PlugIns`、`codesign --verify --deep --strict Mulee.app`；注册自检须先取得 `/tmp/mulee-e2e.lock` 目录锁并确认 `pgrep -x Mulee` 为空，再启动一次构建的 App，使用 `pluginkit -m -p com.apple.Safari.web-extension` 查询。完成后退出本次 App 并释放锁。该检查不等同于扩展已在 Safari 启用，不安装 Chrome 扩展，也不修改用户浏览器设置。
+
+### X1 定向验证
+
+新增 JS 测试使用假的 downloads API，覆盖暂停 → 交接 → 取消 / 清理顺序、暂停失败、校验失败、原生拒绝 / 通信失败、10 秒超时及迟到回复、恢复分支、清理失败、POST 跳过、GET / 无记录接管、记录容量 / 过期、域名及通配匹配、可选权限拒绝和设置保存。Swift 的 `VideoLoginTests` 覆盖 `openLinks` 校验、主程序未运行、系统打开失败和帧长度边界；原生帧上限为 1,048,704 字节（1 MiB 入口 URL 加 JSON 信封空间），Cookie 消息仍由原有解析器执行各自更小的长度限制。
+
+211 执行 `~/.config/mulee/remote.sh ext` 验证扩展；Swift 定向执行 `~/.config/mulee/remote.sh test -only-testing:MuleeTests/VideoLoginTests -only-testing:MuleeTests/BrowserExtensionRequestTests -only-testing:MuleeTests/HTTPDownloadTests -only-testing:MuleeTests/ExtensionHandoffTests`。这不代表真实 Chrome / Safari 接管或用户权限提示已经验收；本任务未安装宿主、加载扩展或操作正在运行的 Mulee。
+
+并行验证中若共享构建目录出现数据库锁冲突，X1 使用独立目录和日志复测（仍只在远端构建，不操作用户的 App）：
+
+```sh
+~/.config/mulee/remote.sh sh 'xcodegen generate -q && xcodebuild test -project Mulee.xcodeproj -scheme Mulee -destination "platform=macOS,arch=arm64" -derivedDataPath build/w1-ext-dd CODE_SIGN_IDENTITY=- -only-testing:MuleeTests/VideoLoginTests -only-testing:MuleeTests/BrowserExtensionRequestTests -only-testing:MuleeTests/HTTPDownloadTests -only-testing:MuleeTests/ExtensionHandoffTests > build/w1-ext-test.log 2>&1'
+```
+
+X1 本轮结果：远端 `remote.sh ext` 为 78 项通过、0 失败；`remote.sh build` 输出 `BUILD SUCCEEDED`（已修复原生宿主帧长度常量的 actor 隔离错误）。四组 Swift 定向测试尚未完成：共享目录曾遇到构建数据库锁，独立目录复测又被其他进行中改动的 `VolumeAvailabilityMonitorTests` 初始化参数不匹配阻断。主控将在合拢后统一验证；不能把本次 Swift 编译尝试记为测试通过。

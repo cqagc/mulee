@@ -26,7 +26,7 @@ json::array serialize_files(const Torrent& torrent) {
     if (!info) return result;
     auto priorities = torrent.handle.get_file_priorities();
     std::vector<std::int64_t> progress;
-    torrent.handle.file_progress(progress, lt::torrent_handle::piece_granularity);
+    torrent.handle.file_progress(progress);
     auto status = torrent.handle.status(lt::torrent_handle::query_pieces);
     const auto& files = info->files();
     for (auto index : files.file_range()) {
@@ -150,6 +150,10 @@ json::object serialize_torrent(const std::string& id, const Torrent& torrent) {
         {"num_peers", status.num_peers}, {"num_seeds", status.num_seeds},
         {"list_peers", status.list_peers}, {"list_seeds", status.list_seeds},
         {"file_count", info ? info->num_files() : 0}, {"selected_file_count", selected},
+        {"user_download_limit", torrent.metadata.user_download_limit},
+        {"user_upload_limit", torrent.metadata.user_upload_limit},
+        {"policy_upload_limit", torrent.metadata.policy_upload_limit},
+        {"download_limit", std::max(0, torrent.handle.download_limit())},
         {"is_private", info ? info->priv() : false}, {"upload_limit", std::max(0, torrent.handle.upload_limit())},
         {"error", error}, {"source", torrent.metadata.source}, {"added_at", torrent.metadata.added_at},
         {"completed_at", torrent.metadata.completed_at}, {"eta", eta}};

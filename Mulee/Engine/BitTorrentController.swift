@@ -7,6 +7,9 @@ import Observation
 final class BitTorrentController {
     let engine: TorrentEngine
     let watchFolders = TorrentWatchFolderService()
+    let blocklistUpdater = IPBlocklistUpdater()
+    private var appliedBlocklistPath: String?
+    private var appliedBlocklistRevision = -1
     private var watchedDrafts = Set<String>()
     private var submittedWatchedDrafts = Set<String>()
     private weak var model: AppModel?
@@ -74,6 +77,8 @@ final class BitTorrentController {
             await previous?.value
             guard let self, self.isRunning, !Task.isCancelled else { return }
             do {
+                var configuration = configuration
+                configuration.ipBlocklistURLPath = self.subscriptionPath
                 try await self.engine.configure(configuration)
                 self.issue = nil
             } catch {
@@ -165,8 +170,30 @@ final class BitTorrentController {
         return true
     }
 
+    private var subscriptionPath: String {
+        guard let settings = model?.downloadSettings, !settings.ipBlocklistURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return "" }
+        return blocklistUpdater.cachedFile?.path ?? ""
+    }
+
     func refreshSession() async {
         guard isRunning else { return }
+        if let settings = model?.downloadSettings {
+            await blocklistUpdater.refresh(url: settings.ipBlocklistURL) { [engine] file in
+                _ = try await engine.importIPBlocklist(from: file, validateOnly: true)
+            }
+            guard isRunning, !Task.isCancelled else { return }
+            if appliedBlocklistPath != subscriptionPath || appliedBlocklistRevision != blocklistUpdater.revision {
+                do {
+                    var updated = configuration
+                    updated.ipBlocklistURLPath = subscriptionPath
+                    try await engine.configure(updated)
+                    appliedBlocklistPath = subscriptionPath
+                    appliedBlocklistRevision = blocklistUpdater.revision
+                } catch {
+                    issue = EngineStatusPresentation.errorMessage(error)
+                }
+            }
+        }
         do {
             let status = try await engine.sessionStatus()
             let removed = await engine.consumePolicyRemovals()

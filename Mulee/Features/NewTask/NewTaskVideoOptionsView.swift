@@ -9,6 +9,7 @@ struct NewTaskVideoOptionsView: View {
         VStack(alignment: .leading, spacing: 6) {
             Picker("视频格式", selection: $item.videoFormatID) {
                 Text("跟随全局设置").tag("")
+                Text(NewTaskVideoQuality.audioOnly.title).tag("mulee:audio")
                 ForEach(item.videoFormats) { format in
                     Text(formatLabel(format)).tag(format.id)
                 }
@@ -22,7 +23,23 @@ struct NewTaskVideoOptionsView: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            if !item.audioOnly, settings.subtitleMode != .off, item.videoSiteKey != "bilibili.com" {
+                subtitleSelection
+            }
             NewTaskVideoPartsView(item: item)
+            if item.selectedVideoParts.count <= 1 {
+                DisclosureGroup("高级选项") {
+                    TextField("开始时间", text: $item.videoSectionStart, prompt: Text("00:00"))
+                    TextField("结束时间", text: $item.videoSectionEnd, prompt: Text("01:00"))
+                    Text("留空下载完整视频；可填写时:分:秒、分:秒或秒数。")
+                        .foregroundStyle(.secondary)
+                    if let error = item.videoSectionError {
+                        Text(error)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
         }
         .toggleStyle(.checkbox)
         .font(.caption)
@@ -30,16 +47,22 @@ struct NewTaskVideoOptionsView: View {
         .padding(.leading, 68)
         .padding(.trailing, 14)
         .padding(.bottom, 12)
-        .task(id: item.id) {
+        .task(id: item.videoFormatURL) {
             await item.loadVideoFormats(remembered: item.videoSiteKey.flatMap { settings.videoFormatChoiceBySite[$0] }) { url, site in
-                try await NewTaskVideoFormatProvider.shared.formats(
+                try await NewTaskVideoFormatProvider.shared.metadata(
                     for: url, site: site, channel: settings.ytDlpChannel == .stable ? .stable : .nightly
                 )
             }
         }
+        .onChange(of: availableSubtitleLanguages, initial: true) {
+            guard !item.didSelectSubtitleLanguages else { return }
+            item.videoSubtitleLanguages = Set(YtDlpSubtitleLanguage.preferredIDs(
+                in: availableSubtitleLanguages, preferences: settings.subtitleLanguages
+            ))
+        }
         .onChange(of: item.videoFormatID) {
             guard let site = item.videoSiteKey else { return }
-            settings.videoFormatChoiceBySite[site] = item.videoFormatID.isEmpty ? nil : item.videoFormatID
+            settings.videoFormatChoiceBySite[site] = item.videoFormatID.isEmpty || item.audioOnly ? nil : item.videoFormatID
         }
         .task(id: item.id) {
             await item.loadVideoParts { url in
@@ -53,6 +76,42 @@ struct NewTaskVideoOptionsView: View {
             item.danmakuToASS = settings.danmakuToASS
             item.ccSubtitles = settings.ccSubtitles
         }
+    }
+
+    private var availableSubtitleLanguages: [String] {
+        let manual = item.videoMetadata?.subtitleLanguages ?? []
+        let automatic = settings.autoCaptions ? item.videoMetadata?.automaticCaptionLanguages ?? [] : []
+        return Set(manual + automatic).filter(YtDlpSubtitleLanguage.isValidID).sorted()
+    }
+
+    private var subtitleSelection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("字幕语言")
+            ForEach(availableSubtitleLanguages, id: \.self) { language in
+                Toggle(subtitleLabel(language), isOn: subtitleBinding(language))
+            }
+            if availableSubtitleLanguages.isEmpty, !item.isLoadingVideoFormats {
+                Text("这个视频暂无可选字幕。")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func subtitleBinding(_ language: String) -> Binding<Bool> {
+        Binding {
+            item.videoSubtitleLanguages.contains(language)
+        } set: { selected in
+            item.didSelectSubtitleLanguages = true
+            if selected { item.videoSubtitleLanguages.insert(language) }
+            else { item.videoSubtitleLanguages.remove(language) }
+        }
+    }
+
+    private func subtitleLabel(_ language: String) -> String {
+        let name = Locale.current.localizedString(forLanguageCode: language) ?? language
+        let automatic = item.videoMetadata?.subtitleLanguages.contains(language) != true
+        let label = name + " (" + language + ")"
+        return automatic ? label + " · " + String(localized: "自动字幕") : label
     }
 
     private func formatLabel(_ format: YtDlpFormat) -> String {

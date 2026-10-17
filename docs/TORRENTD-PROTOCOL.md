@@ -156,13 +156,27 @@ mulee-torrentd --state-dir <目录>
 
 参数 `{"id": "..."}`。没有元数据时返回空数组。结果 `{"files": [{"index": 0, "path": "相对路径", "size": 123, "done": 45, "priority": 4}]}`。`priority` 0 = 不下载，1–7 = 下载（libtorrent 优先级，默认 4）。
 
+`done` 包含尚未完成 piece 中已下载的块，不再按完整 piece 粗化。`contiguous_done` 仍仅累计从文件头连续已校验的 piece；播放器必须使用此字段，不能用 `done` 代替。完成改名同样要等相关 piece 校验通过。
+
+### `magnet_uri`
+
+参数 `{"id": "..."}`，结果 `{"uri": "magnet:?xt=..."}`。用 libtorrent `make_magnet_uri` 从任务生成，包含名称和 tracker；缺少元数据返回 `metadata_pending`，不存在返回 `not_found`。
+
+### `set_task_limits`
+
+参数 `{"id": "...", "download_limit": 0, "upload_limit": 0}`，结果 `{}`。两个限速必填，整数范围 0–2147483647，单位字节/秒，0 表示不限。原子校验后分别调用 `set_download_limit` / `set_upload_limit`。
+
+`list` 增加 `user_download_limit`、`user_upload_limit`（用户值）、`policy_upload_limit`（做种策略值）、`download_limit`（实际任务下载限速）；既有 `upload_limit` 仍为实际上传限速。用户限速和做种策略限速分别持久化，上传生效值取两个非零值的最小值；均为 0 时不限。全局带宽限制仍然生效。
+
+Swift API：`TorrentEngine.magnetURI(_:) async throws -> String`、`TorrentEngine.setTaskLimits(id:download:upload:) async throws`；`TorrentTaskInfo` 暴露 `userDownloadLimit` / `userUploadLimit`。本轮不增加单任务限速界面。
+
 ### `set_file_priorities`
 
 参数 `{"id": "...", "priorities": [4, 0, 4]}`，长度必须等于文件数，否则 `invalid_params`。结果 `{}`。
 
 ### `set_upload_limit`
 
-参数 `{"id": "...", "limit": <字节/秒，0 不限>}`。结果 `{}`。用于做种策略「到 1:1 后降速」。
+参数 `{"id": "...", "limit": <字节/秒，0 不限>}`。结果 `{}`。用于做种策略「到 1:1 后降速」。它只设置策略值，不覆盖用户值；0 清除策略限速。
 
 ### `move_storage`
 
@@ -295,6 +309,26 @@ Swift API：`TorrentEngineSettings.isJunkFile(path:)` 与 daemon 使用相同通
 `files` 每项增加两个字段：
 
 - `storage_path`：实际存储的种子内相对路径，可能含 `.mulee` 后缀；`path` 始终是无标记的逻辑路径。
-- `contiguous_done`：从文件开头起连续、已通过 piece 校验的字节数。`done` 也只统计完整校验 piece，不能用稀疏文件的大小推算可播放数据。
+- `contiguous_done`：从文件开头起连续、已通过 piece 校验的字节数。`done` 包含未完成 piece 中已下载的块，不能代替 `contiguous_done`，也不能用稀疏文件的大小推算可播放数据。
 
 App 在连续开头达到 `min(20_000_000, ceil(size * 0.05))` 字节后打开播放器，缓冲期间可取消。HTTP 分段下载尚无可靠的连续开头判定，只在成品完成后开放播放。下载目录中的 `.mulee-incomplete/<任务 UUID>/` 属于 HTTP 引擎，不属于此辅助进程协议。
+
+## 第二轮 B2/B3：原种子与 IP 黑名单订阅
+
+- `bt.trashTorrentAfterAdd=false`：仅在从访达打开或拖入的本地 .torrent 添加成功后，调用 `FileManager.trashItem`。取消、添加失败、粘贴路径和远程链接不回收；监视文件夹沿用 `.mulee-added`。
+- `bt.ipBlocklistURL=""`：空值关闭订阅；启动检查上次尝试时间，非空时每 7 天更新。URLSession 流式下载，下载内容与 gzip 解压后的内容均限制为 50 MiB。下载到临时文件，经 torrentd 同一 P2P/DAT 解析器校验成功后原子替换独立缓存；失败保留缓存，设置页显示最后成功时间与上次结果。
+- `import_ip_blocklist` 新增可选 `validate_only`（默认 false）。true 时只解析并返回 `blocked_ranges`，不改变过滤器或持久化状态。
+- `configure` 新增可选 `ip_blocklist_url_path`：本地订阅缓存路径，空字符串清除订阅过滤器。不改变 `ip_blocklist_path` 的本地导入语义；两者与手动封禁地址合并。未传字段保留既有对应过滤器。
+
+本轮新增界面文案（中文原文，翻译由主控统一补齐）：
+
+- 复制磁力链接
+- 黑名单网址
+- 每 7 天更新一次，支持 gzip；与本地名单合并，更新失败时保留旧名单。
+- 上次更新
+- 原种子文件
+- 添加成功后将原种子移到废纸篓
+- 仅处理从访达打开或拖入的种子；监视文件夹仍移到 .mulee-added。
+- 黑名单已更新，将与本地名单合并。
+- 黑名单更新失败，已保留旧名单。请检查网址、网络和文件格式。
+- 任务已添加，但原种子未能移到废纸篓。请检查文件访问权限。

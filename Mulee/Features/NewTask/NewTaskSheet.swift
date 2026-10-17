@@ -51,7 +51,7 @@ struct NewTaskSheet: View {
                 .padding(.horizontal, 22)
                 .padding(.top, 14)
 
-            Button("打开种子文件…", action: openTorrentFiles)
+            Button("打开种子或 Metalink 文件…", action: openTorrentFiles)
                 .padding(.horizontal, 22)
                 .padding(.top, 10)
 
@@ -123,10 +123,10 @@ struct NewTaskSheet: View {
 
     private func openTorrentFiles() {
         let panel = NSOpenPanel()
-        panel.allowedContentTypes = [UTType(filenameExtension: "torrent") ?? .data]
+        panel.allowedContentTypes = ["torrent", "metalink", "meta4"].compactMap { UTType(filenameExtension: $0) }
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
-        panel.prompt = String(localized: "打开种子文件")
+        panel.prompt = String(localized: "打开下载文件")
         if panel.runModal() == .OK {
             draft.appendTorrentFiles(panel.urls)
         }

@@ -179,48 +179,28 @@ final class TransferScheduleController {
         for task in model.activeTasks {
             guard !Task.isCancelled else { return }
             if active {
-                if task.pauseReason == .schedule || (entering && task.status == .queued) {
+                if model.automaticPauseReasons(for: task).contains(.schedule) || (entering && task.status == .queued) {
                     await resume(task.id)
                 }
-            } else if [.downloading, .queued, .waitingForSources, .seeding].contains(task.status) {
+            } else if [.downloading, .queued, .waitingForSources, .seeding].contains(task.status) || !model.automaticPauseReasons(for: task).isEmpty {
                 await pause(task.id)
             }
         }
     }
 
     private func pause(_ id: UUID) async {
-        guard let index = model.tasks.firstIndex(where: { $0.id == id && $0.deletedAt == nil }),
-              (model.tasks[index].pauseReason == nil || model.tasks[index].pauseReason == .schedule), !model.userPausedTaskIDs.contains(id) else { return }
-        model.tasks[index].pauseReason = .schedule
-        if let coordinator = model.coordinator {
-            await coordinator.pause(id)
-        } else {
-            model.tasks[index].status = .paused
-            model.tasks[index].downloadRate = 0
-            model.tasks[index].uploadRate = 0
-        }
-        guard let current = model.tasks.firstIndex(where: { $0.id == id }),
-              model.tasks[current].pauseReason == .schedule else { return }
-        if model.userPausedTaskIDs.contains(id) {
-            model.tasks[current].pauseReason = nil
-        }
+        await model.pauseAutomatically(id, reason: .schedule)
     }
 
     private func resume(_ id: UUID) async {
-        guard let index = model.tasks.firstIndex(where: { $0.id == id && $0.deletedAt == nil }),
-              model.tasks[index].pauseReason != .diskSpace, !model.userPausedTaskIDs.contains(id),
-              model.tasks[index].pauseReason == .schedule || model.tasks[index].status == .queued else { return }
-        let wasScheduled = model.tasks[index].pauseReason == .schedule
-        model.tasks[index].pauseReason = nil
-        if let coordinator = model.coordinator {
-            await coordinator.resume(id)
-        } else {
-            model.tasks[index].status = model.tasks[index].kind == .ed2k ? .waitingForSources : .downloading
-        }
-        if wasScheduled, let current = model.tasks.firstIndex(where: { $0.id == id }),
-           model.tasks[current].status == .paused, model.tasks[current].pauseReason == nil,
-           !model.userPausedTaskIDs.contains(id) {
-            model.tasks[current].pauseReason = .schedule
+        guard let task = model.tasks.first(where: { $0.id == id }) else { return }
+        if model.automaticPauseReasons(for: task).contains(.schedule) {
+            await model.resumeAutomatically(id, reason: .schedule)
+        } else if task.status == .queued, !model.userPausedTaskIDs.contains(id) {
+            if let coordinator = model.coordinator { await coordinator.resume(id) }
+            else if let index = model.tasks.firstIndex(where: { $0.id == id }) {
+                model.tasks[index].status = task.kind == .ed2k ? .waitingForSources : .downloading
+            }
         }
     }
 
@@ -228,7 +208,8 @@ final class TransferScheduleController {
         let startsSoon = configuration.nextStart(after: date, calendar: calendar).map {
             $0.timeIntervalSince(date) <= 10 * 60
         } ?? false
-        guard settings.preventSleepBeforeScheduleStart, configuration.enabled, configuration.isValid,
+        guard !ProcessInfo.processInfo.isLowPowerModeEnabled,
+              settings.preventSleepBeforeScheduleStart, configuration.enabled, configuration.isValid,
               configuration.isActive(at: date, calendar: calendar) || startsSoon else {
             releaseSleepAssertion()
             return

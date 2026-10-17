@@ -289,6 +289,10 @@ json::object Session::configure(const json::object& params) {
         auto path = string_param(params, "ip_blocklist_path");
         filters["imported"] = path.empty() ? json::array{} : read_blocklist(absolute_path(path));
     }
+    if (params.contains("ip_blocklist_url_path")) {
+        auto path = string_param(params, "ip_blocklist_url_path");
+        filters["subscribed"] = path.empty() ? json::array{} : read_blocklist(absolute_path(path));
+    }
     apply_ip_filters(filters);
     persistence_.save_filters(filters);
     ip_filters_ = std::move(filters);
@@ -670,7 +674,9 @@ json::array Session::read_blocklist(const std::string& path) {
 
 void Session::apply_ip_filters(const json::object& filters) {
     lt::ip_filter filter;
-    if (auto values = filters.if_contains("imported")) {
+    for (const auto& key : {"imported", "subscribed"}) {
+        auto values = filters.if_contains(key);
+        if (!values) continue;
         for (const auto& value : values->as_array()) {
             const auto& range = value.as_object();
             filter.add_rule(lt::make_address(string_param(range, "first")),
@@ -791,6 +797,7 @@ json::object Session::manage(const std::string& method, const json::object& para
     }
     if (method == "import_ip_blocklist") {
         auto ranges = read_blocklist(absolute_path(string_param(params, "path")));
+        if (params.contains("validate_only") && bool_param(params, "validate_only")) return {{"blocked_ranges", ranges.size()}};
         auto filters = ip_filters_;
         filters["imported"] = ranges;
         persistence_.save_filters(filters);
@@ -1103,9 +1110,27 @@ json::object Session::execute(const std::string& method, const json::object& par
         save(torrent);
         return {};
     }
+    if (method == "magnet_uri") {
+        auto& torrent = find(params);
+        if (!torrent.handle.torrent_file()) throw RequestError("metadata_pending", "Torrent has no metadata");
+        return {{"uri", lt::make_magnet_uri(torrent.handle)}};
+    }
+    if (method == "set_task_limits") {
+        auto& torrent = find(params);
+        int download = int_param(params, "download_limit");
+        int upload = int_param(params, "upload_limit");
+        torrent.metadata.user_download_limit = download;
+        torrent.metadata.user_upload_limit = upload;
+        apply_task_limits(torrent);
+        persistence_.save_meta(string_param(params, "id"), torrent.metadata);
+        save(torrent);
+        return {};
+    }
     if (method == "set_upload_limit") {
         auto& torrent = find(params);
-        torrent.handle.set_upload_limit(int_param(params, "limit"));
+        torrent.metadata.policy_upload_limit = int_param(params, "limit");
+        apply_task_limits(torrent);
+        persistence_.save_meta(string_param(params, "id"), torrent.metadata);
         save(torrent);
         return {};
     }

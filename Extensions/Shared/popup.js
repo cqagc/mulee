@@ -6,6 +6,7 @@ const status = document.getElementById("status");
 const sendButton = document.getElementById("send");
 const takeover = document.getElementById("takeover");
 const extensions = document.getElementById("extensions");
+const excludedSites = document.getElementById("excluded-sites");
 const downloadCookies = document.getElementById("download-cookies");
 let cookieSite;
 
@@ -42,7 +43,7 @@ for (const [id, checked] of [["select-all", true], ["select-none", false]]) {
 }
 
 async function initialize() {
-    const settings = await extensionAPI.storage.local.get({ takeover: false, extensions: MuleeLinks.defaultExtensions });
+    const settings = await extensionAPI.storage.local.get({ takeover: false, extensions: MuleeLinks.defaultExtensions, excludedSites: [] });
     const videoSettings = await extensionAPI.storage.local.get({ videoLogin: false });
     videoLogin.checked = videoSettings.videoLogin && await extensionAPI.permissions.contains(MuleeVideoLogin.permissionRequest(extensionAPI));
     videoLoginSync.disabled = !videoLogin.checked;
@@ -52,6 +53,7 @@ async function initialize() {
     takeover.disabled = !supported;
     if (!supported) document.querySelector("[data-i18n='takeoverHint']").textContent = message("takeoverUnavailable");
     extensions.value = settings.extensions;
+    excludedSites.value = settings.excludedSites.join("\n");
     try {
         const [tab] = await extensionAPI.tabs.query({ active: true, currentWindow: true });
         cookieSite = globalThis.MuleeDownloadCookies?.siteOrigin(tab.url);
@@ -115,9 +117,24 @@ takeover.addEventListener("change", async () => {
             const granted = await extensionAPI.permissions.request({ permissions: ["downloads"] });
             takeover.checked = granted;
             if (!granted) status.textContent = message("permissionDenied");
+            if (granted && (extensionAPI.runtime.getManifest().optional_permissions || []).includes("webRequest")) {
+                try {
+                    const methodsGranted = await extensionAPI.permissions.request({
+                        permissions: ["webRequest", "nativeMessaging"], origins: ["http://*/*", "https://*/*"]
+                    });
+                    if (!methodsGranted) status.textContent = message("methodPermissionDenied");
+                } catch {
+                    status.textContent = message("methodPermissionDenied");
+                }
+            }
         }
         await extensionAPI.storage.local.set({ takeover: takeover.checked });
-        if (!takeover.checked) await extensionAPI.permissions.remove({ permissions: ["downloads"] });
+        if (!takeover.checked) {
+            await extensionAPI.permissions.remove({ permissions: ["downloads"] });
+            if ((extensionAPI.runtime.getManifest().optional_permissions || []).includes("webRequest")) {
+                await extensionAPI.permissions.remove({ permissions: ["webRequest"] });
+            }
+        }
     } catch (error) {
         takeover.checked = false;
         await extensionAPI.storage.local.set({ takeover: false });
@@ -128,8 +145,10 @@ takeover.addEventListener("change", async () => {
 document.getElementById("save").addEventListener("click", async () => {
     try {
         const list = MuleeLinks.extensionList(extensions.value).join(" ");
-        await extensionAPI.storage.local.set({ extensions: list });
+        const sites = MuleeLinks.excludedSiteList(excludedSites.value);
+        await extensionAPI.storage.local.set({ extensions: list, excludedSites: sites });
         extensions.value = list;
+        excludedSites.value = sites.join("\n");
         status.textContent = message("saved");
     } catch (error) {
         showError(error);

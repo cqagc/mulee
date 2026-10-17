@@ -9,6 +9,7 @@ final class SettingsRuntime {
     private let applyOptions: (EngineOptions) -> Void
     private let clipboard: ClipboardWatcher
     private var worker: Task<Void, Never>?
+    private var previousHTTPProxy: HTTPProxyConfiguration?
     private var previousOptions: EngineOptions?
 
     init(
@@ -47,6 +48,11 @@ final class SettingsRuntime {
     }
 
     func refresh() {
+        let proxy = HTTPProxyConfiguration(mode: settings.httpProxyMode, manualURL: settings.httpProxyURL)
+        if proxy != previousHTTPProxy {
+            previousHTTPProxy = proxy
+            Task { try? await model.coordinator?.refreshHTTPProxy() }
+        }
         let date = now()
         model.purgeExpiredTrash(now: date)
         model.slowModeController?.refresh()

@@ -70,6 +70,9 @@ final class SettingsModel {
         static let notifyOnFailure = "general.notifyOnFailure"
         static let notificationSound = "general.notificationSound"
         static let whenAllDone = "general.whenAllDone"
+        static let pauseOnSleep = "general.pauseOnSleep"
+        static let dockBadge = "general.dockBadge"
+        static let completionShortcut = "general.completionShortcut"
         static let preventSleepBeforeScheduleStart = "schedule.preventSleepBeforeStart"
         static let transferScheduleEnabled = "schedule.enabled"
         static let transferScheduleStartTime = "schedule.startTime"
@@ -95,6 +98,8 @@ final class SettingsModel {
         static let scheduledDownloadLimit = "network.scheduledDownloadLimitMBps"
         static let scheduledUploadLimit = "network.scheduledUploadLimitMBps"
         static let diskCacheMB = "network.diskCacheMB"
+        static let httpProxyMode = "network.httpProxyMode"
+        static let httpProxyURL = "network.httpProxyURL"
         static let portMapping = "network.portMapping"
         static let seedingAction = "bt.seedingAction"
         static let privateIgnoresRatio = "bt.privateIgnoresRatio"
@@ -108,6 +113,8 @@ final class SettingsModel {
         static let seedTimeLimitMinutes = "bt.seedTimeLimitMinutes"
         static let seedInactiveLimitMinutes = "bt.seedInactiveLimitMinutes"
         static let privateMinSeedMinutes = "bt.privateMinSeedMinutes"
+        static let trashTorrentAfterAdd = "bt.trashTorrentAfterAdd"
+        static let ipBlocklistURL = "bt.ipBlocklistURL"
         static let ipBlocklistPath = "bt.ipBlocklistPath"
         static let watchFolders = "bt.watchFolders"
         static let watchAutoStart = "bt.watchAutoStart"
@@ -123,6 +130,15 @@ final class SettingsModel {
         static let updateBeforeRetry = "video.updateBeforeRetry"
         static let danmakuToASS = "video.danmakuToASS"
         static let ccSubtitles = "video.ccSubtitles"
+        static let subtitleMode = "video.subtitleMode"
+        static let subtitleLanguages = "video.subtitleLanguages"
+        static let autoCaptions = "video.autoCaptions"
+        static let audioFormat = "video.audioFormat"
+        static let embedMetadata = "video.embedMetadata"
+        static let sponsorBlockMark = "video.sponsorBlockMark"
+        static let codecPreference = "video.codecPreference"
+        static let prefer60fps = "video.prefer60fps"
+        static let filenamePreset = "video.filenamePreset"
         static let autoExtract = "unzip.autoExtract"
         static let detectPagePassword = "unzip.detectPagePassword"
         static let readArchiveComment = "unzip.readArchiveComment"
@@ -154,6 +170,9 @@ final class SettingsModel {
     var notifyOnFailure: Bool { didSet { defaults.set(notifyOnFailure, forKey: Key.notifyOnFailure) } }
     var notificationSound: Bool { didSet { defaults.set(notificationSound, forKey: Key.notificationSound) } }
     var whenAllDone: WhenAllDoneAction { didSet { defaults.set(whenAllDone.rawValue, forKey: Key.whenAllDone) } }
+    var pauseOnSleep: Bool { didSet { defaults.set(pauseOnSleep, forKey: Key.pauseOnSleep) } }
+    var dockBadge: DockPresenter.Badge { didSet { defaults.set(dockBadge.rawValue, forKey: Key.dockBadge) } }
+    var completionShortcut: String { didSet { defaults.set(completionShortcut, forKey: Key.completionShortcut) } }
 
     // MARK: 下载
     var preventSleepBeforeScheduleStart: Bool { didSet { defaults.set(preventSleepBeforeScheduleStart, forKey: Key.preventSleepBeforeScheduleStart) } }
@@ -182,6 +201,8 @@ final class SettingsModel {
     }
 
     // MARK: 网络
+    var httpProxyMode: HTTPProxyConfiguration.Mode { didSet { defaults.set(httpProxyMode.rawValue, forKey: Key.httpProxyMode) } }
+    var httpProxyURL: String { didSet { defaults.set(HTTPProxyConfiguration.manualURL(httpProxyURL)?.absoluteString ?? "", forKey: Key.httpProxyURL) } }
     var downloadLimit: Int { didSet { defaults.set(downloadLimit, forKey: Key.downloadLimit) } }
     var uploadLimit: Double { didSet { defaults.set(uploadLimit, forKey: Key.uploadLimit) } }
     var slowModeDownloadMBps: Double { didSet { defaults.set(slowModeDownloadMBps, forKey: Key.slowModeDownloadMBps) } }
@@ -209,6 +230,8 @@ final class SettingsModel {
     var seedTimeLimitMinutes: Int { didSet { defaults.set(seedTimeLimitMinutes, forKey: Key.seedTimeLimitMinutes) } }
     var seedInactiveLimitMinutes: Int { didSet { defaults.set(seedInactiveLimitMinutes, forKey: Key.seedInactiveLimitMinutes) } }
     var privateMinSeedMinutes: Int { didSet { defaults.set(privateMinSeedMinutes, forKey: Key.privateMinSeedMinutes) } }
+    var trashTorrentAfterAdd: Bool { didSet { defaults.set(trashTorrentAfterAdd, forKey: Key.trashTorrentAfterAdd) } }
+    var ipBlocklistURL: String { didSet { defaults.set(ipBlocklistURL, forKey: Key.ipBlocklistURL) } }
     var ipBlocklistPath: String { didSet { defaults.set(ipBlocklistPath, forKey: Key.ipBlocklistPath) } }
     var watchFolders: [String] { didSet { defaults.set(watchFolders, forKey: Key.watchFolders) } }
     var watchAutoStart: Bool { didSet { defaults.set(watchAutoStart, forKey: Key.watchAutoStart) } }
@@ -228,6 +251,15 @@ final class SettingsModel {
     var updateBeforeRetry: Bool { didSet { defaults.set(updateBeforeRetry, forKey: Key.updateBeforeRetry) } }
     var danmakuToASS: Bool { didSet { defaults.set(danmakuToASS, forKey: Key.danmakuToASS) } }
     var ccSubtitles: Bool { didSet { defaults.set(ccSubtitles, forKey: Key.ccSubtitles) } }
+    var subtitleMode: YtDlpOutputOptions.SubtitleMode { didSet { defaults.set(subtitleMode.rawValue, forKey: Key.subtitleMode) } }
+    var subtitleLanguages: [String] { didSet { defaults.set(subtitleLanguages, forKey: Key.subtitleLanguages) } }
+    var autoCaptions: Bool { didSet { defaults.set(autoCaptions, forKey: Key.autoCaptions) } }
+    var audioFormat: YtDlpOutputOptions.AudioFormat { didSet { defaults.set(audioFormat.rawValue, forKey: Key.audioFormat) } }
+    var embedMetadata: Bool { didSet { defaults.set(embedMetadata, forKey: Key.embedMetadata) } }
+    var sponsorBlockMark: Bool { didSet { defaults.set(sponsorBlockMark, forKey: Key.sponsorBlockMark) } }
+    var codecPreference: YtDlpOutputOptions.CodecPreference { didSet { defaults.set(codecPreference.rawValue, forKey: Key.codecPreference) } }
+    var prefer60fps: Bool { didSet { defaults.set(prefer60fps, forKey: Key.prefer60fps) } }
+    var filenamePreset: YtDlpOutputOptions.FilenamePreset { didSet { defaults.set(filenamePreset.rawValue, forKey: Key.filenamePreset) } }
 
     // MARK: 解压
     var autoExtract: Bool { didSet { defaults.set(autoExtract, forKey: Key.autoExtract) } }
@@ -253,6 +285,9 @@ final class SettingsModel {
         videoFormatChoiceBySite = defaults.dictionary(forKey: Key.videoFormatChoiceBySite) as? [String: String] ?? [:]
         diskReserveEnabled = Self.bool(defaults, Key.diskReserveEnabled, true)
         whenAllDone = Self.raw(defaults, Key.whenAllDone, .none)
+        pauseOnSleep = Self.bool(defaults, Key.pauseOnSleep, true)
+        dockBadge = Self.raw(defaults, Key.dockBadge, .active)
+        completionShortcut = defaults.string(forKey: Key.completionShortcut) ?? ""
         notificationSound = Self.bool(defaults, Key.notificationSound, false)
         notifyOnFailure = Self.bool(defaults, Key.notifyOnFailure, true)
         notifyOnComplete = Self.bool(defaults, Key.notifyOnComplete, true)
@@ -276,6 +311,8 @@ final class SettingsModel {
         scheduledDownloadLimit = Self.int(defaults, Key.scheduledDownloadLimit, 5)
         scheduledUploadLimit = defaults.object(forKey: Key.scheduledUploadLimit) as? Double ?? 2
         diskCacheMB = defaults.object(forKey: Key.diskCacheMB) as? Double ?? 128
+        httpProxyMode = Self.raw(defaults, Key.httpProxyMode, .system)
+        httpProxyURL = defaults.string(forKey: Key.httpProxyURL) ?? ""
         portMapping = Self.bool(defaults, Key.portMapping, true)
         seedingAction = Self.raw(defaults, Key.seedingAction, .throttle)
         privateIgnoresRatio = Self.bool(defaults, Key.privateIgnoresRatio, true)
@@ -289,6 +326,8 @@ final class SettingsModel {
         seedTimeLimitMinutes = Self.int(defaults, Key.seedTimeLimitMinutes, 0)
         seedInactiveLimitMinutes = Self.int(defaults, Key.seedInactiveLimitMinutes, 0)
         privateMinSeedMinutes = Self.int(defaults, Key.privateMinSeedMinutes, 0)
+        trashTorrentAfterAdd = Self.bool(defaults, Key.trashTorrentAfterAdd, false)
+        ipBlocklistURL = defaults.string(forKey: Key.ipBlocklistURL) ?? ""
         ipBlocklistPath = defaults.string(forKey: Key.ipBlocklistPath) ?? ""
         watchFolders = defaults.stringArray(forKey: Key.watchFolders) ?? []
         watchAutoStart = Self.bool(defaults, Key.watchAutoStart, false)
@@ -303,6 +342,15 @@ final class SettingsModel {
         updateBeforeRetry = Self.bool(defaults, Key.updateBeforeRetry, true)
         danmakuToASS = Self.bool(defaults, Key.danmakuToASS, true)
         ccSubtitles = Self.bool(defaults, Key.ccSubtitles, true)
+        subtitleMode = Self.raw(defaults, Key.subtitleMode, .off)
+        subtitleLanguages = defaults.stringArray(forKey: Key.subtitleLanguages) ?? YtDlpOutputOptions.preferredSubtitleLanguages()
+        autoCaptions = Self.bool(defaults, Key.autoCaptions, false)
+        audioFormat = Self.raw(defaults, Key.audioFormat, .m4a)
+        embedMetadata = Self.bool(defaults, Key.embedMetadata, true)
+        sponsorBlockMark = Self.bool(defaults, Key.sponsorBlockMark, false)
+        codecPreference = Self.raw(defaults, Key.codecPreference, .auto)
+        prefer60fps = Self.bool(defaults, Key.prefer60fps, false)
+        filenamePreset = Self.raw(defaults, Key.filenamePreset, .title)
         autoExtract = Self.bool(defaults, Key.autoExtract, true)
         detectPagePassword = Self.bool(defaults, Key.detectPagePassword, true)
         readArchiveComment = Self.bool(defaults, Key.readArchiveComment, true)

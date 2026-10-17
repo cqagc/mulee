@@ -3,6 +3,29 @@ import Foundation
 /// 下载期间文件名带任务前缀（`<任务 id>-标题.mp4`），用来判断文件归属、避免同名冲突；
 /// 完成后去掉前缀，成品和同名附属文件（字幕、弹幕）一起改成用户看到的名字，重名时加序号。
 enum YtDlpFinalName {
+    /// 音频提取后旧路径可能已被删，只接受同一 stem 的目标格式，不扫描无关文件。
+    static func resolve(_ reported: URL, audioFormat: YtDlpOutputOptions.AudioFormat?) throws -> URL {
+        let candidate = audioFormat.map { reported.deletingPathExtension().appendingPathExtension($0.rawValue) } ?? reported
+        guard FileManager.default.fileExists(atPath: candidate.path) else {
+            throw EngineError.invalidResponse("yt-dlp 未生成预期的成品文件")
+        }
+        return candidate
+    }
+
+    static func isThumbnailFailure(_ text: String) -> Bool {
+        let lines = text.components(separatedBy: .newlines)
+        let errors = lines.filter { $0.hasPrefix("ERROR:") }
+        let lastProcessor = lines.last { $0.range(of: #"^\[[A-Za-z]+\] "#, options: .regularExpression) != nil }
+        let coverStage = lastProcessor?.hasPrefix("[EmbedThumbnail]") == true
+            || lastProcessor?.hasPrefix("[ThumbnailsConvertor]") == true
+        return !errors.isEmpty && errors.allSatisfy {
+            $0.contains("Supported filetypes for thumbnail embedding")
+                || $0.contains("Unable to embed using ffprobe & ffmpeg")
+                || $0.contains("Unable to embed thumbnail") || $0.contains("EmbedThumbnail")
+                || (coverStage && $0.hasPrefix("ERROR: Postprocessing:"))
+        }
+    }
+
     /// 返回改名后的成品路径和所有改过名的文件名。前缀不匹配时原样返回。
     static func finalize(_ file: URL, jobID: String) throws -> (file: URL, names: [String]) {
         let prefix = jobID + "-"

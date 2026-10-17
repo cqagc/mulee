@@ -9,6 +9,7 @@ struct YtDlpJob: Codable, Sendable {
     var playlistIndex: Int?
     var playlistTitle: String?
     var formatID: String?
+    var outputOptions: YtDlpTaskOptions?
     var formatVideoOnly: Bool?
     var status: TaskStatus = .queued
     var totalBytes: Int64?

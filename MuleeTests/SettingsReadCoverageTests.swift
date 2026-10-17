@@ -10,9 +10,11 @@ import Testing
         // Top-level settings, including newly added properties without persistence observers.
         let properties = source.matches(of: #/(?m)^    var (\w+)(?::|[ \t]*=)/#).map { String($0.1) }
         #expect(properties.count >= 36)
-        for name in ["downloadRules", "sortIntoFolders", "publicTrackersEnabled", "trackerSubscriptions", "customTrackers", "blockLeechingClients",
+        for name in ["httpProxyMode", "httpProxyURL", "pauseOnSleep", "dockBadge", "completionShortcut", "downloadRules", "sortIntoFolders", "publicTrackersEnabled", "trackerSubscriptions", "customTrackers", "blockLeechingClients",
+                     "subtitleMode", "subtitleLanguages", "autoCaptions", "audioFormat", "embedMetadata",
+                     "sponsorBlockMark", "codecPreference", "prefer60fps", "filenamePreset",
                      "markIncomplete", "duplicateAction", "videoFormatChoiceBySite", "skipJunkFiles", "junkFilePatterns", "seedTimeLimitMinutes", "seedInactiveLimitMinutes",
-                     "privateMinSeedMinutes", "ipBlocklistPath", "watchFolders", "watchAutoStart",
+                     "privateMinSeedMinutes", "ipBlocklistPath", "ipBlocklistURL", "trashTorrentAfterAdd", "watchFolders", "watchAutoStart",
                      "preventSleepBeforeScheduleStart", "transferScheduleEnabled", "transferScheduleStartTime", "transferScheduleEndTime", "transferScheduleWeekdays"] {
             #expect(properties.contains(name))
         }
@@ -45,6 +47,21 @@ import Testing
         #expect(!restored.skipJunkFiles)
         #expect(restored.junkFilePatterns == ["*.url", "*.lnk"])
         #expect(BitTorrentSettingsTab.normalizedPatterns(" \n\t").isEmpty)
+    }
+
+    @Test @MainActor func httpProxyDefaultsAndPersistence() throws {
+        let storage = try TemporaryDefaults(prefix: "http-proxy-settings.")
+        defer { storage.clean() }
+        let settings = SettingsModel(defaults: storage.defaults)
+        #expect(settings.httpProxyMode == .system)
+        #expect(settings.httpProxyURL.isEmpty)
+        settings.httpProxyMode = .manual
+        settings.httpProxyURL = "http://" + "user:password" + "@proxy.example.org:8080"
+        let restored = SettingsModel(defaults: storage.defaults)
+        #expect(restored.httpProxyMode == .manual)
+        #expect(restored.httpProxyURL == "http://proxy.example.org:8080")
+        settings.httpProxyMode = .off
+        #expect(SettingsModel(defaults: storage.defaults).httpProxyMode == .off)
     }
 
     @Test func diskCacheHasAConsumerInEveryEngine() throws {

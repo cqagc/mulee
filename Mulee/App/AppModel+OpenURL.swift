@@ -41,15 +41,29 @@ extension AppModel {
                 for link in links.reversed() {
                     let previousIDs = Set(tasks.map(\.id))
                     await coordinator.add(
-                        links: [link], autoExtract: autoExtract, directory: directory,
+                        links: [link], autoExtract: autoExtract, directory: contexts[link]?.saveDirectory ?? directory,
                         filePriorities: filePriorities, torrentDownloadModes: torrentDownloadModes, videoEntries: videoEntries,
                         requestContexts: contexts.mapValues(\.requestContext), checksums: contexts.compactMapValues(\.checksum),
                         videoFormatIDs: contexts.compactMapValues(\.videoFormatID),
-                        videoOnlyFormats: contexts.mapValues(\.videoFormatVideoOnly)
+                        videoOnlyFormats: contexts.mapValues(\.videoFormatVideoOnly),
+                        videoOptions: contexts.compactMapValues(\.videoOptions),
+                        videoIdentities: contexts.compactMapValues(\.videoIdentity)
                     )
                     for index in tasks.indices where !previousIDs.contains(tasks[index].id) && tasks[index].sourceLink == link.original {
                         tasks[index].sourcePageURL = contexts[link]?.sourcePageURL
                         if let password = contexts[link]?.password { pagePasswords[tasks[index].id] = password }
+                    }
+                    let succeeded = tasks.contains {
+                        !previousIDs.contains($0.id) && $0.sourceLink == link.original
+                            && $0.engineTaskID != nil && $0.status != .failed
+                    }
+                    do {
+                        try OpenURLRouter.trashAddedTorrent(
+                            link, fromFinder: contexts[link]?.finderTorrent == true,
+                            enabled: downloadSettings?.trashTorrentAfterAdd ?? false, succeeded: succeeded
+                        )
+                    } catch {
+                        openURLIssue = String(localized: "任务已添加，但原种子未能移到废纸篓。请检查文件访问权限。")
                     }
                 }
             }
@@ -57,8 +71,13 @@ extension AppModel {
         }
         let newTasks = links.map { link in
             var task = DownloadTask(link: link, autoExtract: autoExtract)
-            if let entry = videoEntries[link] { task.name = "P\(entry.index) \(entry.title)" }
+            if let entry = videoEntries[link] {
+                task.name = entry.site == .youtube ? entry.taskTitle : "P\(entry.index) \(entry.title)"
+            }
             task.sourcePageURL = contexts[link]?.sourcePageURL
+            task.videoIdentity = contexts[link]?.videoIdentity
+            task.videoOptions = contexts[link]?.videoOptions
+            if let directory = contexts[link]?.saveDirectory ?? directory { task.writeDirectories = [directory] }
             task.requestContext = contexts[link]?.requestContext.withoutCookie
             task.checksum = contexts[link]?.checksum
             if link.kind == .http, let name = contexts[link]?.requestContext.suggestedFilename {

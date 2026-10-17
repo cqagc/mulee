@@ -14,6 +14,7 @@ struct TorrentdConfigureParameters: Codable, Sendable {
 
     let skipJunkFiles: Bool
     let junkFilePatterns: [String]
+    let ipBlocklistURLPath: String
     let ipBlocklistPath: String
 
     init(options: EngineOptions, settings: TorrentEngineSettings) {
@@ -32,6 +33,7 @@ struct TorrentdConfigureParameters: Codable, Sendable {
         blockedClients = settings.blockedClients
         skipJunkFiles = settings.skipJunkFiles
         junkFilePatterns = settings.junkFilePatterns
+        ipBlocklistURLPath = settings.ipBlocklistURLPath
         ipBlocklistPath = settings.ipBlocklistPath
     }
 }

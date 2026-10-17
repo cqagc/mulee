@@ -5,6 +5,7 @@ import MuleeCore
 struct NetworkSettingsTab: View {
     var body: some View {
         Form {
+            HTTPProxySettingsSection()
             ProxyStatusCard()
             PortConnectivitySection()
             SpeedLimitSection()

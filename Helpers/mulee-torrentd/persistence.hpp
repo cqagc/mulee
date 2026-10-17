@@ -15,6 +15,9 @@ struct Metadata {
     json::value source = nullptr;
     std::int64_t added_at = 0;
     json::value completed_at = nullptr;
+    int user_download_limit = 0;
+    int user_upload_limit = 0;
+    int policy_upload_limit = 0;
     bool sequential_download = false;
     bool first_last_priority = false;
     bool mark_incomplete = false;
