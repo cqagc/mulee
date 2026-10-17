@@ -6338,6 +6338,35 @@
         }
       }
     },
+    "兼容优先时选 AV1 或 VP9，系统自带播放器可能无法播放": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "兼容优先时选 AV1 或 VP9，系统自带播放器可能无法播放"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When compatibility is preferred, AV1 or VP9 may not play in the system player."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相容優先時選 AV1 或 VP9，系統內建播放器可能無法播放"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "互換性優先でも、AV1またはVP9を選ぶと標準プレーヤーで再生できない場合があります。"
+          }
+        }
+      }
+    },
     "兼容优先": {
       "extractionState": "manual",
       "localizations": {
@@ -12112,6 +12141,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "タスクを検索"
+          }
+        }
+      }
+    },
+    "播放列表需要在新建面板里选择要下载的集": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放列表需要在新建面板里选择要下载的集"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select the playlist videos to download in the New Download window."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放清單需要在新增下載面板裡選擇要下載的集數"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレイリストからダウンロードする動画を新規ダウンロード画面で選択してください。"
           }
         }
       }

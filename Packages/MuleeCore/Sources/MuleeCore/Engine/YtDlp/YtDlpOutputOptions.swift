@@ -101,13 +101,18 @@ public struct YtDlpOutputOptions: Equatable, Sendable {
             }
         }
         if embedMetadata {
-            result += ["--embed-metadata", "--embed-chapters", "--no-embed-info-json"]
+            result += ["--embed-metadata"]
+            if task.section == nil { result.append("--embed-chapters") }
+            result.append("--no-embed-info-json")
             if includeThumbnail { result.append("--embed-thumbnail") }
         }
-        if sponsorBlockMark, site == .youtube {
+        if sponsorBlockMark, site == .youtube, task.section == nil {
             result += ["--sponsorblock-mark", "sponsor,selfpromo,intro,outro", "--embed-chapters"]
         }
-        if let section = task.section { result += ["--download-sections", section.argument] }
+        if let section = task.section {
+            // --embed-metadata 默认也会嵌章节，片段必须显式关闭，避免带入整片的时间轴。
+            result += ["--no-embed-chapters", "--download-sections", section.argument]
+        }
         return result
     }
 }

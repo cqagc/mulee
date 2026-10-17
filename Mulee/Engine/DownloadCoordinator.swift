@@ -294,6 +294,7 @@ final class DownloadCoordinator {
         model.downloadRateHistory = EngineSnapshotMerger.appendingRate(model.totalDownloadRate, to: model.downloadRateHistory)
     }
 
+    @discardableResult
     func add(
         links: [ParsedLink], autoExtract: Bool, directory: URL? = nil,
         filePriorities: [ParsedLink: [Int]] = [:],
@@ -304,16 +305,20 @@ final class DownloadCoordinator {
         videoFormatIDs: [ParsedLink: String] = [:],
         videoOnlyFormats: [ParsedLink: Bool] = [:],
         videoOptions: [ParsedLink: YtDlpTaskOptions] = [:],
-        videoIdentities: [ParsedLink: String] = [:]
-    ) async {
+        videoIdentities: [ParsedLink: String] = [:], canPresentNewTask: Bool = true
+    ) async -> String? {
+        if let error = model.redirectVideoPlaylists(in: links, directory: directory, canPresentNewTask: canPresentNewTask) {
+            return error
+        }
         var insertionIndex = 0
-        for link in links {
+        for link in links where !AppModel.isPureVideoPlaylist(link) {
+            let downloadLink = AppModel.singleVideoDownloadLink(link)
             if link.kind == .bittorrent, let hash = NewTaskLinkModel(link: link).infoHash,
                NewTaskLinkModel.existingTorrent(infoHash: hash, tasks: model.tasks.filter { $0.deletedAt != nil }) != nil {
                 model.openURLIssue = String(localized: "这个种子已在最近删除里，请恢复任务，或彻底删除后再添加。")
                 continue
             }
-            var task = DownloadTask(link: link, autoExtract: autoExtract)
+            var task = DownloadTask(link: downloadLink, autoExtract: autoExtract)
             let lastPosition = model.activeTasks.compactMap(\.queuePosition).max() ?? 0
             task.queuePosition = lastPosition < Int64.max ? lastPosition + 1 : Int64.max
             task.videoIdentity = videoIdentities[link]
@@ -341,7 +346,7 @@ final class DownloadCoordinator {
                 model.tasks.insert(task, at: min(insertionIndex, model.tasks.count))
                 if insertionIndex == 0 { model.selectedTaskID = task.id }
                 insertionIndex += 1
-                waitingVideoLinks[task.id] = (link, directory, videoEntries[link], videoFormatIDs[link], videoOnlyFormats[link] ?? false)
+                waitingVideoLinks[task.id] = (downloadLink, directory, videoEntries[link], videoFormatIDs[link], videoOnlyFormats[link] ?? false)
                 if engine(for: .video) != nil {
                     await submitWaitingVideos()
                 } else if case .failed(let reason) = model.engineStates[.video] {
@@ -385,14 +390,14 @@ final class DownloadCoordinator {
                             queued = true
                         }
                         task.engineTaskID = try await http.add(
-                            link: link, directory: directory, context: context, checksum: task.checksum, paused: queued,
+                            link: downloadLink, directory: directory, context: context, checksum: task.checksum, paused: queued,
                             httpThreads: ruleResult.rule?.httpThreads, speedLimitBytes: ruleResult.rule?.speedLimitBytes,
                             incompleteTaskID: (model.downloadSettings?.markIncomplete ?? true) ? task.id : nil
                         )
                     } else if let torrent = engine as? TorrentEngine {
                         let mode = torrentDownloadModes[link]
                         let id = try await torrent.add(
-                            link: link, directory: directory, filePriorities: filePriorities[link], paused: queued || mode != nil,
+                            link: downloadLink, directory: directory, filePriorities: filePriorities[link], paused: queued || mode != nil,
                             markIncomplete: model.downloadSettings?.markIncomplete ?? true
                         )
                         task.engineTaskID = id
@@ -403,9 +408,9 @@ final class DownloadCoordinator {
                             if !queued { try await torrent.resume(id) }
                         }
                     } else if queued {
-                        task.engineTaskID = try await engine.addQueued(link: link, directory: directory)
+                        task.engineTaskID = try await engine.addQueued(link: downloadLink, directory: directory)
                     } else {
-                        task.engineTaskID = try await engine.add(link: link, directory: directory)
+                        task.engineTaskID = try await engine.add(link: downloadLink, directory: directory)
                     }
                     if task.kind == .bittorrent, let id = task.engineTaskID {
                         excludedTaskIDs[.bittorrent]?.remove(id)
@@ -440,6 +445,7 @@ final class DownloadCoordinator {
             insertionIndex += 1
         }
         await refreshScheduling(sample: false)
+        return nil
     }
 
     func pause(_ id: DownloadTask.ID) async {

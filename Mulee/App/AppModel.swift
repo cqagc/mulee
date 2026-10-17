@@ -371,19 +371,25 @@ final class AppModel {
     }
 
     /// 正式运行交给协调器；没有协调器时保留预览和测试的示例行为。
+    @discardableResult
     func addTasks(
         from links: [ParsedLink], autoExtract: Bool, directory: URL? = nil,
-        filePriorities: [ParsedLink: [Int]] = [:]
-    ) {
+        filePriorities: [ParsedLink: [Int]] = [:], canPresentNewTask: Bool = true
+    ) -> String? {
+        if let error = redirectVideoPlaylists(in: links, directory: directory, canPresentNewTask: canPresentNewTask) {
+            return error
+        }
+        let acceptedLinks = links.filter { !Self.isPureVideoPlaylist($0) }
         if let coordinator {
             Task { await coordinator.add(
-                links: links, autoExtract: autoExtract, directory: directory, filePriorities: filePriorities
+                links: acceptedLinks, autoExtract: autoExtract, directory: directory, filePriorities: filePriorities
             ) }
-            return
+            return nil
         }
-        let newTasks = links.map { DownloadTask(link: $0, autoExtract: autoExtract) }
+        let newTasks = acceptedLinks.map { DownloadTask(link: Self.singleVideoDownloadLink($0), autoExtract: autoExtract) }
         tasks.insert(contentsOf: newTasks, at: 0)
         selectedTaskID = newTasks.first?.id ?? selectedTaskID
+        return nil
     }
 
     private func updateSleepPrevention() {

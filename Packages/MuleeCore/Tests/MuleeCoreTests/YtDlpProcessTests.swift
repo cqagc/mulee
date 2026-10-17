@@ -4,6 +4,26 @@ import Testing
 @testable import MuleeCore
 
 struct YtDlpProcessTests {
+    @Test(arguments: [nil, "", "/tmp/custom-ca.pem"] as [String?], [false, true])
+    func certificateEnvironmentPreservesOverridesAndOnlyInjectsExistingBundle(certificate: String?, exists: Bool) {
+        var inherited = ["PYTHONPATH": "untrusted", "https_proxy": "http://proxy.example:8080"]
+        inherited["SSL_CERT_FILE"] = certificate
+        let environment = YtDlpProcess.environment(inheriting: inherited, certificateFileExists: exists)
+        #expect(environment["SSL_CERT_FILE"] == (certificate ?? (exists ? "/etc/ssl/cert.pem" : nil)))
+        #expect(environment["https_proxy"] == inherited["https_proxy"])
+        #expect(environment["PYTHONPATH"] == nil)
+    }
+
+    @Test func childReceivesCertificateEnvironment() async throws {
+        let child = try await YtDlpProcess.capture(binary: URL(filePath: "/usr/bin/printenv"), arguments: ["SSL_CERT_FILE"])
+        if let certificate = YtDlpProcess.environment["SSL_CERT_FILE"] {
+            #expect(child.status == 0)
+            #expect(child.output.trimmingCharacters(in: .newlines) == certificate)
+        } else {
+            #expect(child.status == 1)
+        }
+    }
+
     @Test func supervisorTerminatesDescendantsWhenParentExits() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("YtDlp-watchdog-\(UUID())")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

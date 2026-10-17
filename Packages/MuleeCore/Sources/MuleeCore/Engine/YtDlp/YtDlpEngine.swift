@@ -357,6 +357,16 @@ public actor YtDlpEngine: DownloadEngine {
                 try await convertDanmaku(url, job: jobs[index], token: token, videoSize: progress[id]?.videoSize)
             }
             guard tokens[id] == token, let index = jobs.firstIndex(where: { $0.id == id }) else { return }
+            // 同时传 --write-subs 与 --embed-subs 时 yt-dlp 会保留源字幕；成功后只清理本任务的副本。
+            do {
+                try YtDlpFileSafety.removeEmbeddedSubtitles(
+                    for: jobs[index], video: url,
+                    languages: current.outputOptions?.subtitleLanguages ?? selectedOutput.subtitleLanguages,
+                    mode: selectedOutput.subtitleMode
+                )
+            } catch {
+                Self.logger.error("清理已嵌入字幕失败：\(error.localizedDescription, privacy: .public)")
+            }
             captureProgress(id)
             var finalURL = url
             do {

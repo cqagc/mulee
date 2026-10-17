@@ -110,4 +110,23 @@ import Testing
         }
         #expect(MuleeAppShortcuts.appShortcuts.count == 4)
     }
+
+    @Test func playlistIntentOpensSelectionAndBackgroundPrefillReturnsExplicitError() async throws {
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let actions = MuleeIntentActions(model: model)
+        let text = "https://www.youtube.com/playlist?list=ExampleList"
+        #expect(throws: MuleeIntentActions.ValidationError.playlistSelectionRequired) {
+            try actions.prefill(link: text, directory: nil, canPresentNewTask: false)
+        }
+        #expect(!model.isShowingNewTask)
+        #expect(model.tasks.isEmpty)
+        var intent = NewMuleeDownloadIntent()
+        intent.actions = actions
+        intent.link = text
+        _ = try await intent.perform()
+        #expect(model.isShowingNewTask)
+        #expect(model.pendingNewTaskText == text)
+        #expect(model.tasks.isEmpty)
+    }
+
 }

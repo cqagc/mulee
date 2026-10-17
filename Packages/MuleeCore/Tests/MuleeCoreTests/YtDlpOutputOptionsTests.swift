@@ -51,7 +51,10 @@ import Testing
                 #expect(arguments[sortIndex + 1] == [expectedCodec, sixty ? "fps:60" : nil].compactMap { $0 }.joined(separator: ","))
             }
             #expect(arguments[3] == (quality == .compatible ? "mp4" : "mkv"))
-            if codec != .auto { #expect(arguments[1] == "bv*+ba/b") }
+            if codec != .auto {
+                #expect(arguments[1] == (quality == .compatible
+                    ? "bv*+ba[acodec~='^(mp4a|aac)']/bv*+ba/b" : "bv*+ba/b"))
+            }
         }
     }
 
@@ -242,6 +245,78 @@ import Testing
         } catch {
             await engine.stop()
             throw error
+        }
+    }
+
+
+    @Test(arguments: [false, true], [false, true])
+    func sectionsNeverEmbedFullVideoChaptersOrQuerySponsors(metadata: Bool, sponsors: Bool) throws {
+        var options = YtDlpOutputOptions()
+        options.embedMetadata = metadata
+        options.sponsorBlockMark = sponsors
+        for audioOnly in [false, true] {
+            let arguments = options.arguments(
+                quality: .compatible, site: .youtube,
+                task: .init(audioOnly: audioOnly, section: try .init(start: "0", end: "8"))
+            )
+            #expect(!arguments.contains("--embed-chapters"))
+            #expect(!arguments.contains("--sponsorblock-mark"))
+            #expect(arguments.contains("--no-embed-chapters"))
+            #expect(arguments.contains("--embed-metadata") == metadata)
+            #expect(Array(arguments.suffix(2)) == ["--download-sections", "*0-8"])
+        }
+    }
+
+    @Test(arguments: YtDlpOutputOptions.SubtitleMode.allCases)
+    func subtitleCleanupOnlyRemovesSelectedRegularFilesOwnedByTheJob(mode: YtDlpOutputOptions.SubtitleMode) throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let id = UUID().uuidString.lowercased()
+        let stem = id + "-Example"
+        let video = root.appendingPathComponent(stem + ".mp4")
+        try Data("video".utf8).write(to: video)
+        let removable = [stem + ".en.vtt", stem + ".en.srt", stem + ".en.ass"]
+        let retained = ["other.en.vtt", stem + ".en.danmaku.ass", stem + ".danmaku.ass", stem + ".fr.vtt", stem + ".en.txt"]
+        for name in removable + retained { try Data("example".utf8).write(to: root.appendingPathComponent(name)) }
+        let link = root.appendingPathComponent(stem + ".ja.vtt")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: root.appendingPathComponent("other.en.vtt"))
+        let directory = root.appendingPathComponent(stem + ".zh.vtt")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let job = YtDlpJob(id: id, url: video, site: .other, directory: root, name: "Example")
+
+        try YtDlpFileSafety.removeEmbeddedSubtitles(for: job, video: video, languages: ["en", "ja", "zh"], mode: mode)
+
+        for name in removable { #expect(FileManager.default.fileExists(atPath: root.appendingPathComponent(name).path) == (mode != .embed)) }
+        for name in retained { #expect(FileManager.default.fileExists(atPath: root.appendingPathComponent(name).path)) }
+        #expect(try link.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink == true)
+        #expect(FileManager.default.fileExists(atPath: directory.path))
+        #expect(FileManager.default.fileExists(atPath: video.path))
+    }
+
+    @Test(arguments: [false, true])
+    func cleanupKeepsBilibiliAndAudioSidecars(audioOnly: Bool) throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let id = UUID().uuidString.lowercased()
+        let video = root.appendingPathComponent(id + "-Example.mp4")
+        let subtitle = root.appendingPathComponent(id + "-Example.en.vtt")
+        try Data("subtitle".utf8).write(to: subtitle)
+        let job = YtDlpJob(id: id, url: video, site: audioOnly ? .other : .bilibili, directory: root,
+                             name: "Example", outputOptions: .init(audioOnly: audioOnly))
+        try YtDlpFileSafety.removeEmbeddedSubtitles(for: job, video: video, languages: ["en"], mode: .embed)
+        #expect(FileManager.default.fileExists(atPath: subtitle.path))
+    }
+
+    @Test func cleanupRejectsForeignVideoAndReportsMissingDirectory() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let id = UUID().uuidString.lowercased()
+        let video = root.appendingPathComponent(id + "-Example.mp4")
+        let job = YtDlpJob(id: id, url: video, site: .other, directory: root, name: "Example")
+        try YtDlpFileSafety.removeEmbeddedSubtitles(for: job, video: root.appendingPathComponent("foreign.mp4"), languages: ["en"], mode: .embed)
+        #expect(throws: (any Error).self) {
+            try YtDlpFileSafety.removeEmbeddedSubtitles(for: job, video: video, languages: ["en"], mode: .embed)
         }
     }
 

@@ -8,6 +8,25 @@ struct YtDlpFileSafety: Sendable {
             && url.lastPathComponent.hasPrefix(job.id + "-")
     }
 
+    static func removeEmbeddedSubtitles(
+        for job: YtDlpJob, video: URL, languages: [String], mode: YtDlpOutputOptions.SubtitleMode
+    ) throws {
+        guard mode == .embed, job.site != .bilibili, job.outputOptions?.audioOnly != true,
+              belongs(video, to: job) else { return }
+        let stem = video.deletingPathExtension().lastPathComponent
+        let names = Set(languages.filter(YtDlpSubtitleLanguage.isValidID).flatMap { language in
+            ["vtt", "srt", "ass"].map { stem + "." + language + "." + $0 }
+        })
+        let files = try FileManager.default.contentsOfDirectory(
+            at: job.directory, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey]
+        )
+        for file in files where names.contains(file.lastPathComponent) && belongs(file, to: job) {
+            let values = try file.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            guard values.isRegularFile == true, values.isSymbolicLink != true else { continue }
+            try FileManager.default.removeItem(at: file)
+        }
+    }
+
     static func trash(_ job: YtDlpJob) throws {
         let files = try FileManager.default.contentsOfDirectory(
             at: job.directory, includingPropertiesForKeys: nil

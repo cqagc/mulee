@@ -6,11 +6,13 @@ final class MuleeIntentActions {
     enum ValidationError: LocalizedError {
         case invalidLink
         case invalidDirectory
+        case playlistSelectionRequired
 
         var errorDescription: String? {
             switch self {
             case .invalidLink: String(localized: "请输入一个有效的下载链接。")
             case .invalidDirectory: String(localized: "保存目录必须是本机的绝对目录路径。")
+            case .playlistSelectionRequired: String(localized: "播放列表需要在新建面板里选择要下载的集")
             }
         }
     }
@@ -50,8 +52,11 @@ final class MuleeIntentActions {
         return (parsed, destination)
     }
 
-    func prefill(link: String, directory: String?) throws {
+    func prefill(link: String, directory: String?, canPresentNewTask: Bool = true) throws {
         let request = try Self.validate(link: link, directory: directory)
+        if AppModel.isPureVideoPlaylist(request.link), !canPresentNewTask {
+            throw ValidationError.playlistSelectionRequired
+        }
         model.pendingNewTaskDirectory = request.directory
         model.showNewTask(prefill: request.link.original)
     }

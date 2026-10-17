@@ -67,15 +67,23 @@ struct YtDlpProcess: Sendable {
     }
 
     static var environment: [String: String] {
-        let inherited = ProcessInfo.processInfo.environment
+        environment(inheriting: ProcessInfo.processInfo.environment,
+                    certificateFileExists: FileManager.default.fileExists(atPath: "/etc/ssl/cert.pem"))
+    }
+
+    static func environment(inheriting inherited: [String: String], certificateFileExists: Bool) -> [String: String] {
         var values: [String: String] = [
             "LANG": "en_US.UTF-8", "LC_ALL": "en_US.UTF-8",
             "PATH": "/usr/bin:/bin:/usr/sbin:/sbin"
         ]
         // HOME/TMPDIR 为工具正常运行所需，代理保留大小写形式；不继承凭据、配置或 Python 环境。
         for key in ["HOME", "TMPDIR", "http_proxy", "https_proxy", "all_proxy", "no_proxy",
-                    "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"] {
+                    "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "SSL_CERT_FILE"] {
             values[key] = inherited[key]
+        }
+        // 静态 ffmpeg 的 HTTPS 下载需要显式根证书路径；调用方指定的证书必须保留。
+        if values["SSL_CERT_FILE"] == nil, certificateFileExists {
+            values["SSL_CERT_FILE"] = "/etc/ssl/cert.pem"
         }
         return values
     }
