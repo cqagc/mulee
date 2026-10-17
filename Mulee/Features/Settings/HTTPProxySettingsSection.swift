@@ -20,9 +20,27 @@ struct HTTPProxySettingsSection: View {
                 Text("手动设置").tag(HTTPProxyConfiguration.Mode.manual)
             }
             if settings.httpProxyMode == .manual {
-                TextField("http://主机:端口", text: $address)
-                TextField("代理账号（可选）", text: $username)
-                SecureField("代理密码（可选）", text: $password)
+                HStack {
+                    Text("代理地址").frame(width: 72, alignment: .leading)
+                    TextField("代理地址", text: $address, prompt: Text("http://主机:端口"))
+                        .labelsHidden()
+                        .textFieldStyle(.roundedBorder)
+                        .frame(minWidth: 260, maxWidth: .infinity)
+                }
+                HStack {
+                    Text("账号").frame(width: 72, alignment: .leading)
+                    TextField("账号", text: $username, prompt: Text("可选"))
+                        .labelsHidden()
+                        .textFieldStyle(.roundedBorder)
+                        .frame(minWidth: 260, maxWidth: .infinity)
+                }
+                HStack {
+                    Text("密码").frame(width: 72, alignment: .leading)
+                    SecureField("密码", text: $password, prompt: Text("可选"))
+                        .labelsHidden()
+                        .textFieldStyle(.roundedBorder)
+                        .frame(minWidth: 260, maxWidth: .infinity)
+                }
                 Button(isSaving ? "正在应用…" : "保存并应用") { save() }
                     .disabled(isSaving)
             }

@@ -29,7 +29,7 @@ struct TaskInspectorActions: View {
     }
 
     private func copyLink() {
-        TaskActions.copyLink(task)
+        TaskActions.copyLink(task, model: model)
     }
 
     private func reveal() {

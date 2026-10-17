@@ -465,7 +465,9 @@ public actor Aria2Engine: DownloadEngine {
             "aria2.tellStopped", [.integer(0), .integer(1000), keys]
         )
         var changed = false
-        var snapshots = (active + waiting + stopped).compactMap(Aria2StatusMapper.snapshot).map { snapshot in
+        let statuses = active + waiting + stopped
+        let diagnosticLog = statuses.contains { $0.status == "error" && $0.errorCode == "1" } ? recentFailureLog() : ""
+        var snapshots = statuses.compactMap { Aria2StatusMapper.snapshot($0, diagnosticLog: diagnosticLog) }.map { snapshot in
             var snapshot = snapshot
             if var transfer = incompleteTransfers[snapshot.engineTaskID] {
                 if let file = snapshot.savePath, transfer.workingFile != file, transfer.completedFile == nil {
@@ -805,6 +807,18 @@ public actor Aria2Engine: DownloadEngine {
         try? configuration?.protectStateFiles()
         client = nil
         process = nil
+    }
+
+    private func recentFailureLog() -> String {
+        guard let url = configuration?.logURL, let file = try? FileHandle(forReadingFrom: url) else { return "" }
+        defer { try? file.close() }
+        do {
+            let size = try file.seekToEnd()
+            try file.seek(toOffset: size > 65_536 ? size - 65_536 : 0)
+            return String(decoding: try file.readToEnd() ?? Data(), as: UTF8.self)
+        } catch {
+            return ""
+        }
     }
 
     private func logTail(_ url: URL) -> String {

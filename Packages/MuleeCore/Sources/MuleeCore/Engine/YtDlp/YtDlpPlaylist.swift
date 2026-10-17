@@ -10,7 +10,7 @@ public enum YtDlpPlaylist {
     }
 
     public static func fetch(
-        url: URL, binary: URL, cookies: [VideoCookie] = [], timeout: Duration = .seconds(20),
+        url: URL, binary: URL, cookies: [VideoCookie] = [], timeout: Duration = .seconds(45),
         proxy: HTTPProxyConfiguration = .current()
     ) async throws -> [YtDlpPlaylistEntry] {
         let host = url.host?.lowercased() ?? ""
@@ -92,7 +92,7 @@ public enum YtDlpPlaylist {
                 return YtDlpPlaylistEntry(
                     index: offset + 1, title: String((entry["title"] as? String ?? "").prefix(512)),
                     url: url, site: .youtube, duration: duration.flatMap { $0.isFinite && $0 > 0 ? $0 : nil },
-                    playlistTitle: playlistTitle, videoIdentity: extractor.map { $0 + ":" + id }
+                    playlistTitle: playlistTitle, videoIdentity: extractor.map { $0 + ":" + id }, playlistCount: rawEntries.count
                 )
             }
         }

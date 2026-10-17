@@ -149,8 +149,8 @@ struct Aria2IntegrationTests {
         }
     }
 
-    @Test("停态任务换链重建 GID 并从原控制文件续传")
-    func stoppedTaskReplacement() async throws {
+    @Test("停态任务换链重建 GID 并从原控制文件续传", arguments: [false, true])
+    func stoppedTaskReplacement(corruptControl: Bool) async throws {
         try await Aria2IntegrationFixture.withFixture { fixture in
             try await fixture.engine.start(options: fixture.options)
             let id = try await fixture.engine.add(link: fixture.link("slow-stopped.bin"), directory: nil)
@@ -164,13 +164,22 @@ struct Aria2IntegrationTests {
                 status = try await rpc.call("aria2.tellStatus", [.string(id)])
             }
             #expect(status.status == "removed")
+            if corruptControl, let path = active.savePath {
+                try Data("corrupt control file".utf8).write(to: URL(filePath: path.path + ".aria2"))
+            }
             guard case .http(let url, _, _) = try fixture.link("replacement.bin") else { return }
-            let newID = try await fixture.engine.replaceURI(id, with: url, context: .init(), checksum: nil)
+            var newID = try await fixture.engine.replaceURI(id, with: url, context: .init(), checksum: nil)
             #expect(newID != id)
             try await fixture.engine.resume(newID)
+            if corruptControl {
+                let failed = try await fixture.waitFor(newID) { $0.status == .failed }
+                #expect(failed.isControlFileFailure)
+                newID = try await fixture.engine.replaceURI(newID, with: url, context: .init(), checksum: nil, restartFromScratch: true)
+                try await fixture.engine.resume(newID)
+            }
             let completed = try await fixture.waitFor(newID) { $0.status == .completed }
             #expect(completed.savePath == active.savePath)
-            #expect(await fixture.server.rangeRequests > 0)
+            if !corruptControl { #expect(await fixture.server.rangeRequests > 0) }
         }
     }
 

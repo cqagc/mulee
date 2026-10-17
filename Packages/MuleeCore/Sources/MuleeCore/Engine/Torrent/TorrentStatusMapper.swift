@@ -33,7 +33,8 @@ struct TorrentStatusMapper: Sendable {
                 peerCount: value.numPeers, shareRatio: value.ratio
             ),
             completedAt: value.completedAt.map { Date(timeIntervalSince1970: TimeInterval($0)) },
-            writeDirectories: [URL(fileURLWithPath: value.savePath)]
+            writeDirectories: [URL(fileURLWithPath: value.savePath)],
+            isFileWriteFailure: status == .failed && EngineTaskSnapshot.describesFileWriteFailure(value.error ?? "")
         )
     }
 }

@@ -3,6 +3,37 @@ import Testing
 @testable import MuleeCore
 
 struct Aria2UnitTests {
+    @Test(arguments: [("17", "example", true), ("16", "example", true), ("9", "example", true),
+                      ("1", "Failed to write into the segment file", true), ("1", "Failed to load control file", true),
+                      ("1", "network error", false)])
+    func writeErrorsSurviveMessageCleaning(code: String, detail: String, expected: Bool) throws {
+        let data = try JSONSerialization.data(withJSONObject: ["gid": "fixture", "status": "error", "errorCode": code, "errorMessage": detail])
+        let status = try JSONDecoder().decode(Aria2RPCModels.Status.self, from: data)
+        #expect(Aria2StatusMapper.snapshot(status)?.isFileWriteFailure == expected)
+        #expect(Aria2StatusMapper.snapshot(status)?.isControlFileFailure == detail.contains("control file"))
+    }
+
+    @Test func genericAbortUsesOnlyTheMatchingLogException() throws {
+        let log = """
+        2026-01-01 00:00:00 [ERROR] CUID#1 - Download aborted. URI=https://example.org/partial.bin
+        Exception: errorCode=1 Unsupported ctrl file version: 0000
+        2026-01-01 00:00:01 [ERROR] CUID#2 - Download aborted. URI=https://example.org/other.bin
+        Exception: errorCode=1 network error
+        """
+        let data = try JSONSerialization.data(withJSONObject: [
+            "gid": "fixture", "status": "error", "errorCode": "1", "errorMessage": "Download aborted.",
+            "files": [["path": "/tmp/partial.bin", "uris": [["uri": "https://example.org/partial.bin"]]]]
+        ])
+        let status = try JSONDecoder().decode(Aria2RPCModels.Status.self, from: data)
+        let snapshot = try #require(Aria2StatusMapper.snapshot(status, diagnosticLog: log))
+        #expect(snapshot.isFileWriteFailure)
+        #expect(snapshot.isControlFileFailure)
+        #expect(Aria2StatusMapper.fileFailure(in: log, source: "https://example.org/other.bin", path: nil)?.write == false)
+        #expect(Aria2StatusMapper.fileFailure(in: log, source: "https://example.org/missing.bin", path: nil) == nil)
+        #expect(snapshot.errorMessage?.contains("0000") == false)
+        #expect(Aria2StatusMapper.snapshot(status)?.isFileWriteFailure == true)
+    }
+
     @Test func unsafeStateDirectoryIsRejectedAndPermissionsAreRepaired() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }

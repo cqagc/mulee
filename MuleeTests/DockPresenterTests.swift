@@ -1,9 +1,17 @@
 import AppKit
 import Foundation
 import Testing
+import UserNotifications
 @testable import Mulee
 
 @Suite struct DockPresenterTests {
+    @Test func badgeWarningIncludesSystemNotificationAndBadgePermissions() {
+        #expect(DockPresenter.badgePermissionDenied(badge: .disabled, authorization: .authorized))
+        #expect(DockPresenter.badgePermissionDenied(badge: .enabled, authorization: .denied))
+        #expect(!DockPresenter.badgePermissionDenied(badge: .enabled, authorization: .authorized))
+        #expect(!DockPresenter.badgePermissionDenied(badge: .notSupported, authorization: .notDetermined))
+    }
+
     @Test func activeCountAndEmptyStates() {
         #expect(DockPresenter.badge(.none, activeCount: 3, bytesPerSecond: 12_000_000) == nil)
         #expect(DockPresenter.badge(.active, activeCount: 3, bytesPerSecond: 0) == "3")

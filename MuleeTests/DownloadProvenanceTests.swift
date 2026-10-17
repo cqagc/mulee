@@ -26,6 +26,42 @@ import Testing
         #expect(DownloadProvenance.sources(for: task) == ["https://example.com/file"])
     }
 
+    @Test(arguments: [
+        ("https://www.youtube.com/watch?v=Example0001&list=ExampleList&token=private#part", "https://www.youtube.com/watch?v=Example0001&list=ExampleList"),
+        ("https://youtu.be/Example0001?list=ExampleList&token=private", "https://www.youtube.com/watch?v=Example0001&list=ExampleList"),
+        ("https://www.bilibili.com/video/BVExample001?p=3&token=private", "https://www.bilibili.com/video/BVExample001?p=3"),
+        ("https://example.org/watch?v=Example0001&token=private", "https://example.org/watch"),
+        ("https://youtube.com.example.org/watch?v=Example0001", "https://youtube.com.example.org/watch")
+    ])
+    func videoPagesKeepOnlyPublicLocators(source: String, expected: String) {
+        var task = MockData.tasks[0]
+        task.kind = .video
+        task.sourceLink = source
+        task.sourcePageURL = nil
+        task.requestContext = nil
+        #expect(DownloadProvenance.sources(for: task) == [expected])
+        task.kind = .http
+        #expect(!DownloadProvenance.sources(for: task).contains { $0.contains("?") })
+    }
+
+    @Test func videoWhereFromsRetainsEpisodeAndRemovesCredentials() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("Example.mp4")
+        try Data([1]).write(to: file)
+        var task = MockData.tasks[0]
+        task.kind = .video
+        task.sourceLink = "https://www.youtube.com/watch?v=Example0001&list=ExampleList&token=private"
+        task.sourcePageURL = URL(string: "https://" + "user:password" + "@www.bilibili.com/video/BVExample001?p=2&token=private#fragment")
+        await DownloadProvenance.apply(to: file, task: task)
+        let data = try attribute("com.apple.metadata:kMDItemWhereFroms", at: file)
+        #expect(try PropertyListSerialization.propertyList(from: data, format: nil) as? [String] == [
+            "https://www.youtube.com/watch?v=Example0001&list=ExampleList",
+            "https://www.bilibili.com/video/BVExample001?p=2"
+        ])
+    }
+
     @Test func binaryPlistAndQuarantineRoundTrip() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)

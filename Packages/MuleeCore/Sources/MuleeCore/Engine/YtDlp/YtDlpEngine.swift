@@ -171,7 +171,7 @@ public actor YtDlpEngine: DownloadEngine {
         try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
         let id = UUID().uuidString.lowercased()
         jobs.append(YtDlpJob(id: id, url: url, site: site, directory: destination, name: entry?.taskTitle ?? url.lastPathComponent,
-                                playlistIndex: entry?.index, playlistTitle: entry?.title,
+                                playlistIndex: entry?.index, playlistTitle: entry?.title, playlistFilenamePrefix: entry?.filenamePrefix,
                                 formatID: formatID, outputOptions: outputOptions, formatVideoOnly: formatVideoOnly, status: paused ? .paused : .queued))
         try persist()
         if !paused, options.downloadLimit > 0 { await requeueActive() }
@@ -394,6 +394,7 @@ public actor YtDlpEngine: DownloadEngine {
             if case EngineError.launchFailed(let text) = error { raw = text }
             else { raw = String(describing: error) }
             jobs[index].errorMessage = YtDlpErrorDescriptions.message(raw)
+            jobs[index].isFileWriteFailure = EngineTaskSnapshot.describesFileWriteFailure(raw)
             progress[id] = nil
             persistOrReport()
         }
@@ -476,7 +477,9 @@ public actor YtDlpEngine: DownloadEngine {
             "--ignore-config", "--no-simulate", "--newline", "--progress",
             "--no-colors", "--continue", "--no-overwrites", "--no-cache-dir",
             "--paths", job.directory.path,
-            "--output", job.id + "-" + (job.playlistIndex.map { "P\($0) " } ?? "") + output.filenamePreset.template,
+            "--output", job.id + "-" + (job.playlistFilenamePrefix ?? job.playlistIndex.map { index in
+                job.site == .youtube ? (index < 10 ? "0" : "") + String(index) + " - " : "P\(index) "
+            } ?? "") + output.filenamePreset.template,
             "--print", YtDlpProgress.metadataTemplate,
             "--print", YtDlpProgress.fileTemplate,
             "--progress-template", YtDlpProgress.downloadTemplate,

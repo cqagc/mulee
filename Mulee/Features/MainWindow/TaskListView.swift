@@ -30,30 +30,39 @@ struct TaskListView: View {
             }
         }
         .listStyle(.inset)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            HStack {
-                Spacer()
-                Menu("排序") {
-                    Picker("排序依据", selection: Binding(
-                        get: { TaskSort(settings.taskSort).key },
-                        set: { settings.taskSort = TaskSort(key: $0, ascending: TaskSort(settings.taskSort).ascending).value }
-                    )) {
-                        ForEach(TaskSort.Key.allCases, id: \.self) { key in
-                            Text(key.title).tag(key)
+        .scrollEdgeEffectStyle(.hard, for: .top)
+        .safeAreaBar(edge: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                DiskReserveBanner()
+                HStack {
+                    Spacer()
+                    Menu("排序") {
+                        Picker("排序依据", selection: Binding(
+                            get: { TaskSort(settings.taskSort).key },
+                            set: { settings.taskSort = TaskSort(key: $0, ascending: TaskSort(settings.taskSort).ascending).value }
+                        )) {
+                            ForEach(TaskSort.Key.allCases, id: \.self) { key in
+                                Text(key.title).tag(key)
+                            }
                         }
+                        .pickerStyle(.inline)
+                        .labelsHidden()
+                        Divider()
+                        Picker("排序方向", selection: Binding(
+                            get: { TaskSort(settings.taskSort).ascending },
+                            set: { settings.taskSort = TaskSort(key: TaskSort(settings.taskSort).key, ascending: $0).value }
+                        )) {
+                            Text("升序").tag(true)
+                            Text("降序").tag(false)
+                        }
+                        .pickerStyle(.inline)
+                        .labelsHidden()
                     }
-                    Picker("排序方向", selection: Binding(
-                        get: { TaskSort(settings.taskSort).ascending },
-                        set: { settings.taskSort = TaskSort(key: TaskSort(settings.taskSort).key, ascending: $0).value }
-                    )) {
-                        Text("升序").tag(true)
-                        Text("降序").tag(false)
-                    }
+                    .fixedSize()
                 }
-                .fixedSize()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 4)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 4)
         }
         .overlay {
             if tasks.isEmpty {

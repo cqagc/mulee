@@ -60,7 +60,7 @@ struct TaskPresentation {
             let lastSeen = info.lastCompleteSourceSeen.map { String(localized: "，完整源最后出现于 \(monthDay($0))") } ?? String(localized: "，尚未见到完整源")
             return String(localized: "\(size) · 暂无来源\(lastSeen)")
         case .video(let site, let quality, let danmaku):
-            return "\(site.displayName) · \(Self.qualityTitle(quality))\(danmaku ? String(localized: " · 弹幕转 ASS") : "")"
+            return "\(site.displayName) · \(Self.qualityTitle(quality))\(site == .bilibili && danmaku ? String(localized: " · 弹幕转 ASS") : "")"
         }
     }
 
@@ -188,6 +188,10 @@ struct TaskPresentation {
     }
 
     var isStatusEmphasized: Bool { [.waitingForSources, .completed, .failed].contains(task.status) }
+    var showsTaskLimits: Bool { task.deletedAt == nil && task.status != .completed }
+    var showsQueueActions: Bool { task.deletedAt == nil && ![.completed, .seeding].contains(task.status) }
+    var showsQueuePriority: Bool { showsTaskLimits && task.status != .seeding }
+    var showsHTTPReplacement: Bool { task.kind == .http && [.failed, .paused].contains(task.status) }
     var canPauseOrResume: Bool { [.downloading, .waitingForSources, .queued, .paused, .seeding].contains(task.status) }
     var pauseTitle: String { task.status == .paused ? String(localized: "继续") : String(localized: "暂停") }
     var pauseSymbol: MuleeSymbol { task.status == .paused ? .resume : .pause }

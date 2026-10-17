@@ -23,6 +23,10 @@ final class DownloadCoordinator {
     private var revisions: [TaskKind: Int] = [:]
     private var excludedTaskIDs: [TaskKind: Set<String>] = [:]
     private var isPolling = false
+    private var volumeWriteFailures: [UUID: Date] = [:]
+    private var volumeHTTPRecoveries: Set<UUID> = []
+    private let volumeProbe: any DownloadVolumeProbing
+    private let now: () -> Date
     private var checksumJobs: [UUID: Task<Void, Never>] = [:]
     private var checkedCompletions: Set<UUID> = []
     private var replacingHTTPTasks: Set<UUID> = []
@@ -41,11 +45,15 @@ final class DownloadCoordinator {
         model: AppModel, engines: [any DownloadEngine], videoBootstrap: VideoEngineBootstrap? = nil,
         videoEngineFactory: (@MainActor (VideoEngineConfiguration) async throws -> any DownloadEngine)? = nil,
         schedulingDefaults: UserDefaults? = nil,
+        volumeProbe: any DownloadVolumeProbing = SystemDownloadVolumeProbe(),
+        now: @escaping () -> Date = Date.init,
         inspectHTTP: @escaping (URL, DownloadRequestContext, Bool) async throws -> HTTPResourceIdentity = {
             try await HTTPResourceProbe.inspect($0, context: $1, expectsHTML: $2)
         }
     ) {
         self.model = model
+        self.volumeProbe = volumeProbe
+        self.now = now
         provenanceCompletions = Set(model.activeTasks.filter { [.completed, .seeding, .extracting].contains($0.status) }.map(\.id))
         self.inspectHTTP = inspectHTTP
         scheduling = DownloadScheduling(defaults: schedulingDefaults ?? (AppEnvironment.isRunningUnitTests ? nil : .standard))
@@ -178,6 +186,8 @@ final class DownloadCoordinator {
         generation = nil
         model.stalledYieldTaskIDs.removeAll()
         httpResumeAttempts.removeAll()
+        volumeWriteFailures.removeAll()
+        volumeHTTPRecoveries.removeAll()
         for job in forgettingHTTPTasks.values { await job.value }
         forgettingHTTPTasks.removeAll()
         fileProgressPublisher.stop()
@@ -243,6 +253,55 @@ final class DownloadCoordinator {
                 pendingAdds[kind, default: 0] == 0 && revisions[kind, default: 0] == snapshotRevisions[kind]
             }
         }
+        var volumeFailures = Set<UUID>()
+        let tasksByEngineID = Dictionary(model.activeTasks.compactMap { task -> (String, DownloadTask)? in
+            guard let id = task.engineTaskID else { return nil }
+            return (task.kind.rawValue + ":" + id, task)
+        }, uniquingKeysWith: { first, _ in first })
+        for kind in snapshots.keys {
+            for index in snapshots[kind]?.indices ?? 0..<0 {
+                guard let snapshot = snapshots[kind]?[index],
+                      let task = tasksByEngineID[kind.rawValue + ":" + snapshot.engineTaskID] else { continue }
+                if snapshot.status != .failed {
+                    volumeWriteFailures[task.id] = nil
+                    if snapshot.status == .completed || (snapshot.status == .downloading && snapshot.receivedBytes > 0) {
+                        volumeHTTPRecoveries.remove(task.id)
+                    }
+                    continue
+                }
+                let writeFailure = snapshot.isFileWriteFailure || EngineTaskSnapshot.describesFileWriteFailure(snapshot.errorMessage ?? "")
+                if writeFailure, volumeWriteFailures[task.id] == nil { volumeWriteFailures[task.id] = now() }
+                let snapshotDirectories = snapshot.writeDirectories.flatMap { $0.isEmpty ? nil : $0 }
+                let taskDirectories = task.writeDirectories.flatMap { $0.isEmpty ? nil : $0 }
+                let fallback = snapshot.savePath?.deletingLastPathComponent() ?? task.savePath?.deletingLastPathComponent()
+                let directory = fallback ?? latestOptions?.downloadDirectory ?? URL(filePath: "/")
+                let directories = snapshotDirectories ?? taskDirectories ?? [directory]
+                let unavailable = directories.contains { directory in
+                    do { return try volumeProbe.volume(for: directory) == nil }
+                    catch { return true }
+                }
+                if !unavailable, snapshot.isControlFileFailure, volumeHTTPRecoveries.contains(task.id),
+                   task.kind == .http, !model.userPausedTaskIDs.contains(task.id),
+                   model.automaticPauseReasons(for: task).isEmpty, let url = URL(string: task.sourceLink) {
+                    volumeHTTPRecoveries.remove(task.id)
+                    // 卸载可能截断控制文件；只回退一次，复用 E2 的重下路径保留原路径并回收损坏的进度。
+                    do { try await replaceHTTPLink(task.id, newURL: url, restartFromScratch: true, respectingPauseIntent: true) }
+                    catch { resubmissionFailed(EngineStatusPresentation.errorMessage(error), id: task.id) }
+                    return
+                }
+                if (unavailable && writeFailure && hasPendingVolumeWriteFailure(task.id))
+                    || model.automaticPauseReasons(for: task).contains(.volumeUnavailable) {
+                    volumeFailures.insert(task.id)
+                    model.automaticPauseStore.insert(.volumeUnavailable, for: task)
+                    snapshots[kind]?[index].status = .paused
+                    snapshots[kind]?[index].errorMessage = nil
+                } else if hasPendingVolumeWriteFailure(task.id) {
+                    // 卸载通知和引擎报错可能先后到达；宽限期内不发布失败或触发失败通知。
+                    snapshots[kind]?[index].status = .paused
+                    snapshots[kind]?[index].errorMessage = nil
+                }
+            }
+        }
         let mergeInput = model.tasks
         var merged = EngineSnapshotMerger.merge(
             tasks: mergeInput, snapshots: snapshots, now: .now, videoConfiguration: videoConfiguration
@@ -251,6 +310,7 @@ final class DownloadCoordinator {
         for index in merged.indices {
             let task = merged[index]
             guard let previous = previousTasks[task.id] else { continue }
+            if volumeFailures.contains(task.id) { merged[index].requiresVolumeResubmission = true }
             let reasons = model.automaticPauseReasons(for: previous)
             if !reasons.isEmpty, task.deletedAt == nil, ![.completed, .extracting].contains(previous.status) {
                 merged[index].pauseReason = model.automaticPauseStore.isManuallyPaused(previous)
@@ -520,7 +580,8 @@ final class DownloadCoordinator {
     }
 
     func replaceHTTPLink(
-        _ id: UUID, newURL: URL, restartFromScratch: Bool = false, requestContext: DownloadRequestContext? = nil
+        _ id: UUID, newURL: URL, restartFromScratch: Bool = false, requestContext: DownloadRequestContext? = nil,
+        respectingPauseIntent: Bool = false
     ) async throws {
         guard let task = model.tasks.first(where: { $0.id == id }), task.kind == .http,
               let http = engine(for: .http) as? Aria2Engine else { throw EngineError.notRunning }
@@ -559,6 +620,11 @@ final class DownloadCoordinator {
         guard generation == token, !Task.isCancelled,
               model.tasks.contains(where: { $0.id == id && $0.engineTaskID == task.engineTaskID && $0.checksum == task.checksum }) else {
             throw CancellationError()
+        }
+        if respectingPauseIntent {
+            guard !model.userPausedTaskIDs.contains(id),
+                  let current = model.tasks.first(where: { $0.id == id && $0.deletedAt == nil }),
+                  model.automaticPauseReasons(for: current).isEmpty else { throw CancellationError() }
         }
         pendingAdds[.http, default: 0] += 1
         revisions[.http, default: 0] += 1
@@ -607,6 +673,11 @@ final class DownloadCoordinator {
         } else if !sameOrigin, task.hasRequestCookie == true {
             model.tasks[index].hasRequestCookie = false
             try await DownloadRequestCookieStore.shared.delete(taskID: id)
+        }
+        if respectingPauseIntent, model.userPausedTaskIDs.contains(id) || !model.automaticPauseReasons(for: model.tasks[index]).isEmpty {
+            scheduling.userPause(model.tasks[index])
+            model.tasks[index].status = .paused
+            return
         }
         await refreshScheduling(sample: false)
     }
@@ -659,6 +730,8 @@ final class DownloadCoordinator {
             } catch {
                 result[index].status = .failed
                 result[index].errorMessage = EngineStatusPresentation.errorMessage(error)
+                let domain = (error as NSError).domain
+                result[index].isFileWriteFailure = domain == NSCocoaErrorDomain || domain == NSPOSIXErrorDomain
                 // 目标冲突可重试；内容检查失败保留原因，不能在后续快照中漏过。
                 if error is HTTPDownloadFailure { httpFileIssues[file] = error.localizedDescription }
             }
@@ -779,6 +852,17 @@ final class DownloadCoordinator {
     }
 
     /// 磁盘保护使用独立入口，不能把用户原本暂停的任务标为可自动恢复。
+    func hasPendingVolumeWriteFailure(_ id: UUID) -> Bool {
+        volumeWriteFailures[id].map { now().timeIntervalSince($0) <= 15 } == true
+    }
+
+    /// 卷检测晚于引擎报错时，保留恢复方式；无关或过期的失败不能被自动恢复。
+    func prepareForUnavailableVolume(_ id: UUID) -> Bool {
+        guard let index = model.tasks.firstIndex(where: { $0.id == id }) else { return false }
+        if hasPendingVolumeWriteFailure(id) { model.tasks[index].requiresVolumeResubmission = true }
+        return model.tasks[index].status != .failed || model.tasks[index].requiresVolumeResubmission == true
+    }
+
     func pauseForDiskSpace(_ id: DownloadTask.ID) async {
         await model.pauseAutomatically(id, reason: .diskSpace)
     }
@@ -908,7 +992,8 @@ final class DownloadCoordinator {
 
     private func perform(_ id: DownloadTask.ID, action: Action) async {
         guard let task = model.tasks.first(where: { $0.id == id && $0.deletedAt == nil }) else { return }
-        if action == .resume, resubmittingTaskIDs.contains(id) || !model.automaticPauseReasons(for: task).isEmpty { return }
+        if action == .resume, resubmittingTaskIDs.contains(id) || replacingHTTPTasks.contains(id)
+            || !model.automaticPauseReasons(for: task).isEmpty { return }
         if action == .resume, scheduleRequiresPause() {
             if let index = model.tasks.firstIndex(where: { $0.id == id }), model.tasks[index].pauseReason != .diskSpace {
                 model.tasks[index].pauseReason = .schedule
@@ -917,6 +1002,53 @@ final class DownloadCoordinator {
             return
         }
         if action == .pause { resubmissionAttempts[id] = nil }
+        if action == .pause, task.requiresVolumeResubmission == true {
+            if let index = model.tasks.firstIndex(where: { $0.id == id }) {
+                model.tasks[index].status = .paused
+                model.tasks[index].errorMessage = nil
+                model.tasks[index].downloadRate = 0
+                model.tasks[index].uploadRate = 0
+            }
+            return
+        }
+        if action == .resume, task.requiresVolumeResubmission == true, let oldID = task.engineTaskID {
+            do {
+                if engine(for: task.kind) is Aria2Engine, let url = URL(string: task.sourceLink) {
+                    // E2 的停态替换路径按原目录和文件名重新 addUri，加载已有 .aria2 控制文件。
+                    try await replaceHTTPLink(id, newURL: url, respectingPauseIntent: true)
+                    if let index = model.tasks.firstIndex(where: { $0.id == id }) { model.tasks[index].requiresVolumeResubmission = nil }
+                    volumeWriteFailures[id] = nil
+                    volumeHTTPRecoveries.insert(id)
+                    return
+                }
+                if engine(for: task.kind) is YtDlpEngine {
+                    // 保留原 job ID，yt-dlp 才能继续读取同名前缀的 .part 文件。
+                    if let index = model.tasks.firstIndex(where: { $0.id == id }) { model.tasks[index].requiresVolumeResubmission = nil }
+                } else if let engine = engine(for: task.kind) {
+                    var retainedTask = task
+                    var priorities: [Int]?
+                    if let torrent = engine as? TorrentEngine {
+                        // 本地种子可能已按设置移到废纸篓；从引擎保留元数据及用户选中的文件。
+                        retainedTask.sourceLink = try await torrent.magnetURI(oldID)
+                        priorities = try await torrent.files(oldID).sorted { $0.index < $1.index }.map(\.priority)
+                    }
+                    try await engine.remove(oldID, deleteFiles: false)
+                    excludeFromSnapshots(task)
+                    guard let index = model.tasks.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+                    model.tasks[index].engineTaskID = nil
+                    if task.kind == .http {
+                        await perform(id, action: .resume)
+                    } else {
+                        retainedTask.engineTaskID = nil
+                        await resubmit(retainedTask, token: generation, resumeAttempt: UUID(), filePriorities: priorities)
+                    }
+                    return
+                }
+            } catch {
+                resubmissionFailed(EngineStatusPresentation.errorMessage(error), id: id)
+                return
+            }
+        }
         let resumeAttempt = UUID()
         if task.kind == .http {
             httpResumeAttempts[id] = action == .resume ? resumeAttempt : nil
@@ -1006,7 +1138,7 @@ final class DownloadCoordinator {
         await refreshScheduling(sample: false)
     }
 
-    private func resubmit(_ task: DownloadTask, token: UUID?, resumeAttempt: UUID) async {
+    private func resubmit(_ task: DownloadTask, token: UUID?, resumeAttempt: UUID, filePriorities: [Int]? = nil) async {
         let id = task.id
         guard resubmittingTaskIDs.insert(id).inserted else { return }
         resubmissionAttempts[id] = resumeAttempt
@@ -1064,7 +1196,7 @@ final class DownloadCoordinator {
                 )
             } else if let torrent = engine as? TorrentEngine {
                 engineID = try await torrent.add(
-                    link: link, directory: task.writeDirectories?.first ?? directory, filePriorities: nil, paused: true,
+                    link: link, directory: task.writeDirectories?.first ?? directory, filePriorities: filePriorities, paused: true,
                     markIncomplete: model.downloadSettings?.markIncomplete ?? true
                 )
             } else if let video = engine as? YtDlpEngine {
@@ -1077,6 +1209,8 @@ final class DownloadCoordinator {
                 return
             }
             model.tasks[index].engineTaskID = engineID
+            model.tasks[index].requiresVolumeResubmission = nil
+            volumeWriteFailures[id] = nil
             excludedTaskIDs[task.kind]?.remove(engineID)
             if model.userPausedTaskIDs.contains(id) || resubmissionAttempts[id] != resumeAttempt
                 || (task.kind == .http && httpResumeAttempts[id] != resumeAttempt) {

@@ -12,6 +12,42 @@ import Testing
         return calendar
     }
 
+    @Test(arguments: [TaskStatus.completed, .seeding, .downloading, .paused, .queued, .failed])
+    func finishedTasksHideQueueMenu(status: TaskStatus) {
+        var task = MockData.tasks[0]
+        task.status = status
+        #expect(TaskPresentation(task: task).showsQueueActions == ![.completed, .seeding].contains(status))
+    }
+
+    @Test func completedHTTPHidesLimitsAndReplacementAndSeedingKeepsOnlyUpload() {
+        var task = MockData.tasks[0]
+        task.kind = .http
+        task.status = .completed
+        #expect(!TaskPresentation(task: task).showsTaskLimits)
+        #expect(!TaskPresentation(task: task).showsHTTPReplacement)
+        for status in [TaskStatus.failed, .paused] {
+            task.status = status
+            #expect(TaskPresentation(task: task).showsTaskLimits)
+            #expect(TaskPresentation(task: task).showsHTTPReplacement)
+        }
+        task.status = .downloading
+        #expect(!TaskPresentation(task: task).showsHTTPReplacement)
+        task.kind = .bittorrent
+        task.status = .seeding
+        #expect(TaskPresentation(task: task).showsTaskLimits)
+        #expect(!TaskPresentation(task: task).showsQueuePriority)
+        task.deletedAt = .now
+        #expect(!TaskPresentation(task: task).showsTaskLimits)
+    }
+
+    @Test(arguments: [VideoSite.youtube, .other, .bilibili])
+    func danmakuLabelOnlyBelongsToBilibili(site: VideoSite) {
+        var task = MockData.tasks[0]
+        task.kind = .video
+        task.detail = .video(site: site, quality: "自动", danmakuToASS: true)
+        #expect(TaskPresentation(task: task).metadata.contains("弹幕转 ASS") == (site == .bilibili))
+    }
+
     @Test(arguments: [TaskStatus.paused, .queued])
     func schedulePauseExplainsWhyItIsWaiting(status: TaskStatus) {
         var task = MockData.tasks[0]

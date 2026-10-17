@@ -22,7 +22,7 @@ final class StreamingPlayback {
         guard task.deletedAt == nil, task.fileMissing != true else { return false }
         if task.kind == .bittorrent {
             return task.engineTaskID != nil && [.downloading, .queued, .paused, .seeding, .completed].contains(task.status)
-                && (isVideo(task.name) || files.contains { isVideo($0.path) })
+                && (isVideo(task.name) || task.fileExtension.map { videoExtensions.contains($0.lowercased()) } == true || files.contains { isVideo($0.path) })
         }
         if task.kind == .http, task.engineTaskID != nil, task.status == .downloading {
             return isVideo(task.savePath?.lastPathComponent ?? task.name)

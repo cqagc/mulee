@@ -40,6 +40,7 @@ struct NewTaskSheet: View {
             TextField("粘贴下载链接，每行一个", text: $draft.inputText, axis: .vertical)
                 .font(.callout.monospaced())
                 .lineLimit(3...6)
+                .onExitCommand(perform: cancel)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
@@ -101,6 +102,13 @@ struct NewTaskSheet: View {
             NewTaskFooterView(draft: draft, cancel: cancel, startDownload: startDownload)
         }
         .frame(width: 640)
+        .onKeyPress(.escape) {
+            if let editor = NSApp.currentEvent?.window?.firstResponder as? NSTextView, editor.hasMarkedText() {
+                return .ignored
+            }
+            cancel()
+            return .handled
+        }
         .disabled(draft.isChecking)
         .onDisappear { addingTask?.cancel() }
         .onChange(of: draft.knownDownloadBytes, initial: true) { refreshDiskCheck() }

@@ -66,7 +66,7 @@ struct NewTaskFooterView: View {
                 Spacer()
                 Button("取消", action: cancel)
                     .keyboardShortcut(.cancelAction)
-                Button("开始下载 \(draft.linkCount) 个任务", action: startDownload)
+                Button("开始下载 \(draft.downloadTaskCount) 个任务", action: startDownload)
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
                     .disabled(!draft.canStartDownload)

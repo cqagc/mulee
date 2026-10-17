@@ -34,30 +34,32 @@ struct HTTPTaskActionsView: View {
                 Button("添加镜像地址") { addMirror() }
                     .disabled(isWorking || mirror.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            Text("换个链接继续")
-                .font(.subheadline.weight(.semibold))
-            TextField("粘贴新的下载链接", text: $replacement)
-                .textFieldStyle(.roundedBorder)
-                .disabled(isWorking)
-            Button(isWorking ? "正在检查文件…" : "检查并继续") {
-                guard let url = URL(string: replacement.trimmingCharacters(in: .whitespacesAndNewlines)),
-                      ["http", "https"].contains(url.scheme?.lowercased() ?? ""), url.host != nil,
-                      url.user == nil, url.password == nil else {
-                    message = "请输入有效的 HTTP 或 HTTPS 下载链接。"
-                    return
+            if TaskPresentation(task: task).showsHTTPReplacement {
+                Text("换个链接继续")
+                    .font(.subheadline.weight(.semibold))
+                TextField("粘贴新的下载链接", text: $replacement)
+                    .textFieldStyle(.roundedBorder)
+                    .disabled(isWorking)
+                Button(isWorking ? "正在检查文件…" : "检查并继续") {
+                    guard let url = URL(string: replacement.trimmingCharacters(in: .whitespacesAndNewlines)),
+                          ["http", "https"].contains(url.scheme?.lowercased() ?? ""), url.host != nil,
+                          url.user == nil, url.password == nil else {
+                        message = "请输入有效的 HTTP 或 HTTPS 下载链接。"
+                        return
+                    }
+                    checkedURL = url
+                    checkedContext = nil
+                    replace(url, restart: false)
                 }
-                checkedURL = url
-                checkedContext = nil
-                replace(url, restart: false)
-            }
-            .disabled(isWorking || replacement.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.coordinator == nil)
-            Button("从浏览器抓取新链接") {
-                model.waitForBrowserHTTPReplacement(task.id)
-                message = "在浏览器里重新点下载，Mulee 会接住新链接。等待五分钟内同网站或同文件名的链接。"
-            }
-            .disabled(isWorking || model.coordinator == nil)
-            if model.waitingHTTPReplacement?.taskID == task.id {
-                Button("取消等待") { model.waitingHTTPReplacement = nil }
+                .disabled(isWorking || replacement.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.coordinator == nil)
+                Button("从浏览器抓取新链接") {
+                    model.waitForBrowserHTTPReplacement(task.id)
+                    message = "在浏览器里重新点下载，Mulee 会接住新链接。等待五分钟内同网站或同文件名的链接。"
+                }
+                .disabled(isWorking || model.coordinator == nil)
+                if model.waitingHTTPReplacement?.taskID == task.id {
+                    Button("取消等待") { model.waitingHTTPReplacement = nil }
+                }
             }
             if let message {
                 Text(message)

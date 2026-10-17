@@ -8,7 +8,7 @@ import OSLog
 nonisolated enum DownloadProvenance {
     private static let logger = Logger(subsystem: "com.cqagc.mulee", category: "provenance")
 
-    static func sanitizedSource(_ source: String, filename: String) -> String? {
+    static func sanitizedSource(_ source: String, filename: String, video: Bool = false) -> String? {
         guard let separator = source.firstIndex(of: ":") else { return nil }
         let scheme = source[..<separator].lowercased()
         if scheme == "magnet" || scheme == "ed2k" {
@@ -18,7 +18,21 @@ nonisolated enum DownloadProvenance {
         guard ["http", "https", "ftp", "ftps", "file"].contains(scheme), scheme == "file" || components.host?.isEmpty == false else { return nil }
         components.user = nil
         components.password = nil
-        components.query = nil
+        let host = components.host?.lowercased() ?? ""
+        let isYouTube = host == "youtube.com" || host.hasSuffix(".youtube.com") || host == "youtu.be"
+        let isBilibili = host == "bilibili.com" || host.hasSuffix(".bilibili.com")
+        let allowed = video && isYouTube ? ["v", "list"] : video && isBilibili ? ["p"] : []
+        if video, isYouTube, let link = LinkParser.parse(source).first, let id = link.youtubeVideoID {
+            components.scheme = "https"
+            components.host = "www.youtube.com"
+            components.port = nil
+            components.path = "/watch"
+            components.queryItems = [URLQueryItem(name: "v", value: id)]
+                + (components.queryItems?.filter { $0.name == "list" } ?? [])
+        } else {
+            let query = components.queryItems?.filter { allowed.contains($0.name) }
+            components.queryItems = query?.isEmpty == false ? query : nil
+        }
         components.fragment = nil
         return components.url?.absoluteString
     }
@@ -26,7 +40,7 @@ nonisolated enum DownloadProvenance {
     static func sources(for task: DownloadTask) -> [String] {
         var sources: [String] = []
         for source in [task.sourceLink, task.sourcePageURL?.absoluteString ?? task.requestContext?.referer?.absoluteString ?? ""] {
-            if let cleaned = sanitizedSource(source, filename: task.name), !sources.contains(cleaned) {
+            if let cleaned = sanitizedSource(source, filename: task.name, video: task.kind == .video), !sources.contains(cleaned) {
                 sources.append(cleaned)
             }
         }

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UserNotifications
 
 /// 设置·通用。
 struct GeneralSettingsTab: View {
@@ -10,6 +11,7 @@ struct GeneralSettingsTab: View {
     @State private var shortcuts: [String] = []
     @State private var shortcutIssue: String?
     @State private var shortcutRefresh = 0
+    @State private var badgeNotAllowed = false
 
     var body: some View {
         @Bindable var model = model
@@ -26,9 +28,19 @@ struct GeneralSettingsTab: View {
                         Text(badge.title).tag(badge)
                     }
                 }
-                Text("仅在显示 Dock 图标时生效。")
+                Text("仅在显示 Dock 图标时生效；还需在系统设置的「通知」中允许 Mulee 发送通知，并开启「标记应用程序图标」。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if badgeNotAllowed {
+                    Text("系统设置里没有允许 Mulee 显示标记")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("打开系统通知设置") {
+                        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }
+                }
             }
             Section("睡眠") {
                 Toggle("下载时阻止睡眠", isOn: $model.preventSleep)
@@ -97,7 +109,12 @@ struct GeneralSettingsTab: View {
         }
         .formStyle(.grouped)
         .sheet(isPresented: $isShowingStatistics) { TransferStatisticsSettingsView() }
-        .task(id: scenePhase) { await app.notificationService?.refreshAuthorization() }
+        .task(id: scenePhase) {
+            await app.notificationService?.refreshAuthorization()
+            guard !AppEnvironment.isRunningUnitTests else { return }
+            let settings = await UNUserNotificationCenter.current().notificationSettings()
+            badgeNotAllowed = DockPresenter.badgePermissionDenied(badge: settings.badgeSetting, authorization: settings.authorizationStatus)
+        }
         .task(id: shortcutRefresh) {
             do {
                 shortcuts = try await CompletionShortcutRunner.list()

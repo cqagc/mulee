@@ -3,6 +3,18 @@ import Testing
 @testable import MuleeCore
 
 @Suite struct TorrentEngineTests {
+    @Test(arguments: ["file_error: Input/output error", "io_error", "No such device"])
+    func fileErrorsAreMarkedBeforeMessageCleaning(raw: String) async throws {
+        let fake = TorrentFakeTransport()
+        try await TorrentFixtures.withEngine(fake: fake) { engine, root in
+            try await engine.start(options: EngineOptions(downloadDirectory: root))
+            await fake.setResult("list", .object(["torrents": .array([
+                TorrentFixtures.task(["state": .string("error"), "error": .string(raw)])
+            ])]))
+            #expect(try await engine.snapshots().first?.isFileWriteFailure == true)
+        }
+    }
+
     @Test("制作进度按 job_id 分发，取消 API 使用同一个 job_id")
     func creationProgress() async throws {
         let fake = TorrentFakeTransport()

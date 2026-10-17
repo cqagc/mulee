@@ -22,10 +22,22 @@ public struct EngineTaskSnapshot: Sendable, Hashable, Identifiable {
     public var sourceURL: URL?
     /// 出错时的错误说明（已转成用户能看懂的中文，原始错误码附在末尾）。
     public var errorMessage: String?
+    /// 在清洗原始报错前记录写盘错误，卷保护不依赖本地化文案。
+    public var isFileWriteFailure: Bool
+    public var isControlFileFailure: Bool
     /// 引擎报告的类型专属详情；nil 时保留 App 已有详情。
     public var detail: TaskDetail?
     /// 引擎记录的完成时间，BT 做种期间也保留。
     public var completedAt: Date?
+
+    public static func describesFileWriteFailure(_ message: String) -> Bool {
+        let text = message.lowercased()
+        return ["failed to write", "write error", "writing", "unable to write", "unable to open for writing",
+                "file_error", "io_error", "input/output error", "no such device", "device not configured",
+                "read-only file system", "no space left", "disk full", "permission denied", "segment file",
+                "no such file or directory", "cannot create", "failed to create", "unable to open file", "file_open", "file_write",
+                "errno 2", "errno 5", "errno 6", "errno 19", "errno 28", "errno 30", "control file"].contains(where: text.contains)
+    }
 
     public var id: String { engineTaskID }
 
@@ -43,7 +55,9 @@ public struct EngineTaskSnapshot: Sendable, Hashable, Identifiable {
         errorMessage: String?,
         detail: TaskDetail? = nil,
         completedAt: Date? = nil,
-        writeDirectories: [URL]? = nil
+        writeDirectories: [URL]? = nil,
+        isFileWriteFailure: Bool = false,
+        isControlFileFailure: Bool = false
     ) {
         self.engineTaskID = engineTaskID
         self.name = name
@@ -57,6 +71,8 @@ public struct EngineTaskSnapshot: Sendable, Hashable, Identifiable {
         self.writeDirectories = writeDirectories
         self.sourceURL = sourceURL
         self.errorMessage = errorMessage
+        self.isFileWriteFailure = isFileWriteFailure
+        self.isControlFileFailure = isControlFileFailure
         self.detail = detail
         self.completedAt = completedAt
     }

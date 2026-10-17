@@ -8,11 +8,12 @@ public struct YtDlpPlaylistEntry: Sendable, Identifiable, Equatable {
     public let duration: Double?
     public let playlistTitle: String?
     public let videoIdentity: String?
+    public let playlistCount: Int?
     public var id: URL { url }
 
     public init(
         index: Int, title: String, url: URL, site: VideoSite = .bilibili,
-        duration: Double? = nil, playlistTitle: String? = nil, videoIdentity: String? = nil
+        duration: Double? = nil, playlistTitle: String? = nil, videoIdentity: String? = nil, playlistCount: Int? = nil
     ) {
         self.index = index
         self.title = title
@@ -21,6 +22,7 @@ public struct YtDlpPlaylistEntry: Sendable, Identifiable, Equatable {
         self.duration = duration
         self.playlistTitle = playlistTitle
         self.videoIdentity = videoIdentity
+        self.playlistCount = playlistCount
     }
 
     public var displayTitle: String {
@@ -33,8 +35,15 @@ public struct YtDlpPlaylistEntry: Sendable, Identifiable, Equatable {
         return prefix + " · " + title
     }
 
+    public var filenamePrefix: String {
+        guard site == .youtube else { return "P\(index) " }
+        let width = max(index, playlistCount ?? 0) > 99 ? 3 : 2
+        let number = String(index)
+        return String(repeating: "0", count: max(0, width - number.count)) + number + " - "
+    }
+
     public var taskTitle: String {
-        if site == .youtube { return displayTitle }
+        if site == .youtube { return filenamePrefix + title.trimmingCharacters(in: .whitespacesAndNewlines) }
         let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         return title.isEmpty ? "P\(index)" : title
     }

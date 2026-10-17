@@ -49,6 +49,11 @@ final class NewTaskModel {
 
     var parsedLinks: [ParsedLink] { links.map(\.link) }
     var linkCount: Int { links.count }
+    var downloadTaskCount: Int {
+        links.filter { $0.duplicateMessage == nil }.reduce(0) { count, item in
+            count + (item.requiresVideoSelection ? item.selectedVideoEntries.count : max(1, item.selectedVideoEntries.count))
+        }
+    }
     var canStartDownload: Bool { !links.isEmpty && links.allSatisfy(\.canStart) && !isChecking }
     var filePriorities: [ParsedLink: [Int]] {
         Dictionary(uniqueKeysWithValues: links.compactMap { item in

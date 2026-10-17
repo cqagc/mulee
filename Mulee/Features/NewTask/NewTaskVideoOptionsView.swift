@@ -4,6 +4,8 @@ import MuleeCore
 struct NewTaskVideoOptionsView: View {
     @Environment(SettingsModel.self) private var settings
     @Bindable var item: NewTaskLinkModel
+    @State private var playlistReload = 0
+    @State private var isAdvancedExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -14,6 +16,7 @@ struct NewTaskVideoOptionsView: View {
                     Text(formatLabel(format)).tag(format.id)
                 }
             }
+            NewTaskVideoPartsView(item: item) { playlistReload += 1 }
             if item.isLoadingVideoFormats {
                 ProgressView("正在读取视频格式，仍可跟随全局设置添加…")
                     .controlSize(.small)
@@ -26,9 +29,8 @@ struct NewTaskVideoOptionsView: View {
             if !item.audioOnly, settings.subtitleMode != .off, item.videoSiteKey != "bilibili.com" {
                 subtitleSelection
             }
-            NewTaskVideoPartsView(item: item)
-            if item.selectedVideoParts.count <= 1 {
-                DisclosureGroup("高级选项") {
+            if item.showsVideoAdvancedOptions {
+                DisclosureGroup(isExpanded: $isAdvancedExpanded) {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
                             Text("开始时间")
@@ -50,6 +52,15 @@ struct NewTaskVideoOptionsView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                } label: {
+                    Button {
+                        isAdvancedExpanded.toggle()
+                    } label: {
+                        Text("高级选项")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -76,8 +87,8 @@ struct NewTaskVideoOptionsView: View {
             guard let site = item.videoSiteKey else { return }
             settings.videoFormatChoiceBySite[site] = item.videoFormatID.isEmpty || item.audioOnly ? nil : item.videoFormatID
         }
-        .task(id: item.id) {
-            await item.loadVideoParts { url in
+        .task(id: playlistReload) {
+            await item.loadVideoParts(retry: playlistReload > 0) { url in
                 try await VideoPlaylistProvider.shared.entries(
                     for: url, channel: settings.ytDlpChannel == .stable ? .stable : .nightly
                 )

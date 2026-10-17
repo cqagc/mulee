@@ -69,6 +69,23 @@ import Testing
         #expect(!StreamingPlayback.canPlay(task, files: [file]))
     }
 
+    @Test func torrentMenuCanPlayWithoutFetchingFiles() {
+        var task = MockData.tasks[0]
+        task.kind = .bittorrent
+        task.engineTaskID = "fixture"
+        task.status = .downloading
+        task.name = "Example.mp4"
+        #expect(StreamingPlayback.canPlay(task))
+        task.name = "Example"
+        task.fileExtension = "mkv"
+        #expect(StreamingPlayback.canPlay(task))
+        task.fileExtension = nil
+        #expect(!StreamingPlayback.canPlay(task))
+        #expect(StreamingPlayback.canPlay(task, files: [TorrentFileEntry(index: 0, path: "Example/movie.mp4", size: 100)]))
+        task.fileMissing = true
+        #expect(!StreamingPlayback.canPlay(task))
+    }
+
     @Test func actualStoragePathIsUsedForStreaming() {
         var task = MockData.longTailTask
         task.writeDirectories = [URL(filePath: "/tmp/downloads")]

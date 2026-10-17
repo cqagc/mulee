@@ -5,6 +5,22 @@ import Testing
 
 @MainActor
 @Suite struct BitTorrentUITests {
+    @Test func magnetActionsDoNotDependOnMenuPrefetch() {
+        var task = MockData.tasks[0]
+        task.kind = .bittorrent
+        task.engineTaskID = "fixture"
+        task.sourceLink = "file:///tmp/example.torrent"
+        #expect(TaskActions.canCopyMagnet(task))
+        #expect(TaskActions.copiesMagnetForSource(task))
+        task.sourceLink = "magnet:?xt=urn:btih:example"
+        #expect(!TaskActions.copiesMagnetForSource(task))
+        task.engineTaskID = nil
+        #expect(!TaskActions.canCopyMagnet(task))
+        task.kind = .http
+        task.sourceLink = "file:///tmp/example.meta4"
+        #expect(!TaskActions.copiesMagnetForSource(task))
+    }
+
     @Test func trackerValidation() {
         #expect(BitTorrentManagementModel.trackerValidation([]) == nil)
         #expect(BitTorrentManagementModel.trackerValidation([

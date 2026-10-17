@@ -88,8 +88,36 @@ enum TaskActions {
         if alert.runModal() == .alertFirstButtonReturn { model.setTags(task.id, text: field.stringValue) }
     }
 
-    static func copyLink(_ task: DownloadTask) {
-        _ = SystemClipboard.write(task.sourceLink)
+    static func canCopyMagnet(_ task: DownloadTask) -> Bool {
+        task.kind == .bittorrent && task.engineTaskID != nil
+    }
+
+    static func copiesMagnetForSource(_ task: DownloadTask) -> Bool {
+        task.kind == .bittorrent && URL(string: task.sourceLink)?.isFileURL == true
+    }
+
+    static func copyLink(_ task: DownloadTask, model: AppModel) {
+        if copiesMagnetForSource(task) {
+            copyMagnet(task, model: model)
+        } else {
+            _ = SystemClipboard.write(task.sourceLink)
+        }
+    }
+
+    static func copyMagnet(_ task: DownloadTask, model: AppModel) {
+        Task {
+            do {
+                guard let engine = model.bitTorrent?.engine, let id = task.engineTaskID else { throw EngineError.notRunning }
+                let uri = try await engine.magnetURI(id)
+                guard uri.hasPrefix("magnet:?"), SystemClipboard.write(uri) else { throw CocoaError(.fileWriteUnknown) }
+            } catch {
+                let alert = NSAlert()
+                alert.messageText = String(localized: "无法复制磁力链接")
+                alert.informativeText = String(localized: "请等待种子信息读取完成，并确认 BT 引擎已连接后重试。")
+                alert.addButton(withTitle: String(localized: "好"))
+                alert.runModal()
+            }
+        }
     }
 
     static func localURL(for task: DownloadTask) -> URL {

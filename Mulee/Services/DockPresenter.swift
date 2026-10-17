@@ -1,5 +1,6 @@
 import AppKit
 import MuleeCore
+import UserNotifications
 
 @MainActor
 final class DockPresenter {
@@ -25,6 +26,10 @@ final class DockPresenter {
     init(model: AppModel, settings: SettingsModel) {
         self.model = model
         self.settings = settings
+    }
+
+    static func badgePermissionDenied(badge: UNNotificationSetting, authorization: UNAuthorizationStatus) -> Bool {
+        badge == .disabled || authorization == .denied
     }
 
     static func badge(_ mode: Badge, activeCount: Int, bytesPerSecond: Int64) -> String? {

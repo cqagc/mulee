@@ -42,6 +42,8 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
     public var lastProgressAt: Date?
     public var pauseReason: PauseReason?
     public var writeDirectories: [URL]?
+    /// 旧历史为 nil；写盘失败后的恢复必须重建失效任务，不能只解除暂停。
+    public var requiresVolumeResubmission: Bool?
     public let id: UUID
     /// 显示名（通常是文件名或视频标题）。
     public var name: String
@@ -97,6 +99,7 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
         case lastProgressAt
         case pauseReason
         case writeDirectories
+        case requiresVolumeResubmission
         case id
         case name
         case fileExtension

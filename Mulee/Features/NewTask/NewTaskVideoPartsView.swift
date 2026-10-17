@@ -3,6 +3,7 @@ import SwiftUI
 
 struct NewTaskVideoPartsView: View {
     @Bindable var item: NewTaskLinkModel
+    let retry: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -13,8 +14,10 @@ struct NewTaskVideoPartsView: View {
             if let error = item.videoPartsError {
                 Text(error)
                     .foregroundStyle(.secondary)
+                Button("重试", action: retry)
+                    .disabled(item.isLoadingVideoParts)
             }
-            if item.requiresVideoSelection {
+            if item.showsVideoPartsSelection {
                 HStack {
                     Text(item.link.playlistID == nil ? String(localized: "分 P / 合集") : String(localized: "播放列表"))
                     Spacer()

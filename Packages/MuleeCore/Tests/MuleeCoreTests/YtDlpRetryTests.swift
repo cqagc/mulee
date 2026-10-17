@@ -3,6 +3,33 @@ import Testing
 @testable import MuleeCore
 
 struct YtDlpRetryTests {
+    @Test func writeFailureIsRetainedThroughRestartAndCanRequeueSameJob() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("YtDlp-write-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let binary = root.appendingPathComponent("yt-dlp")
+        try Data("#!/bin/sh\necho 'ERROR: Failed to write: Input/output error' >&2\nexit 1\n".utf8).write(to: binary)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
+        let engine = YtDlpEngine(stateDirectory: root.appendingPathComponent("state"), binaryURL: binary, installer: nil, updatesEnabled: false)
+        let options = EngineOptions(downloadDirectory: root.appendingPathComponent("downloads"))
+        do {
+            try await engine.start(options: options)
+            let url = try #require(URL(string: "https://example.invalid/video"))
+            let id = try await engine.add(link: .video(url: url, site: .other, original: url.absoluteString))
+            let failed = try await YtDlpIntegrationFixture.waitFor(engine, id: id) { $0.status == .failed }
+            #expect(failed.isFileWriteFailure)
+            await engine.stop()
+            try await engine.start(options: options)
+            #expect(try await engine.snapshots().first?.isFileWriteFailure == true)
+            try await engine.resume(id)
+            #expect(try await engine.snapshots().first?.engineTaskID == id)
+            await engine.stop()
+        } catch {
+            await engine.stop()
+            throw error
+        }
+    }
+
     @Test(arguments: ["Unable to extract player response", "HTTP Error 403: Forbidden"])
     func downloadFailureUpdatesAndRetriesExactlyOnce(raw: String) async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("YtDlp-retry-\(UUID())")

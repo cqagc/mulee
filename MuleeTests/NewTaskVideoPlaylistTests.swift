@@ -15,6 +15,60 @@ import Testing
         return try YtDlpPlaylist.parse(json, source: source)
     }
 
+    @Test func failedPlaylistCanRetryInPlaceAndEmptyListHidesControls() async throws {
+        let draft = NewTaskModel(inputText: "https://www.youtube.com/playlist?list=ExampleList")
+        let item = try #require(draft.links.first)
+        var attempts = 0
+        await item.loadVideoParts { _ in
+            attempts += 1
+            throw EngineError.unsupportedLink
+        }
+        #expect(item.videoPartsError == String(localized: "无法获取视频列表，请点击重试"))
+        #expect(!item.showsVideoPartsSelection)
+        #expect(!item.showsVideoAdvancedOptions)
+        let parts = try entries()
+        await item.loadVideoParts(retry: true) { _ in
+            attempts += 1
+            return parts
+        }
+        #expect(attempts == 2)
+        #expect(item.videoPartsError == nil)
+        #expect(item.showsVideoPartsSelection)
+        #expect(item.showsVideoAdvancedOptions)
+        await item.loadVideoParts(retry: true) { _ in [] }
+        #expect(!item.showsVideoPartsSelection)
+        #expect(!item.showsVideoAdvancedOptions)
+        #expect(!draft.canStartDownload)
+    }
+
+    @Test func cancelledPlaylistReadCanRetry() async throws {
+        let draft = NewTaskModel(inputText: "https://www.youtube.com/playlist?list=ExampleList")
+        let item = try #require(draft.links.first)
+        await item.loadVideoParts { _ in throw CancellationError() }
+        #expect(!item.isLoadingVideoParts)
+        #expect(item.videoPartsError == nil)
+        let parts = try entries()
+        await item.loadVideoParts { _ in parts }
+        #expect(item.videoParts == parts)
+    }
+
+    @Test func taskCountTracksZeroOneMultipleAndMixedLinks() async throws {
+        let draft = NewTaskModel(inputText: "https://www.youtube.com/playlist?list=ExampleList\nhttps://example.org/sample.zip")
+        let item = try #require(draft.links.first)
+        let parts = try entries()
+        await item.loadVideoParts { _ in parts }
+        #expect(draft.linkCount == 2)
+        #expect(draft.downloadTaskCount == 1)
+        item.selectedVideoParts = [parts[0].id]
+        #expect(draft.downloadTaskCount == 2)
+        item.selectedVideoParts = Set(parts.map(\.id))
+        #expect(draft.downloadTaskCount == 3)
+        item.selectedVideoParts = []
+        #expect(!draft.canStartDownload)
+        draft.inputText = "https://www.youtube.com/playlist?list=ExampleList"
+        #expect(draft.downloadTaskCount == 0)
+    }
+
     @Test(arguments: [
         "https://www.youtube.com/watch?v=Example0002&list=ExampleList",
         "https://youtu.be/Example0002?list=ExampleList",
@@ -113,7 +167,7 @@ import Testing
         draft.createTasks(in: app)
 
         #expect(app.tasks.count == 2)
-        #expect(app.tasks.map(\.name) == ["#1 示例一", "#2 示例二"])
+        #expect(app.tasks.map(\.name) == ["01 - 示例一", "02 - 示例二"])
         #expect(app.tasks.map(\.videoIdentity) == ["Youtube:Example0001", "Youtube:Example0002"])
         let expected = enabled ? root.appendingPathComponent("示例 列表", isDirectory: true) : root
         #expect(app.tasks.allSatisfy { $0.writeDirectories == [expected] })
@@ -167,11 +221,11 @@ import Testing
         )
 
         #expect(app.tasks.first?.videoIdentity == "Youtube:Example0001")
-        #expect(app.tasks.first?.name == "#1 示例一")
+        #expect(app.tasks.first?.name == "01 - 示例一")
         #expect(await video.addedLinks == [part.link])
         await video.setSnapshots([
             EngineTaskSnapshot(
-                engineTaskID: "task-1", name: "#1 示例一", totalBytes: 100,
+                engineTaskID: "task-1", name: "01 - 示例一", totalBytes: 100,
                 receivedBytes: 50, downloadRate: 10, uploadRate: 0, status: .downloading,
                 connections: 1, savePath: nil, sourceURL: part.url, errorMessage: nil
             )

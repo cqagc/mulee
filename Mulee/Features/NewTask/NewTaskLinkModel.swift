@@ -208,16 +208,27 @@ final class NewTaskLinkModel: Identifiable {
         videoParts.first?.playlistTitle ?? (link.playlistID == nil ? nil : String(localized: "播放列表"))
     }
 
+    var showsVideoPartsSelection: Bool {
+        requiresVideoSelection && !isLoadingVideoParts && videoPartsError == nil && !videoParts.isEmpty
+    }
+
+    var showsVideoAdvancedOptions: Bool {
+        !isLoadingVideoParts && videoPartsError == nil && (!requiresVideoSelection || !videoParts.isEmpty)
+            && selectedVideoParts.count <= 1
+    }
+
     var showsPlaylistSubfolder: Bool {
         link.playlistID != nil && selectedVideoEntries.count >= 2
     }
 
     func loadVideoParts(
-        using provider: (URL) async throws -> [YtDlpPlaylistEntry]
+        retry: Bool = false, using provider: (URL) async throws -> [YtDlpPlaylistEntry]
     ) async {
-        guard case .video(let url, let site, _) = link, !didLoadVideoParts,
+        guard !isLoadingVideoParts else { return }
+        guard case .video(let url, let site, _) = link, (!didLoadVideoParts || retry),
               site == .bilibili || (site == .youtube && link.playlistID != nil) else { return }
         didLoadVideoParts = true
+        videoPartsError = nil
         isLoadingVideoParts = true
         defer { isLoadingVideoParts = false }
         do {
@@ -240,7 +251,7 @@ final class NewTaskLinkModel: Identifiable {
             didLoadVideoParts = false
         } catch {
             videoPartsError = link.playlistID != nil
-                ? String(localized: "无法获取视频列表，请重新打开面板后重试")
+                ? String(localized: "无法获取视频列表，请点击重试")
                 : String(localized: "无法获取视频列表，仍可下载当前视频")
         }
     }

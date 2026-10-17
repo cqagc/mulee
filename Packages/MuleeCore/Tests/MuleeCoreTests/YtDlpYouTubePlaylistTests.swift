@@ -52,7 +52,7 @@ struct YtDlpYouTubePlaylistTests {
         #expect(entries.map(\.site) == [.youtube, .youtube])
         #expect(entries.map(\.index) == [1, 2])
         #expect(entries[0].displayTitle == "#1 示例一")
-        #expect(entries[0].taskTitle == "#1 示例一")
+        #expect(entries[0].taskTitle == "01 - 示例一")
         #expect(entries[0].duration == 65)
         #expect(entries[0].durationDescription != nil)
         #expect(entries[1].durationDescription == nil)
@@ -61,6 +61,15 @@ struct YtDlpYouTubePlaylistTests {
         #expect(entries[1].link == .video(url: entries[1].url, site: .youtube, original: entries[1].url.absoluteString))
         #expect(entries[1].url.absoluteString == "https://www.youtube.com/watch?v=Example0002")
         #expect(YtDlpPlaylistEntry.arguments(for: entries[1].url, site: .youtube) == ["--no-playlist"])
+    }
+
+    @Test(arguments: [(3, 99, "03 - "), (3, 100, "003 - "), (100, 100, "100 - "), (1, 1000, "001 - ")])
+    func filenameNumbersUseFullPlaylistWidth(index: Int, count: Int, prefix: String) throws {
+        let url = try #require(URL(string: "https://www.youtube.com/watch?v=Example0001"))
+        let entry = YtDlpPlaylistEntry(index: index, title: "Example", url: url, site: .youtube, playlistCount: count)
+        #expect(entry.filenamePrefix == prefix)
+        #expect(entry.taskTitle == prefix + "Example")
+        #expect(YtDlpPlaylistEntry(index: index, title: "Example", url: url).filenamePrefix == "P\(index) ")
     }
 
     @Test func malformedAndOversizedYouTubePlaylistsFail() throws {

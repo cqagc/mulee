@@ -67,6 +67,36 @@ struct YtDlpTitleTests {
         }
     }
 
+    @Test(arguments: [(99, "03 - "), (100, "003 - ")])
+    func youtubeFilenamePrefixSurvivesRestart(count: Int, prefix: String) async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("YtDlp-prefix-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let binary = root.appendingPathComponent("yt-dlp")
+        try Data(Self.script.utf8).write(to: binary)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
+        let downloads = root.appendingPathComponent("downloads")
+        let engine = YtDlpEngine(stateDirectory: root.appendingPathComponent("state"), binaryURL: binary, installer: nil, updatesEnabled: false)
+        do {
+            try await engine.start(options: EngineOptions(downloadDirectory: downloads))
+            let url = try #require(URL(string: "https://www.youtube.com/watch?v=Example0001"))
+            let entry = YtDlpPlaylistEntry(index: 3, title: "Example", url: url, site: .youtube, playlistCount: count)
+            let id = try await engine.add(link: entry.link, directory: downloads, entry: entry, paused: true)
+            await engine.stop()
+            try await engine.start(options: EngineOptions(downloadDirectory: downloads))
+            try Data().write(to: downloads.appendingPathComponent("release"))
+            try await engine.resume(id)
+            let completed = try await YtDlpIntegrationFixture.waitFor(engine, id: id) { $0.status == .completed }
+            #expect(completed.name == prefix + "Example")
+            #expect(completed.savePath?.lastPathComponent == prefix + "fixture.mp4")
+            #expect(FileManager.default.fileExists(atPath: downloads.appendingPathComponent(prefix + "fixture.mp4").path))
+            await engine.stop()
+        } catch {
+            await engine.stop()
+            throw error
+        }
+    }
+
     private static let script = """
     #!/bin/sh
     if [ "$1" = "--version" ]; then echo fixture; exit 0; fi

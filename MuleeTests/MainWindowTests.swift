@@ -5,6 +5,59 @@ import Testing
 @testable import Mulee
 
 @Suite @MainActor struct MainWindowTests {
+    @Test func escapeClosesNewTaskWhileMultilineEditorHasFocus() async throws {
+        let temporary = try TemporaryDefaults(prefix: "new-task-escape.")
+        defer { temporary.clean() }
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        model.isShowingNewTask = true
+        let draft = NewTaskModel(inputText: "https://example.org/example.bin", saveDirectory: URL(filePath: "/tmp"))
+        let host = NSHostingController(rootView: NewTaskSheet(draft: draft)
+            .environment(model).environment(SettingsModel(defaults: temporary.defaults)))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 700),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.contentViewController = host
+        defer { window.contentViewController = nil }
+        host.view.layoutSubtreeIfNeeded()
+        await Task.yield()
+        func descendants(_ view: NSView) -> [NSView] {
+            [view] + view.subviews.flatMap(descendants)
+        }
+        let field = try #require(descendants(host.view).compactMap { $0 as? NSTextField }.first {
+            $0.isEditable && $0.stringValue == draft.inputText
+        })
+        #expect(window.makeFirstResponder(field))
+        let editor = try #require(window.fieldEditor(true, for: field) as? NSTextView)
+        #expect(window.makeFirstResponder(editor))
+        #expect(editor.string == draft.inputText)
+        let escape = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                                                 windowNumber: window.windowNumber, context: nil, characters: "\u{1b}",
+                                                 charactersIgnoringModifiers: "\u{1b}", isARepeat: false, keyCode: 53))
+        window.sendEvent(escape)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(1))
+        while model.isShowingNewTask, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(!model.isShowingNewTask)
+    }
+
+    @Test func taskContentStaysBelowUnifiedToolbar() throws {
+        let temporary = try TemporaryDefaults(prefix: "window-safe-area.")
+        defer { temporary.clean() }
+        let controller = makeController(state: MainWindowState(defaults: temporary.defaults))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1240, height: 780),
+                              styleMask: [.titled, .closable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
+        window.contentViewController = controller
+        controller.view.layoutSubtreeIfNeeded()
+        controller.viewDidAppear()
+        controller.view.layoutSubtreeIfNeeded()
+        defer { window.contentViewController = nil }
+        let pane = controller.splitViewItems[1].viewController
+        let content = try #require(pane.children.first)
+        let frame = content.view.convert(content.view.bounds, to: nil)
+        #expect(frame.maxY <= window.contentLayoutRect.maxY + 1)
+        #expect(frame.height > 0)
+    }
+
     @Test func menuPanelRecreationDoesNotReplayWindowRequest() {
         let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
         #expect(!model.consumeMainWindowRequest(0))

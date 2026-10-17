@@ -20,7 +20,24 @@ final class MainSplitViewController: NSSplitViewController {
 
     required init?(coder: NSCoder) { nil }
 
-    func addPane(_ controller: NSViewController, kind: MainWindowPane.Kind) {
+    func addPane(_ content: NSViewController, kind: MainWindowPane.Kind) {
+        let controller: NSViewController
+        if kind == .tasks {
+            // 保护横幅属于内容区，不能随全尺寸内容视图进入工具栏毛玻璃后面。
+            controller = NSViewController()
+            controller.view = NSView()
+            controller.addChild(content)
+            content.view.translatesAutoresizingMaskIntoConstraints = false
+            controller.view.addSubview(content.view)
+            NSLayoutConstraint.activate([
+                content.view.topAnchor.constraint(equalTo: controller.view.safeAreaLayoutGuide.topAnchor),
+                content.view.bottomAnchor.constraint(equalTo: controller.view.bottomAnchor),
+                content.view.leadingAnchor.constraint(equalTo: controller.view.leadingAnchor),
+                content.view.trailingAnchor.constraint(equalTo: controller.view.trailingAnchor)
+            ])
+        } else {
+            controller = content
+        }
         let item: NSSplitViewItem
         switch kind {
         case .sidebar:
