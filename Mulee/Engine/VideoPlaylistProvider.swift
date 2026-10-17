@@ -21,6 +21,6 @@ actor VideoPlaylistProvider {
         if binary == nil, FileManager.default.isExecutableFile(atPath: homebrew.path) { binary = homebrew }
         #endif
         guard let binary else { throw EngineError.binaryNotFound }
-        return try await YtDlpPlaylist.fetch(url: url, binary: binary, cookies: cookies)
+        return try await YtDlpPlaylist.fetch(url: url, binary: binary, cookies: cookies, proxy: .current())
     }
 }

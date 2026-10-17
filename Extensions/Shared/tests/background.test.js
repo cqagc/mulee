@@ -19,6 +19,7 @@ function event() {
 
 function worker({ takeover = false, videoLogin = false, native = false, scheme = native ? "safari-web-extension" : "chrome-extension" } = {}) {
     const calls = [];
+    const notices = [];
     const api = {
         runtime: {
             id: "test-extension",
@@ -44,7 +45,10 @@ function worker({ takeover = false, videoLogin = false, native = false, scheme =
         permissions: { onAdded: event(), onRemoved: event(), contains: async () => true },
         webRequest: { onBeforeRequest: event() },
         cookies: { getAll: async () => [] },
-        action: { setBadgeText: () => {}, setTitle: () => {} },
+        action: {
+            setBadgeText: value => notices.push(["badge", value.text]),
+            setTitle: value => notices.push(["title", value.title])
+        },
         i18n: { getMessage: key => key },
         downloads: {
             onCreated: event(),
@@ -64,7 +68,7 @@ function worker({ takeover = false, videoLogin = false, native = false, scheme =
         navigator: { userAgent: "Synthetic Browser/1.0" }, URL, console, setTimeout, clearTimeout, [native ? "browser" : "chrome"]: api };
     vm.createContext(context);
     vm.runInContext(fs.readFileSync(path.join(__dirname, "../background.js"), "utf8"), context);
-    return { api, calls, context };
+    return { api, calls, context, notices };
 }
 
 test("download interception is inactive by default and never touches cookies", async () => {
@@ -358,7 +362,7 @@ test("popup preserves specific sync errors on both login controls and during lin
 
 test("all four locales provide selection and actionable login messages", () => {
     const keys = ["sendSelected", "selectAll", "selectNone", "videoLoginNotFound", "videoLoginReloadRequired",
-        "downloadCookies", "downloadCookiesHint", "downloadCookiesUnavailable", "downloadCookiesDenied", "downloadCookiesFailed", "excludedSites", "excludedSitesHint", "invalidExcludedSites", "methodPermissionDenied", "handoffTimeout"];
+        "downloadCookies", "downloadCookiesHint", "downloadCookiesUnavailable", "downloadCookiesDenied", "downloadCookiesFailed", "excludedSites", "excludedSitesHint", "invalidExcludedSites", "methodPermissionDenied", "handoffTimeout", "browserDownloadPaused"];
     for (const language of ["en", "ja", "zh_CN", "zh_TW"]) {
         const locale = JSON.parse(fs.readFileSync(path.join(__dirname, "../_locales", language, "messages.json"), "utf8"));
         for (const key of keys) assert.ok(locale[key].message, language + ": " + key);
@@ -402,10 +406,9 @@ test("pause failure leaves browser download untouched", async () => {
 });
 
 test("validation and handoff failures resume without cancelling or erasing", async () => {
-    for (const failure of ["validation", "handoff", "cancel"]) {
+    for (const failure of ["validation", "handoff"]) {
         const state = worker({ takeover: true });
         if (failure === "handoff") state.api.tabs.create = async () => { throw new Error("unavailable"); };
-        if (failure === "cancel") state.api.downloads.cancel = async () => { throw new Error("cancel failed"); };
         const item = failure === "validation"
             ? { ...matchingDownload, filename: "x".repeat(core.maximumBytes) + ".zip" } : matchingDownload;
         await assert.rejects(intercept(state, item));
@@ -415,7 +418,7 @@ test("validation and handoff failures resume without cancelling or erasing", asy
     }
 });
 
-test("ten second handoff deadline resumes browser and ignores late completion", async () => {
+test("ten second handoff deadline keeps browser paused and ignores late completion", async () => {
     const state = worker({ takeover: true });
     let expire;
     let delay;
@@ -431,7 +434,7 @@ test("ten second handoff deadline resumes browser and ignores late completion", 
     finish({ id: 9 });
     await new Promise(resolve => setImmediate(resolve));
     assert.deepEqual(state.calls.filter(call => ["pause", "resume", "cancel", "erase"].includes(call[0]))
-        .map(call => call[0]), ["pause", "resume"]);
+        .map(call => call[0]), ["pause"]);
 });
 
 test("erase failure never tries to resume an already cancelled download", async () => {
@@ -515,7 +518,7 @@ test("Safari native failure resumes without falling back during takeover", async
     for (const rejects of [false, true]) {
         const state = worker({ takeover: true, native: true });
         state.api.runtime.sendNativeMessage = async () => {
-            if (rejects) throw new Error("unavailable");
+            if (rejects) throw new Error("Failed to start native messaging host.");
             return { ok: false };
         };
         await assert.rejects(intercept(state), /sendFailed/);
@@ -523,22 +526,35 @@ test("Safari native failure resumes without falling back during takeover", async
     }
 });
 
-test("Chrome without native permission or installed host retains protocol handoff", async () => {
-    for (const permission of [true, false]) {
-        const state = worker({ takeover: true, native: true, scheme: "chrome-extension" });
-        state.api.permissions.contains = async request => !request.permissions.includes("nativeMessaging") || permission;
-        state.api.runtime.sendNativeMessage = async () => { throw new Error("Specified native messaging host not found."); };
-        await intercept(state);
-        assert.equal(state.calls.some(call => call[0] === "create"), true);
-        assert.equal(state.calls.at(-1)[0], "erase");
+test("Chrome without native permission retains protocol handoff", async () => {
+    const state = worker({ takeover: true, native: true, scheme: "chrome-extension" });
+    state.api.permissions.contains = async request => !request.permissions.includes("nativeMessaging");
+    await intercept(state);
+    assert.equal(state.calls.some(call => call[0] === "create"), true);
+    assert.equal(state.calls.at(-1)[0], "erase");
+});
+
+test("known native connection failures resume without falling back", async () => {
+    for (const scheme of ["chrome-extension", "safari-web-extension"]) {
+        for (const message of ["Specified native messaging host not found.", "Failed to start native messaging host.",
+            "Access to the specified native messaging host is forbidden.", "Invalid native messaging host name specified."]) {
+            const state = worker({ takeover: true, native: true, scheme });
+            state.api.runtime.sendNativeMessage = async () => { throw new Error(message); };
+            await assert.rejects(intercept(state), /sendFailed/);
+            assert.deepEqual(state.calls.map(call => call[0]), ["pause", "resume"]);
+        }
     }
 });
 
-test("Chrome native transport errors resume without falling back", async () => {
-    const state = worker({ takeover: true, native: true, scheme: "chrome-extension" });
-    state.api.runtime.sendNativeMessage = async () => { throw new Error("host exited"); };
-    await assert.rejects(intercept(state), /sendFailed/);
-    assert.deepEqual(state.calls.map(call => call[0]), ["pause", "resume"]);
+test("native errors after sending keep downloads paused without falling back", async () => {
+    for (const scheme of ["chrome-extension", "safari-web-extension"]) {
+        for (const message of ["Native host has exited.", "Error when communicating with the native messaging host.", "unknown"]) {
+            const state = worker({ takeover: true, native: true, scheme });
+            state.api.runtime.sendNativeMessage = async () => { throw new Error(message); };
+            await assert.rejects(intercept(state), /handoffTimeout/);
+            assert.deepEqual(state.calls.map(call => call[0]), ["pause"]);
+        }
+    }
 });
 
 test("Chrome downloads without tab IDs still leave a recently recorded POST in the browser", async () => {
@@ -585,12 +601,14 @@ test("session write failure cleans up the handoff tab and resumes", async () => 
     assert.deepEqual(state.calls.map(call => call[0]), ["pause", "create", "resume"]);
 });
 
-test("malformed native acknowledgements never authorize cancellation", async () => {
-    for (const response of [undefined, {}, { ok: "true" }]) {
-        const state = worker({ takeover: true, native: true, scheme: "chrome-extension" });
-        state.api.runtime.sendNativeMessage = async () => response;
-        await assert.rejects(intercept(state), /sendFailed/);
-        assert.deepEqual(state.calls.map(call => call[0]), ["pause", "resume"]);
+test("malformed native acknowledgements keep downloads paused", async () => {
+    for (const scheme of ["chrome-extension", "safari-web-extension"]) {
+        for (const response of [undefined, {}, { ok: "true" }, { ok: null }]) {
+            const state = worker({ takeover: true, native: true, scheme });
+            state.api.runtime.sendNativeMessage = async () => response;
+            await assert.rejects(intercept(state), /handoffTimeout/);
+            assert.deepEqual(state.calls.map(call => call[0]), ["pause"]);
+        }
     }
 });
 
@@ -605,7 +623,7 @@ test("request listeners register once and permission revocation drops cached met
 });
 
 
-test("native handoff timeout resumes and a late ok cannot cancel the browser download", async () => {
+test("native handoff timeout keeps browser paused and a late ok cannot cancel or resume it", async () => {
     const state = worker({ takeover: true, native: true, scheme: "chrome-extension" });
     let expire;
     let complete;
@@ -618,5 +636,41 @@ test("native handoff timeout resumes and a late ok cannot cancel the browser dow
     await assert.rejects(pending, /handoffTimeout/);
     complete({ ok: true });
     await new Promise(resolve => setImmediate(resolve));
-    assert.deepEqual(state.calls.map(call => call[0]), ["pause", "resume"]);
+    assert.deepEqual(state.calls.map(call => call[0]), ["pause"]);
+});
+
+
+test("cancel failure after confirmed native handoff keeps the browser paused and shows a notice", async () => {
+    for (const scheme of ["chrome-extension", "safari-web-extension"]) {
+        const state = worker({ takeover: true, native: true, scheme });
+        state.api.downloads.cancel = async id => {
+            state.calls.push(["cancel", id]);
+            throw new Error("cancel failed");
+        };
+        state.api.downloads.onCreated.listeners[0](matchingDownload);
+        await new Promise(resolve => setImmediate(resolve));
+        assert.deepEqual(state.calls.map(call => call[0]), ["pause", "native", "cancel"]);
+        assert.deepEqual(state.notices, [["badge", "!"], ["title", "browserDownloadPaused"]]);
+    }
+});
+
+test("native handoff timeout shows a notice and never resumes after a late success or rejection", async () => {
+    for (const response of [{ ok: true }, { ok: false }]) {
+        const state = worker({ takeover: true, native: true, scheme: "chrome-extension" });
+        let expire;
+        let complete;
+        state.context.setTimeout = callback => { expire = callback; return 1; };
+        state.context.clearTimeout = () => {};
+        state.api.runtime.sendNativeMessage = () => new Promise(resolve => { complete = resolve; });
+        state.api.downloads.onCreated.listeners[0](matchingDownload);
+        await new Promise(resolve => setImmediate(resolve));
+        expire();
+        await new Promise(resolve => setImmediate(resolve));
+        assert.deepEqual(state.calls.map(call => call[0]), ["pause"]);
+        assert.deepEqual(state.notices, [["badge", "!"], ["title", "handoffTimeout"]]);
+        complete(response);
+        await new Promise(resolve => setImmediate(resolve));
+        assert.deepEqual(state.calls.map(call => call[0]), ["pause"]);
+        assert.equal(state.notices.length, 2);
+    }
 });

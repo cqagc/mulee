@@ -71,6 +71,7 @@ mulee-torrentd --state-dir <目录>
 | `skip_junk_files` | bool? | 默认 true；添加任务时匹配文件名并设置优先级 0 |
 | `junk_file_patterns` | [string]? | 通配列表，最多 256 项、每项 1–1024 字节，大小写不敏感 |
 | `ip_blocklist_path` | string? | P2P / DAT 文件绝对路径；空串清除导入范围，保留手动封禁；省略保留当前导入范围 |
+| `ip_blocklist_url_path` | string? | 订阅缓存文件绝对路径；与本地导入范围及手动封禁合并；空串清除订阅范围，省略保留当前订阅范围 |
 
 结果：`{"listen_port": <实际端口>}`。端口被占用时自动改用随机端口并在结果里如实返回。
 

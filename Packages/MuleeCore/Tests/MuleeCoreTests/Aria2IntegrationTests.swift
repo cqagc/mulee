@@ -79,15 +79,15 @@ struct Aria2IntegrationTests {
                 link: fixture.link("slow-cookie-pause.bin"), directory: nil,
                 context: DownloadRequestContext(cookie: "sid=secret"), paused: true
             )
-            await fixture.server.holdHEADRequests()
+            await fixture.server.holdGETRequests()
             let resume = Task { try await fixture.engine.resume(id) }
             let deadline = ContinuousClock.now.advanced(by: .seconds(2))
-            while await fixture.server.suspendedHEADRequests == 0, ContinuousClock.now < deadline {
+            while await fixture.server.suspendedGETRequests == 0, ContinuousClock.now < deadline {
                 try await Task.sleep(for: .milliseconds(10))
             }
-            #expect(await fixture.server.suspendedHEADRequests > 0)
+            #expect(await fixture.server.suspendedGETRequests > 0)
             try await fixture.engine.pause(id)
-            await fixture.server.releaseHEADRequests()
+            await fixture.server.releaseGETRequests()
             try await resume.value
             let snapshot = try #require(try await fixture.engine.snapshots().first { $0.engineTaskID == id })
             #expect(snapshot.status == .paused)

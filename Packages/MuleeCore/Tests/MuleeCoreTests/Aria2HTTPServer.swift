@@ -14,24 +14,26 @@ actor Aria2HTTPServer {
     private(set) var receivedHeaders: [[String: String]] = []
     private var stopped = false
     private var redirect: URL?
-    private var holdsHEAD = false
-    private var headWaiters: [CheckedContinuation<Void, Never>] = []
+    private var redirectsGETOnly = false
+    private var holdsGET = false
+    private var getWaiters: [CheckedContinuation<Void, Never>] = []
 
-    var suspendedHEADRequests: Int { headWaiters.count }
+    var suspendedGETRequests: Int { getWaiters.count }
 
-    func holdHEADRequests() {
-        holdsHEAD = true
+    func holdGETRequests() {
+        holdsGET = true
     }
 
-    func releaseHEADRequests() {
-        holdsHEAD = false
-        let waiting = headWaiters
-        headWaiters.removeAll()
+    func releaseGETRequests() {
+        holdsGET = false
+        let waiting = getWaiters
+        getWaiters.removeAll()
         for continuation in waiting { continuation.resume() }
     }
 
-    func setRedirect(_ url: URL?) {
+    func setRedirect(_ url: URL?, onlyGET: Bool = false) {
         redirect = url
+        redirectsGETOnly = onlyGET
     }
 
     init(payload: Data) throws {
@@ -61,7 +63,7 @@ actor Aria2HTTPServer {
 
     func stop() async {
         stopped = true
-        releaseHEADRequests()
+        releaseGETRequests()
         listener.cancel()
         let tasks = Array(requests.values)
         for task in tasks { task.cancel() }
@@ -123,10 +125,10 @@ actor Aria2HTTPServer {
             return (String(line[..<colon]).lowercased(), String(line[line.index(after: colon)...]).trimmingCharacters(in: .whitespaces))
         }, uniquingKeysWith: { _, new in new })
         receivedHeaders.append(headers)
-        if first[0] == "HEAD", holdsHEAD {
-            await withCheckedContinuation { headWaiters.append($0) }
+        if first[0] == "GET", holdsGET {
+            await withCheckedContinuation { getWaiters.append($0) }
         }
-        if let redirect {
+        if let redirect, !redirectsGETOnly || first[0] == "GET" {
             try await send(Data("HTTP/1.1 302 Found\r\nLocation: \(redirect.absoluteString)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".utf8), on: connection)
             return
         }

@@ -10,6 +10,16 @@ final class DownloadScheduling {
     private var previousOptions: EngineOptions?
     private var lastAdjustment: Date?
     private var busy = false
+    private var lastActivity: [DownloadTask.ID: Date] = [:]
+    private var yielded: Set<DownloadTask.ID> = []
+    private var recovered: Set<DownloadTask.ID> = []
+    private var taskLimits: [DownloadTask.ID: TaskLimits] = [:]
+
+    private struct TaskLimits: Equatable {
+        var engineID: String
+        var download: Int64
+        var upload: Int64
+    }
 
     init(defaults: UserDefaults?) {
         pauses = QueuePauseStore(defaults: defaults)
@@ -21,6 +31,10 @@ final class DownloadScheduling {
         applied.removeAll()
         previousOptions = nil
         lastAdjustment = nil
+        lastActivity.removeAll()
+        yielded.removeAll()
+        recovered.removeAll()
+        taskLimits.removeAll()
     }
 
     func startupOptions(_ options: EngineOptions, kind: TaskKind, kinds: Set<TaskKind>) -> EngineOptions {
@@ -45,18 +59,30 @@ final class DownloadScheduling {
 
     func userPause(_ task: DownloadTask) {
         pauses.set("user", for: task)
+        lastActivity[task.id] = nil
+        yielded.remove(task.id)
+        recovered.remove(task.id)
     }
 
     func userResume(_ task: DownloadTask) {
         pauses.set(nil, for: task)
+        taskLimits[task.id] = nil
     }
 
     func removed(_ task: DownloadTask) {
         pauses.set(nil, for: task)
+        lastActivity[task.id] = nil
+        yielded.remove(task.id)
+        recovered.remove(task.id)
+        taskLimits[task.id] = nil
     }
 
     func isQueuePaused(_ task: DownloadTask) -> Bool {
         pauses.reason(for: task) == "queue"
+    }
+
+    func occupiesSlot(_ task: DownloadTask) -> Bool {
+        GlobalConcurrencyPolicy.occupiesSlot(task, yielded: yielded)
     }
 
     func refresh(
@@ -66,7 +92,6 @@ final class DownloadScheduling {
         guard !busy, isCurrent() else { return }
         busy = true
         defer { busy = false }
-        let enginePaused = Set(model.activeTasks.filter { $0.status == .paused }.map(\.id))
         for task in model.activeTasks where task.pauseReason == nil {
             if pauses.reason(for: task) == "queue", task.status == .paused {
                 if let index = model.tasks.firstIndex(where: { $0.id == task.id }) {
@@ -87,13 +112,16 @@ final class DownloadScheduling {
                 }
             }
         }
-        let admitted = GlobalConcurrencyPolicy.admitted(tasks: model.activeTasks.filter { $0.pauseReason == nil }, limit: options.maxConcurrentDownloads)
+        updateStalledTasks(model: model, now: now, limit: options.maxConcurrentDownloads)
+        let admitted = GlobalConcurrencyPolicy.admitted(
+            tasks: model.activeTasks.filter { $0.pauseReason == nil }, limit: options.maxConcurrentDownloads,
+            yielded: yielded, recovered: recovered
+        )
         // 先暂停超额任务，再释放名额，避免一次轮询内短暂恢复过多任务。
-        for task in model.activeTasks where task.pauseReason == nil && GlobalConcurrencyPolicy.occupiesSlot(task) && !admitted.contains(task.id) {
+        for task in model.activeTasks where task.pauseReason == nil && occupiesSlot(task) && !admitted.contains(task.id) {
             guard isCurrent(), let id = task.engineTaskID,
                   let engine = engines.first(where: { $0.kind == task.kind }) else { continue }
-            guard pauses.reason(for: task) != "user",
-                  !isQueuePaused(task) || !enginePaused.contains(task.id) else { continue }
+            guard pauses.reason(for: task) != "user", !isQueuePaused(task) else { continue }
             pauses.set("queue", for: task)
             do {
                 try await engine.pause(id)
@@ -123,7 +151,8 @@ final class DownloadScheduling {
             let desired = allocation(options: options, tasks: model.activeTasks, engines: engines, admitted: admitted, reset: changed)
             let significant = changed || desired.contains { kind, value in
                 guard let old = applied[kind] else { return true }
-                return significantChange(old.downloadLimit, value.downloadLimit)
+                return old.maxConcurrentDownloads != value.maxConcurrentDownloads
+                    || significantChange(old.downloadLimit, value.downloadLimit)
                     || significantChange(old.uploadLimit, value.uploadLimit)
             }
             lastAdjustment = now
@@ -155,7 +184,14 @@ final class DownloadScheduling {
             }
             previousOptions = options
         }
-        for task in model.activeTasks where task.pauseReason == nil && admitted.contains(task.id) && isQueuePaused(task) {
+        // apply 可能为缓存设置重启引擎；在全局设置完成后恢复任务限速，再放行队列。
+        let limitsReady = await applyTaskLimits(model: model, engines: engines, isCurrent: isCurrent)
+        guard isCurrent() else { return }
+        let readyQueue = GlobalConcurrencyPolicy.orderedQueue(model.activeTasks.filter {
+            $0.pauseReason == nil && admitted.contains($0.id) && isQueuePaused($0)
+        })
+        for task in readyQueue {
+            guard ![.http, .bittorrent].contains(task.kind) || limitsReady.contains(task.id) else { continue }
             guard isCurrent(), let id = task.engineTaskID,
                   let engine = engines.first(where: { $0.kind == task.kind }) else { continue }
             guard model.tasks.contains(where: { $0.id == task.id && $0.pauseReason == nil }) else { continue }
@@ -174,6 +210,58 @@ final class DownloadScheduling {
         }
     }
 
+    private func updateStalledTasks(model: AppModel, now: Date, limit: Int) {
+        let running = model.activeTasks.filter { $0.status == .downloading && $0.pauseReason == nil && !isQueuePaused($0) }
+        let ids = Set(running.map(\.id))
+        lastActivity = lastActivity.filter { ids.contains($0.key) }
+        recovered.formIntersection(ids)
+        let minutes = model.downloadSettings?.stalledYieldMinutes ?? 10
+        var next: Set<DownloadTask.ID> = []
+        for task in running {
+            if task.downloadRate > 0 {
+                lastActivity[task.id] = now
+                if yielded.contains(task.id) { recovered.insert(task.id) }
+            } else if lastActivity[task.id] == nil {
+                lastActivity[task.id] = now
+            }
+            if GlobalConcurrencyPolicy.isStalled(task, lastActivity: lastActivity[task.id], now: now, minutes: minutes) {
+                next.insert(task.id)
+            }
+        }
+        yielded = next
+        if running.count - yielded.count <= max(1, limit) { recovered.removeAll() }
+        if model.stalledYieldTaskIDs != yielded { model.stalledYieldTaskIDs = yielded }
+    }
+
+    private func applyTaskLimits(
+        model: AppModel, engines: [any DownloadEngine], isCurrent: () -> Bool
+    ) async -> Set<DownloadTask.ID> {
+        var ready: Set<DownloadTask.ID> = []
+        let ids = Set(model.activeTasks.map(\.id))
+        taskLimits = taskLimits.filter { ids.contains($0.key) }
+        for task in model.activeTasks where [.http, .bittorrent].contains(task.kind)
+            && [.downloading, .queued, .paused, .waitingForSources, .seeding].contains(task.status) {
+            guard isCurrent(), let id = task.engineTaskID,
+                  let engine = engines.first(where: { $0.kind == task.kind }) else { continue }
+            let limits = TaskLimits(
+                engineID: id, download: max(0, task.downloadLimit ?? 0),
+                upload: task.kind == .bittorrent ? max(0, task.uploadLimit ?? 0) : 0
+            )
+            do {
+                if taskLimits[task.id] != limits {
+                    try await engine.setTaskLimits(id: id, download: limits.download, upload: limits.upload)
+                    guard isCurrent() else { return ready }
+                    taskLimits[task.id] = limits
+                }
+                ready.insert(task.id)
+            } catch {
+                guard isCurrent() else { return ready }
+                report(error, task: task, model: model)
+            }
+        }
+        return ready
+    }
+
     private func allocation(
         options: EngineOptions, tasks: [DownloadTask], engines: [any DownloadEngine],
         admitted: Set<DownloadTask.ID>, reset: Bool
@@ -183,7 +271,8 @@ final class DownloadScheduling {
         for engine in engines {
             let current = tasks.filter { $0.kind == engine.kind }
             let downloading = current.filter {
-                admitted.contains($0.id) || ($0.status == .waitingForSources && $0.downloadRate > 0 && !isQueuePaused($0))
+                admitted.contains($0.id) || yielded.contains($0.id)
+                    || ($0.status == .waitingForSources && $0.downloadRate > 0 && !isQueuePaused($0))
             }.count
             downloadDemand[engine.kind] = .init(rate: average(samples[engine.kind]), activeTasks: downloading)
             if [.bittorrent, .ed2k].contains(engine.kind) {
@@ -215,6 +304,10 @@ final class DownloadScheduling {
         )
         return Dictionary(uniqueKeysWithValues: kinds.map { kind in
             var next = options
+            // aria2 内部名额也要容纳保持连接的卡住任务，否则同引擎的队列无法让位。
+            next.maxConcurrentDownloads = max(options.maxConcurrentDownloads, tasks.filter {
+                $0.kind == kind && ($0.status == .downloading || admitted.contains($0.id))
+            }.count)
             next.downloadLimit = options.downloadLimit == 0 ? 0 : download[kind] ?? parkingLimit(kind)
             next.uploadLimit = options.uploadLimit == 0 || ![.bittorrent, .ed2k].contains(kind)
                 ? 0 : upload[kind] ?? parkingLimit(kind)
@@ -255,6 +348,10 @@ final class DownloadScheduling {
         do {
             try await engine.apply(options: options)
             guard isCurrent() else { return false }
+            if applied[engine.kind]?.diskCacheMegabytes != options.diskCacheMegabytes {
+                let affected = Set(model.tasks.filter { $0.kind == engine.kind }.map(\.id))
+                taskLimits = taskLimits.filter { !affected.contains($0.key) }
+            }
             applied[engine.kind] = options
             return true
         } catch {

@@ -70,6 +70,62 @@ struct HTTPProxyTests {
         #expect(proxy.sessionProxyDictionary.isEmpty)
     }
 
+    @Test func configurationNeverSerializesProxyCredentials() throws {
+        let root = URL(filePath: "/tmp/http-proxy-tests")
+        var configuration = Aria2Configuration(stateDirectory: root, port: 34567, secret: "rpc-test", options: .init(downloadDirectory: root))
+        configuration.proxy = HTTPProxyConfiguration(
+            mode: .manual, manualURL: "http://proxy.example.org:8080",
+            credential: .init(username: "proxy-test-account", password: "proxy-test-password"), environment: [:]
+        )
+        let text = try configuration.contents()
+        #expect(!text.contains("proxy-test-account"))
+        #expect(!text.contains("proxy-test-password"))
+        #expect(!text.contains("all-proxy-user="))
+        #expect(!text.contains("all-proxy-passwd="))
+        #expect(configuration.runtimeOptions["all-proxy-user"] == "proxy-test-account")
+        #expect(configuration.runtimeOptions["all-proxy-passwd"] == "proxy-test-password")
+        #expect(text.contains("rpc-secret=rpc-test\n"))
+    }
+
+    @Test(arguments: HTTPProxyConfiguration.Mode.allCases)
+    func playlistAndFormatProbesUseTheSelectedProxy(_ mode: HTTPProxyConfiguration.Mode) async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("http-proxy-probe-\(UUID())")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let binary = root.appendingPathComponent("yt-dlp")
+        let script = #"""
+        #!/bin/sh
+        printf '%s\n' "$@" > "$0.arguments"
+        printf '%s\n' '{"formats":[],"entries":[{"id":"Example0001"}]}'
+        """#
+        try Data(script.utf8).write(to: binary)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
+        let proxy = HTTPProxyConfiguration(
+            mode: mode, manualURL: "http://proxy.example.org:8080",
+            credential: .init(username: "user", password: "password"), environment: [:]
+        )
+        let playlist = try #require(URL(string: "https://www.youtube.com/playlist?list=ExampleList"))
+        let video = try #require(URL(string: "https://www.youtube.com/watch?v=Example0001"))
+        for operation in 0..<3 {
+            switch operation {
+            case 0: _ = try await YtDlpPlaylist.fetch(url: playlist, binary: binary, proxy: proxy)
+            case 1: _ = try await YtDlpFormats.fetchMetadata(url: video, site: .youtube, binary: binary, proxy: proxy)
+            default: _ = try await YtDlpFormats.fetch(url: video, site: .youtube, binary: binary, proxy: proxy)
+            }
+            let arguments = try String(contentsOf: root.appendingPathComponent("yt-dlp.arguments"), encoding: .utf8)
+                .components(separatedBy: "\n")
+            if mode == .system {
+                #expect(!arguments.contains("--proxy"))
+            } else {
+                let index = try #require(arguments.firstIndex(of: "--proxy"))
+                try #require(index + 1 < arguments.count)
+                let expected = mode == .off ? "" : "http://" + "user:password" + "@proxy.example.org:8080"
+                #expect(arguments[index + 1] == expected)
+                #expect(arguments.filter { $0 == "--proxy" }.count == 1)
+            }
+        }
+    }
+
     @Test func proxyOptionsReachStartupAndRuntimeConfiguration() throws {
         let root = URL(filePath: "/tmp/http-proxy-tests")
         var configuration = Aria2Configuration(stateDirectory: root, port: 34567, secret: "test", options: .init(downloadDirectory: root))

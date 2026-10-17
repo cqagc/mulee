@@ -25,6 +25,7 @@ final class AppModel {
         didSet { updateSleepPrevention() }
     }
     var isScheduledLimitActive = false
+    var stalledYieldTaskIDs: Set<DownloadTask.ID> = []
     var isTransferScheduleActive = false
     var transferScheduleWakeIssue: String?
     var isSlowModeActive = false

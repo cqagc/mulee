@@ -21,6 +21,8 @@ public protocol DownloadEngine: Actor {
     func addQueued(link: ParsedLink, directory: URL?) async throws -> String
     func pause(_ engineTaskID: String) async throws
     func resume(_ engineTaskID: String) async throws
+    /// 单任务字节/秒上限；0 表示不限，仍受全局额度约束。
+    func setTaskLimits(id: String, download: Int64, upload: Int64) async throws
     /// 删除任务；`deleteFiles` 为 true 时同时删除已下载的文件（含未完成的临时文件）。
     func remove(_ engineTaskID: String, deleteFiles: Bool) async throws
 
@@ -29,6 +31,10 @@ public protocol DownloadEngine: Actor {
 }
 
 public extension DownloadEngine {
+    func setTaskLimits(id: String, download: Int64, upload: Int64) async throws {
+        throw EngineError.unsupportedLink
+    }
+
     /// 不支持原子添加暂停任务的引擎，在同一次调用内立即暂停。
     func addQueued(link: ParsedLink, directory: URL?) async throws -> String {
         let id = try await add(link: link, directory: directory)

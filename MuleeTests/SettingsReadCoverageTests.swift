@@ -10,7 +10,7 @@ import Testing
         // Top-level settings, including newly added properties without persistence observers.
         let properties = source.matches(of: #/(?m)^    var (\w+)(?::|[ \t]*=)/#).map { String($0.1) }
         #expect(properties.count >= 36)
-        for name in ["httpProxyMode", "httpProxyURL", "pauseOnSleep", "dockBadge", "completionShortcut", "downloadRules", "sortIntoFolders", "publicTrackersEnabled", "trackerSubscriptions", "customTrackers", "blockLeechingClients",
+        for name in ["stalledYieldMinutes", "taskSort", "httpProxyMode", "httpProxyURL", "pauseOnSleep", "dockBadge", "completionShortcut", "downloadRules", "sortIntoFolders", "publicTrackersEnabled", "trackerSubscriptions", "customTrackers", "blockLeechingClients",
                      "subtitleMode", "subtitleLanguages", "autoCaptions", "audioFormat", "embedMetadata",
                      "sponsorBlockMark", "codecPreference", "prefer60fps", "filenamePreset",
                      "markIncomplete", "duplicateAction", "videoFormatChoiceBySite", "skipJunkFiles", "junkFilePatterns", "seedTimeLimitMinutes", "seedInactiveLimitMinutes",

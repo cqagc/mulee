@@ -46,6 +46,19 @@ struct TaskContextMenu: View {
         }
         Button("在访达中显示", systemImage: MuleeSymbol.revealInFinder.name, action: reveal)
         Button((task.tags ?? []).isEmpty ? String(localized: "添加标签…") : String(localized: "编辑标签…"), systemImage: MuleeSymbol.tags.name) { TaskActions.editTags(task, model: model) }
+        Divider()
+        Button("移到队列最前") { model.coordinator?.moveInQueue(task.id, toFront: true) }
+        Button("移到队列最后") { model.coordinator?.moveInQueue(task.id, toFront: false) }
+        Menu("优先级") {
+            Picker("优先级", selection: Binding(
+                get: { task.priority },
+                set: { model.coordinator?.setPriority(task.id, priority: $0) }
+            )) {
+                Text("高").tag(DownloadTask.Priority.high)
+                Text("中").tag(DownloadTask.Priority.normal)
+                Text("低").tag(DownloadTask.Priority.low)
+            }
+        }
         if task.kind == .bittorrent {
             Divider()
             BitTorrentActionsView(task: task)

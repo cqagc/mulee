@@ -30,6 +30,10 @@ struct DownloadSettingsTab: View {
                 Text("所有引擎合计；电驴等待来源和 BT 做种不占名额")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                BitTorrentLimitField(title: "卡住后让出名额", minutes: $model.stalledYieldMinutes)
+                Text("连续零速达到此时间后，保持连接并让后面的任务开始；恢复速度时允许暂时超过并发上限。0 表示不让位。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 Picker("遇到同名文件", selection: $model.duplicateAction) {
                     Text("自动编号保留两份").tag(DownloadRequestContext.DuplicateAction.rename)
                     Text("覆盖已有文件").tag(DownloadRequestContext.DuplicateAction.overwrite)

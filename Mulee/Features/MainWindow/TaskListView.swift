@@ -9,11 +9,13 @@ struct TaskListView: View {
 
     var body: some View {
         @Bindable var model = model
+        let sortedTasks = TaskSort(settings.taskSort).sorted(tasks)
 
         List(selection: $model.selectedTaskID) {
-            ForEach(tasks) { task in
+            ForEach(sortedTasks) { task in
                 TaskRowView(presentation: TaskPresentation(
-                    task: task, seedingAction: settings.seedingAction, schedule: .init(settings: settings)
+                    task: task, seedingAction: settings.seedingAction, schedule: .init(settings: settings),
+                    isYieldingSlot: model.stalledYieldTaskIDs.contains(task.id)
                 ))
                     .equatable()
                     .tag(task.id)
@@ -28,6 +30,31 @@ struct TaskListView: View {
             }
         }
         .listStyle(.inset)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack {
+                Spacer()
+                Menu("排序") {
+                    Picker("排序依据", selection: Binding(
+                        get: { TaskSort(settings.taskSort).key },
+                        set: { settings.taskSort = TaskSort(key: $0, ascending: TaskSort(settings.taskSort).ascending).value }
+                    )) {
+                        ForEach(TaskSort.Key.allCases, id: \.self) { key in
+                            Text(key.title).tag(key)
+                        }
+                    }
+                    Picker("排序方向", selection: Binding(
+                        get: { TaskSort(settings.taskSort).ascending },
+                        set: { settings.taskSort = TaskSort(key: TaskSort(settings.taskSort).key, ascending: $0).value }
+                    )) {
+                        Text("升序").tag(true)
+                        Text("降序").tag(false)
+                    }
+                }
+                .fixedSize()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 4)
+        }
         .overlay {
             if tasks.isEmpty {
                 ContentUnavailableView(isSearching ? String(localized: "未找到任务") : String(localized: "暂无任务"),

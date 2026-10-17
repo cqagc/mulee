@@ -39,7 +39,7 @@
         "message": "Intercept browser downloads"
     },
     "takeoverHint": {
-        "message": "Off by default. Enabling requests download access and optional request method access. Downloads pause first and resume if handoff fails or takes more than 10 seconds."
+        "message": "Off by default. Enabling requests download access and optional request method access. Downloads pause first. Confirmed handoff failures try to resume them; no confirmation within 10 seconds leaves them paused."
     },
     "takeoverUnavailable": {
         "message": "This browser does not provide the download interception API. Use the context menu or select links to send to Mulee."
@@ -135,9 +135,12 @@
         "message": "Request method access was not granted. Matching downloads will still be intercepted. Downloads that submit forms may not work in Mulee."
     },
     "handoffTimeout": {
-        "message": "Handoff was not confirmed within 10 seconds. The extension tried to resume the browser download."
+        "message": "Could not confirm whether Mulee received the download. The browser download remains paused. If it does not appear in Mulee, resume it in the browser."
     },
     "nativeTakeoverHint": {
-        "message": "Install the Chrome helper in Mulee’s Video settings and allow native access to keep downloads in the browser when Mulee is not running. Without the helper, the browser handoff page cannot confirm receipt by Mulee."
+        "message": "Install the Chrome helper in Mulee’s Video settings and allow native access to keep downloads in the browser when Mulee is not running. Without native access, the browser handoff page cannot confirm receipt by Mulee."
+    },
+    "browserDownloadPaused": {
+        "message": "Mulee has taken over the download. The browser download remains paused and can be removed manually."
     }
 }

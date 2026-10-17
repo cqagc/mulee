@@ -28,14 +28,14 @@ public enum YtDlpFormats {
 
     public static func fetch(
         url: URL, site: VideoSite, binary: URL, cookies: [VideoCookie] = [],
-        deno: URL? = nil, timeout: Duration = .seconds(20)
+        deno: URL? = nil, timeout: Duration = .seconds(20), proxy: HTTPProxyConfiguration = .current()
     ) async throws -> [YtDlpFormat] {
-        try await fetchMetadata(url: url, site: site, binary: binary, cookies: cookies, deno: deno, timeout: timeout).formats
+        try await fetchMetadata(url: url, site: site, binary: binary, cookies: cookies, deno: deno, timeout: timeout, proxy: proxy).formats
     }
 
     public static func fetchMetadata(
         url: URL, site: VideoSite, binary: URL, cookies: [VideoCookie] = [],
-        deno: URL? = nil, timeout: Duration = .seconds(20)
+        deno: URL? = nil, timeout: Duration = .seconds(20), proxy: HTTPProxyConfiguration = .current()
     ) async throws -> YtDlpVideoMetadata {
         guard ["http", "https"].contains(url.scheme?.lowercased() ?? ""), url.host != nil,
               url.user == nil, url.password == nil else { throw EngineError.unsupportedLink }
@@ -45,6 +45,7 @@ public enum YtDlpFormats {
         defer { try? cookieFile?.remove() }
         var arguments = ["--ignore-config", "-J", "--skip-download", "--no-playlist", "--no-warnings",
                          "--no-cache-dir", "--socket-timeout", "10", "--retries", "0"]
+        arguments += proxy.proxyArguments()
         if let cookieFile { arguments += ["--cookies", cookieFile.url.path] }
         if let deno { arguments += ["--js-runtimes", "deno:" + deno.path] }
         arguments += ["--", videoURL.absoluteString]

@@ -72,6 +72,10 @@ struct Aria2Configuration: Sendable {
         guard values.values.allSatisfy({ !$0.utf8.contains(where: { [0, 10, 13].contains($0) }) }) else {
             throw EngineError.invalidResponse(String(localized: "aria2 配置不能包含换行符", bundle: .module))
         }
+        // 代理凭据只经 RPC 下发；配置文件不落盘任何账号或口令选项。
+        values = values.filter { key, _ in
+            !["-user", "-passwd", "-password"].contains(where: key.hasSuffix)
+        }
         return values.keys.sorted().map { "\($0)=\(values[$0, default: ""])" }.joined(separator: "\n") + "\n"
     }
 

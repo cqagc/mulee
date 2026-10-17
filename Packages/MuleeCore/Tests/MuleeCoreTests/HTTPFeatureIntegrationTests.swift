@@ -5,6 +5,41 @@ import Testing
 
 @Suite(.serialized, .enabled(if: Aria2IntegrationFixture.binaryAvailable))
 struct HTTPFeatureIntegrationTests {
+    @Test func GETOnlyCrossHostRedirectNeverForwardsCredentialsToAria2() async throws {
+        try await Aria2IntegrationFixture.withFixture { fixture in
+            let destination = try Aria2HTTPServer(payload: fixture.payload)
+            do {
+                let port = try await destination.start()
+                let target = try #require(URL(string: "http://localhost:\(port)/payload.bin"))
+                await fixture.server.setRedirect(target, onlyGET: true)
+                let link = try fixture.link("head-success.bin")
+                guard case .http(let original, _, _) = link else { return }
+                let head = try await HTTPResourceProbe.inspect(original)
+                #expect(head.size == Int64(fixture.payload.count))
+                #expect(await destination.receivedHeaders.isEmpty)
+                try await fixture.engine.start(options: fixture.options)
+                let context = DownloadRequestContext(headers: ["Authorization": "Basic example-token"], cookie: "sid=example-cookie")
+                let id = try await fixture.engine.add(link: link, directory: nil, context: context, paused: true)
+                let rpc = try fixture.rpc()
+                let uris: [Aria2RPCModels.URI] = try await rpc.call("aria2.getUris", [.string(id)])
+                #expect(uris.first?.uri == target.absoluteString)
+                try await fixture.engine.resume(id)
+                _ = try await fixture.waitFor(id) { $0.status == .completed }
+                let sourceRequests = await fixture.server.receivedHeaders
+                #expect(sourceRequests.contains {
+                    $0["range"] == "bytes=0-0" && $0["authorization"] == "Basic example-token" && $0["cookie"] == "sid=example-cookie"
+                })
+                let received = await destination.receivedHeaders
+                #expect(!received.isEmpty)
+                #expect(received.allSatisfy { $0["authorization"] == nil && $0["cookie"] == nil })
+                await destination.stop()
+            } catch {
+                await destination.stop()
+                throw error
+            }
+        }
+    }
+
     @Test func authenticationFailureCanRetryWithoutCredentialsInHistory() async throws {
         try await Aria2IntegrationFixture.withFixture { fixture in
             try await fixture.engine.start(options: fixture.options)
@@ -18,6 +53,32 @@ struct HTTPFeatureIntegrationTests {
             let completed = try await fixture.waitFor(retried) { $0.status == .completed }
             #expect(completed.receivedBytes == fixture.payload.count)
             #expect(!String(decoding: try JSONEncoder().encode(context), as: UTF8.self).contains(credential.authorization))
+            let paused = try await fixture.engine.add(
+                link: fixture.link("slow-session.bin"), directory: nil,
+                context: DownloadRequestContext(headers: ["Authorization": credential.authorization], cookie: "sid=example-cookie"), paused: true
+            )
+            let rpc = try fixture.rpc()
+            let session = fixture.state.appendingPathComponent("aria2.session")
+            for _ in 0..<2 {
+                let _: String = try await rpc.call("aria2.saveSession")
+                try FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: session.path)
+                let deadline = ContinuousClock.now.advanced(by: .seconds(2))
+                while ContinuousClock.now < deadline {
+                    let attributes = try FileManager.default.attributesOfItem(atPath: session.path)
+                    if (attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600 { break }
+                    try await Task.sleep(for: .milliseconds(20))
+                }
+                let attributes = try FileManager.default.attributesOfItem(atPath: session.path)
+                #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
+            }
+            let text = try String(contentsOf: session, encoding: .utf8)
+            #expect(text.contains(paused))
+            #expect(text.contains(credential.authorization))
+            let directory = try FileManager.default.attributesOfItem(atPath: fixture.state.path)
+            #expect((directory[.posixPermissions] as? NSNumber)?.intValue == 0o700)
+            await fixture.engine.stop()
+            let attributes = try FileManager.default.attributesOfItem(atPath: session.path)
+            #expect((attributes[.posixPermissions] as? NSNumber)?.intValue == 0o600)
         }
     }
 
@@ -90,7 +151,10 @@ struct HTTPFeatureIntegrationTests {
 
     @Test func proxyRefreshChangesGlobalOptionsWithoutRestartingEngine() async throws {
         try await Aria2IntegrationFixture.withFixture { fixture in
-            let selected = Mutex(HTTPProxyConfiguration(mode: .off, environment: [:]))
+            let credential = HTTPCredentialStore.Credential(username: "proxy-test-account", password: "proxy-test-password")
+            let selected = Mutex(HTTPProxyConfiguration(
+                mode: .manual, manualURL: "http://proxy.example.org:8080", credential: credential, environment: [:]
+            ))
             let engine = Aria2Engine(
                 stateDirectory: fixture.root.appendingPathComponent("proxy-state"),
                 binaryURL: URL(filePath: try #require(ProcessInfo.processInfo.environment["MULEE_ARIA2C"])),
@@ -98,8 +162,6 @@ struct HTTPFeatureIntegrationTests {
             )
             do {
                 try await engine.start(options: fixture.options)
-                selected.withLock { $0 = HTTPProxyConfiguration(mode: .manual, manualURL: "http://proxy.example.org:8080", environment: [:]) }
-                try await engine.refreshProxy()
                 let text = try String(contentsOf: fixture.root.appendingPathComponent("proxy-state/aria2.conf"), encoding: .utf8)
                 #expect(text.contains("all-proxy=http://proxy.example.org:8080\n"))
                 let values = Dictionary(uniqueKeysWithValues: text.split(separator: "\n").compactMap { line -> (String, String)? in
@@ -112,6 +174,21 @@ struct HTTPFeatureIntegrationTests {
                 )
                 let global: [String: String] = try await rpc.call("aria2.getGlobalOption")
                 #expect(global["all-proxy"].flatMap(HTTPProxyConfiguration.manualURL)?.absoluteString == "http://proxy.example.org:8080")
+                #expect(global["all-proxy-user"] == credential.username)
+                #expect(global["all-proxy-passwd"] == credential.password)
+                #expect(!text.contains(credential.username))
+                #expect(!text.contains(credential.password))
+                let changedCredential = HTTPCredentialStore.Credential(username: "updated-account", password: "updated-password")
+                selected.withLock { $0 = HTTPProxyConfiguration(
+                    mode: .manual, manualURL: "http://proxy.example.org:8080", credential: changedCredential, environment: [:]
+                ) }
+                try await engine.refreshProxy()
+                let changed: [String: String] = try await rpc.call("aria2.getGlobalOption")
+                #expect(changed["all-proxy-user"] == changedCredential.username)
+                #expect(changed["all-proxy-passwd"] == changedCredential.password)
+                let updated = try String(contentsOf: fixture.root.appendingPathComponent("proxy-state/aria2.conf"), encoding: .utf8)
+                #expect(!updated.contains(changedCredential.username))
+                #expect(!updated.contains(changedCredential.password))
                 selected.withLock { $0 = HTTPProxyConfiguration(mode: .off, environment: [:]) }
                 try await engine.refreshProxy()
                 #expect(try String(contentsOf: fixture.root.appendingPathComponent("proxy-state/aria2.conf"), encoding: .utf8).contains("all-proxy=\n"))

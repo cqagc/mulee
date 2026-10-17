@@ -16,6 +16,6 @@ actor NewTaskVideoFormatProvider {
         }
         let cookies = try await VideoLoginStore.shared.cookies(for: site)
         let deno = try await installer.installedURL(for: .deno)
-        return try await YtDlpFormats.fetchMetadata(url: url, site: site, binary: binary, cookies: cookies, deno: deno)
+        return try await YtDlpFormats.fetchMetadata(url: url, site: site, binary: binary, cookies: cookies, deno: deno, proxy: .current())
     }
 }

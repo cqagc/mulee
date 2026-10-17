@@ -332,6 +332,13 @@ public actor Aria2Engine: DownloadEngine {
         return engineTaskID
     }
 
+    public func setTaskLimits(id: String, download: Int64, upload: Int64) async throws {
+        let client = try runningClient()
+        let _: String = try await client.call("aria2.changeOption", [
+            .string(id), .object(["max-download-limit": .string(String(max(0, download)))])
+        ])
+    }
+
     public func pause(_ engineTaskID: String) async throws {
         resumeAttempts[engineTaskID] = nil
         let client = try runningClient()
@@ -638,6 +645,10 @@ public actor Aria2Engine: DownloadEngine {
                 _ = try await group.next()
             }
             guard child.isRunning else { throw EngineError.launchFailed(String(localized: "aria2 进程提前退出", bundle: .module)) }
+            // 先通过本机 RPC 下发凭据，再对调用方宣告启动完成；conf 始终不保存代理口令。
+            let _: String = try await rpc.call("aria2.changeGlobalOption", [
+                .object(configuration.proxy.aria2Options.mapValues(Aria2RPCValue.string))
+            ])
             client = rpc
             // 轮询不需要跨执行器管理系统回调，且随子进程退出取消。
             proxyMonitor = Task { [weak self] in

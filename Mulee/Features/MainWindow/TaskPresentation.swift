@@ -11,17 +11,20 @@ struct TaskPresentation {
     let calendar: Calendar
     let schedule: TransferScheduleController.Configuration?
     let seedingAction: SettingsModel.SeedingAction
+    let isYieldingSlot: Bool
 
     init(
         task: DownloadTask, now: Date = .now, calendar: Calendar = .current,
         seedingAction: SettingsModel.SeedingAction = .throttle,
-        schedule: TransferScheduleController.Configuration? = nil
+        schedule: TransferScheduleController.Configuration? = nil,
+        isYieldingSlot: Bool = false
     ) {
         self.task = task
         self.now = now
         self.calendar = calendar
         self.seedingAction = seedingAction
         self.schedule = schedule
+        self.isYieldingSlot = isYieldingSlot
     }
 
     var typeLabel: String {
@@ -120,6 +123,7 @@ struct TaskPresentation {
     }
 
     var statusTitle: String {
+        if isYieldingSlot, task.status == .downloading { return String(localized: "卡住，已让出名额") }
         if [.paused, .queued].contains(task.status), task.pauseReason != .diskSpace, let schedulePauseTitle {
             return schedulePauseTitle
         }
@@ -144,6 +148,7 @@ struct TaskPresentation {
     }
 
     var statusSubtitle: String {
+        if isYieldingSlot, task.status == .downloading { return "" }
         if [.paused, .queued].contains(task.status), schedulePauseTitle != nil { return "" }
         return switch task.status {
         case .downloading: task.estimatedTimeRemaining.map { String(localized: "剩 \(Self.duration($0, remaining: true))") } ?? String(localized: "正在下载")

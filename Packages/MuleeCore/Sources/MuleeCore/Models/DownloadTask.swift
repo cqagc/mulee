@@ -2,6 +2,31 @@ import Foundation
 
 /// 下载列表里的一个任务。值类型，由引擎层更新后整体替换。
 public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
+    public enum Priority: String, Sendable, Hashable, Codable, CaseIterable {
+        case high
+        case normal
+        case low
+
+        public var rank: Int {
+            switch self {
+            case .high: 0
+            case .normal: 1
+            case .low: 2
+            }
+        }
+    }
+
+    /// nil 表示不限速；与引擎的全局额度同时生效。
+    public var downloadLimit: Int64?
+    public var uploadLimit: Int64?
+    public var queuePosition: Int64?
+    public var createdAt: Date?
+    private var storedPriority: Priority?
+    public var priority: Priority {
+        get { storedPriority ?? .normal }
+        set { storedPriority = newValue }
+    }
+
     public enum PauseReason: String, Sendable, Hashable, Codable {
         case diskSpace
         case volumeUnavailable
@@ -59,6 +84,48 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
     /// 引擎报告的错误信息（status 为 .failed 时显示）。
     public var errorMessage: String?
 
+    private enum CodingKeys: String, CodingKey {
+        case downloadLimit
+        case uploadLimit
+        case queuePosition
+        case createdAt
+        case storedPriority = "priority"
+        case tags
+        case fileBookmark
+        case fileMissing
+        case deletedAt
+        case lastProgressAt
+        case pauseReason
+        case writeDirectories
+        case id
+        case name
+        case fileExtension
+        case kind
+        case status
+        case totalBytes
+        case receivedBytes
+        case downloadRate
+        case uploadRate
+        case estimatedTimeRemaining
+        case completedAt
+        case detail
+        case postDownload
+        case sourceLink
+        case sourcePageURL
+        case requestContext
+        case hasHTTPCredentials
+        case hasRequestCookie
+        case httpIdentity
+        case videoIdentity
+        case httpValidationError
+        case videoOptions
+        case checksum
+        case checksumVerification
+        case engineTaskID
+        case savePath
+        case errorMessage
+    }
+
     public init(
         id: UUID = UUID(),
         name: String,
@@ -79,6 +146,7 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
         savePath: URL? = nil,
         errorMessage: String? = nil
     ) {
+        self.createdAt = .now
         self.id = id
         self.name = name
         self.fileExtension = fileExtension

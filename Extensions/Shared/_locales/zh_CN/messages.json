@@ -39,7 +39,7 @@
         "message": "接管浏览器下载"
     },
     "takeoverHint": {
-        "message": "默认关闭。开启时申请下载权限，并可选允许检查请求方法。先暂停浏览器下载，交接失败或超过 10 秒则尝试恢复。"
+        "message": "默认关闭。开启时申请下载权限，并可选允许检查请求方法。先暂停浏览器下载，明确交接失败时尝试恢复；超过 10 秒未能确认时保持暂停。"
     },
     "takeoverUnavailable": {
         "message": "此浏览器未提供下载接管 API。请使用右键菜单或手动选择链接发送到 Mulee。"
@@ -135,9 +135,12 @@
         "message": "未允许检查请求方法，仍会接管匹配的下载。需要提交表单的下载可能无法交给 Mulee。"
     },
     "handoffTimeout": {
-        "message": "10 秒内未能确认交接，已尝试恢复浏览器下载。"
+        "message": "没能确认 Mulee 是否收到。浏览器里的这项已暂停：如果 Mulee 里没有出现，请在浏览器里继续"
     },
     "nativeTakeoverHint": {
-        "message": "在 Mulee 的视频设置中安装 Chrome 辅助组件，并允许原生连接后，Mulee 未运行时浏览器会继续下载。未连接辅助组件时使用浏览器交接页，无法确认 Mulee 是否收到。"
+        "message": "在 Mulee 的视频设置中安装 Chrome 辅助组件，并允许原生连接后，Mulee 未运行时浏览器会继续下载。未允许原生连接时使用浏览器交接页，无法确认 Mulee 是否收到。"
+    },
+    "browserDownloadPaused": {
+        "message": "Mulee 已接手下载，浏览器里的这项已暂停，可以手动删除"
     }
 }

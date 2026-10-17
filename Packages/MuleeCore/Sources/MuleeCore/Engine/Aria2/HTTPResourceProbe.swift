@@ -63,6 +63,12 @@ public enum HTTPResourceProbe {
     }
 
     private static func inspectResponse(_ url: URL, context: DownloadRequestContext) async throws -> HTTPURLResponse {
+        if context.requestCookie != nil || context.headers.keys.contains(where: {
+            ["authorization", "proxy-authorization"].contains($0.lowercased())
+        }) {
+            // HEAD 和 GET 可能走不同的跳转规则；凭据只按真实 GET 的逐跳结果限定。
+            return try await response(url, context: context, method: "GET")
+        }
         var response = try await response(url, context: context, method: "HEAD")
         // 签名 GET 链接可能拒绝 HEAD；用一字节 Range 确认，不能直接误报过期。
         if [403, 405, 501].contains(response.statusCode)

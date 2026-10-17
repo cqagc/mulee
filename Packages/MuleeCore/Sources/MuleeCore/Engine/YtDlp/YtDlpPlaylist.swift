@@ -10,7 +10,8 @@ public enum YtDlpPlaylist {
     }
 
     public static func fetch(
-        url: URL, binary: URL, cookies: [VideoCookie] = [], timeout: Duration = .seconds(20)
+        url: URL, binary: URL, cookies: [VideoCookie] = [], timeout: Duration = .seconds(20),
+        proxy: HTTPProxyConfiguration = .current()
     ) async throws -> [YtDlpPlaylistEntry] {
         let host = url.host?.lowercased() ?? ""
         let site: VideoSite = VideoCookie.allows(domain: host, site: .youtube) || host == "youtu.be" ? .youtube : .bilibili
@@ -22,6 +23,7 @@ public enum YtDlpPlaylist {
         defer { try? cookieFile?.remove() }
         var arguments = ["--ignore-config", "--flat-playlist", "--yes-playlist", "-J", "--no-warnings",
                          "--no-cache-dir", "--socket-timeout", "10", "--retries", "0"]
+        arguments += proxy.proxyArguments()
         if site == .youtube { arguments += ["--playlist-end", "1000"] }
         if let cookieFile { arguments += ["--cookies", cookieFile.url.path] }
         var listing = URLComponents(url: url, resolvingAgainstBaseURL: false)

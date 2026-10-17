@@ -312,7 +312,7 @@ import Testing
                 "disk_cache_bytes": .integer(16 * 1_024 * 1_024), "blocked_clients": .array([]),
                 "skip_junk_files": .bool(true),
                 "junk_file_patterns": .array(TorrentEngineSettings.defaultJunkFilePatterns.map(TorrentdValue.string)),
-                "ip_blocklist_path": .string("")
+                "ip_blocklist_path": .string(""), "ip_blocklist_url_path": .string("")
             ])
             options.uploadLimit = 999
             try await engine.apply(options: options)

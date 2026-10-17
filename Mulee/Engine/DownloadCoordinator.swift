@@ -160,6 +160,7 @@ final class DownloadCoordinator {
         if let latestOptions, latestOptions != options {
             apply(options: latestOptions)
         }
+        await refreshScheduling(sample: false)
         pollingTask = Task { [weak self] in
             while !Task.isCancelled {
                 do {
@@ -175,6 +176,7 @@ final class DownloadCoordinator {
 
     func stop() async {
         generation = nil
+        model.stalledYieldTaskIDs.removeAll()
         httpResumeAttempts.removeAll()
         for job in forgettingHTTPTasks.values { await job.value }
         forgettingHTTPTasks.removeAll()
@@ -310,6 +312,8 @@ final class DownloadCoordinator {
                 continue
             }
             var task = DownloadTask(link: link, autoExtract: autoExtract)
+            let lastPosition = model.activeTasks.compactMap(\.queuePosition).max() ?? 0
+            task.queuePosition = lastPosition < Int64.max ? lastPosition + 1 : Int64.max
             task.videoIdentity = videoIdentities[link]
             task.requestContext = requestContexts[link]?.withoutCookie
             task.videoOptions = videoOptions[link]
@@ -320,6 +324,7 @@ final class DownloadCoordinator {
             }
             if let entry = videoEntries[link] { task.name = entry.taskTitle }
             let ruleResult = applyDownloadRule(to: &task, link: link, context: requestContexts[link] ?? .init(), directory: directory)
+            if task.kind == .http { task.downloadLimit = ruleResult.rule?.speedLimitBytes }
             let directory = ruleResult.directory
             if let saveDirectory = directory ?? latestOptions?.downloadDirectory {
                 task.writeDirectories = [saveDirectory]
@@ -1156,9 +1161,27 @@ final class DownloadCoordinator {
 
     private func shouldQueueNewTask() -> Bool {
         let occupied = model.activeTasks.filter {
-            GlobalConcurrencyPolicy.occupiesSlot($0) && !scheduling.isQueuePaused($0)
+            scheduling.occupiesSlot($0) && !scheduling.isQueuePaused($0)
         }.count
         return occupied >= max(1, latestOptions?.maxConcurrentDownloads ?? 1)
+    }
+
+    func setTaskLimits(_ id: DownloadTask.ID, download: Int64?, upload: Int64?) {
+        guard let index = model.tasks.firstIndex(where: { $0.id == id && $0.deletedAt == nil }),
+              [.http, .bittorrent].contains(model.tasks[index].kind) else { return }
+        model.tasks[index].downloadLimit = download.flatMap { $0 > 0 ? min($0, Int64(Int32.max)) : nil }
+        model.tasks[index].uploadLimit = model.tasks[index].kind == .bittorrent
+            ? upload.flatMap { $0 > 0 ? min($0, Int64(Int32.max)) : nil } : nil
+        Task { await refreshScheduling(sample: false) }
+    }
+
+    func setPriority(_ id: DownloadTask.ID, priority: DownloadTask.Priority) {
+        guard let index = model.tasks.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+        model.tasks[index].priority = priority
+    }
+
+    func moveInQueue(_ id: DownloadTask.ID, toFront: Bool) {
+        model.tasks = GlobalConcurrencyPolicy.moving(tasks: model.tasks, id: id, toFront: toFront)
     }
 
     private func refreshScheduling(sample: Bool = true) async {

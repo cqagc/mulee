@@ -64,12 +64,14 @@ Chrome 用 `tabs.create` / `tabs.update` 打开 `mulee://add`。首次出现「�
 
 Chrome 弹窗中的「下载接管设置」可开启「接管浏览器下载」，开启时才申请可选 `downloads` 权限；随后申请可选 `webRequest`、HTTP/HTTPS host 权限和原生连接权限，拒绝这组权限仍可接管。关闭时撤销 `downloads` 和 `webRequest` 权限；host 与原生连接权限可能仍供已授权的登录状态交接使用。扩展名列表可以编辑，空格或逗号分隔，不区分大小写，默认覆盖压缩包、镜像、安装包、大视频和 `.torrent`。
 
-匹配下载地址或浏览器已提供的文件名时，扩展先 `downloads.pause`，再校验并交接链接。交接成功才 `cancel` + `erase`；校验失败、交接失败或超过 10 秒则尝试 `resume`，浏览器继续下载。暂停本身失败时不接管。Mulee 中仍然需要确认，不会直接开始下载；恢复失败只报告错误，不取消浏览器任务。
+匹配下载地址或浏览器已提供的文件名时，扩展先 `downloads.pause`，再校验并交接链接。交接成功才 `cancel` + `erase`。发送前校验出错、宿主明确回复 `{ok:false}` 或确定原生连接未建立时，尝试 `resume`，浏览器继续下载。超过 10 秒、宿主发送后中途退出或回复格式异常，都无法确认 Mulee 是否已接收，因此保持浏览器下载暂停，并提示「没能确认 Mulee 是否收到。浏览器里的这项已暂停：如果 Mulee 里没有出现，请在浏览器里继续」。迟到的回复不会再取消或恢复浏览器下载。
+
+交接已确认成功后，`cancel` 失败独立处理，不能进入恢复分支，也不清理浏览器记录，提示「Mulee 已接手下载，浏览器里的这项已暂停，可以手动删除」。两种提示沿用工具栏 `!` 徽标及其悬停标题。暂停本身失败时不接管。Mulee 中仍然需要确认，不会直接开始下载；恢复失败只报告错误，不取消浏览器任务。
 
 交接成功的判定按通道区分：
-- Safari 使用现有原生 handler 的 `{ok:true}` 回复，原生失败时恢复浏览器下载，不退回协议页。当前 Safari manifest 不开放 downloads 权限，接管开关禁用，右键和工具栏仍可使用；API 均做特性检测。
+- Safari 使用现有原生 handler 的 `{ok:true}` 回复，仅明确拒绝或确定连接未建立时恢复浏览器下载，无法确认时保持暂停，不退回协议页。当前 Safari manifest 不开放 downloads 权限，接管开关禁用，右键和工具栏仍可使用；API 均做特性检测。
 - Chrome 已授权 `nativeMessaging` 且安装辅助组件时，现有宿主新增消息 `{type:"openLinks", url:"mulee://add?..."}`。`url` 沿用现有编码，包含链接、来源页、文字及 UA、文件名、一次性 Cookie token 等上下文；宿主复用 `BrowserExtensionRequest` / `OpenURLRequest` 校验。主程序未运行（不把宿主自身计为主程序）、校验失败或系统打开失败时回复 `{ok:false}`，浏览器恢复；成功打开才回复 `{ok:true}`。辅助组件安装入口沿用 Mulee 设置·视频的 Chrome 登录状态连接按钮，不自动安装。
-- Chrome 未授予原生权限或宿主未安装时，按主控裁决保留协议标签页交接：成功创建交接页并存好入口后即视为交接成功。**这个回退通道无法确认 Mulee 是否收到链接**，取消外部协议提示或 Mulee 未运行时不保证自动恢复。安装辅助组件并授予原生权限后才有上述在线检查。其他原生通信错误不会退回协议页，而会恢复浏览器下载。
+- Chrome 未授予原生权限时，按主控裁决保留协议标签页交接：成功创建交接页并存好入口后即视为交接成功。**这个回退通道无法确认 Mulee 是否收到链接**，取消外部协议提示或 Mulee 未运行时不保证自动恢复。安装辅助组件并授予原生权限后才有上述在线检查。已尝试原生交接后不再退回协议页：宿主未找到、无权连接或无法启动等确定连接未建立的错误会恢复浏览器下载；中途断线或畸形回复保持暂停。连接错误分类参考 [Chrome Native Messaging 错误说明](https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging#common-errors)。
 
 有 `webRequest` 权限时，仅在内存记录主框架及子资源请求的 URL、tabId、方法和记录时间，不读取请求体或请求头。按 URL + tabId 保存最近 200 条，60 秒过期，撤销权限时清空。原始 URL 或重定向后的 URL 对应请求不是 GET 时不接管；找不到记录时照常接管。Chrome 的 DownloadItem 没有 tabId，因此会保守检查同 URL 的所有近期记录，任一非 GET 就留在浏览器；提供 tabId 的平台按 URL + tabId 精确匹配。MV3 worker 重启后内存记录重新积累。
 
@@ -149,7 +151,7 @@ xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS,a
 
 ### X1 定向验证
 
-新增 JS 测试使用假的 downloads API，覆盖暂停 → 交接 → 取消 / 清理顺序、暂停失败、校验失败、原生拒绝 / 通信失败、10 秒超时及迟到回复、恢复分支、清理失败、POST 跳过、GET / 无记录接管、记录容量 / 过期、域名及通配匹配、可选权限拒绝和设置保存。Swift 的 `VideoLoginTests` 覆盖 `openLinks` 校验、主程序未运行、系统打开失败和帧长度边界；原生帧上限为 1,048,704 字节（1 MiB 入口 URL 加 JSON 信封空间），Cookie 消息仍由原有解析器执行各自更小的长度限制。
+新增 JS 测试使用假的 downloads API，覆盖暂停 → 交接 → 取消 / 清理顺序、暂停失败、校验失败、原生拒绝 / 连接失败时恢复、发送后通信状态不明时保持暂停、10 秒超时及迟到回复、确认成功后取消失败时保持暂停及提示、清理失败、POST 跳过、GET / 无记录接管、记录容量 / 过期、域名及通配匹配、可选权限拒绝和设置保存。Swift 的 `VideoLoginTests` 覆盖 `openLinks` 校验、主程序未运行、系统打开失败和帧长度边界；原生帧上限为 1,048,704 字节（1 MiB 入口 URL 加 JSON 信封空间），Cookie 消息仍由原有解析器执行各自更小的长度限制。
 
 211 执行 `~/.config/mulee/remote.sh ext` 验证扩展；Swift 定向执行 `~/.config/mulee/remote.sh test -only-testing:MuleeTests/VideoLoginTests -only-testing:MuleeTests/BrowserExtensionRequestTests -only-testing:MuleeTests/HTTPDownloadTests -only-testing:MuleeTests/ExtensionHandoffTests`。这不代表真实 Chrome / Safari 接管或用户权限提示已经验收；本任务未安装宿主、加载扩展或操作正在运行的 Mulee。
 
@@ -160,3 +162,9 @@ xcodebuild -project Mulee.xcodeproj -scheme Mulee -destination 'platform=macOS,a
 ```
 
 X1 本轮结果：远端 `remote.sh ext` 为 78 项通过、0 失败；`remote.sh build` 输出 `BUILD SUCCEEDED`（已修复原生宿主帧长度常量的 actor 隔离错误）。四组 Swift 定向测试尚未完成：共享目录曾遇到构建数据库锁，独立目录复测又被其他进行中改动的 `VolumeAvailabilityMonitorTests` 初始化参数不匹配阻断。主控将在合拢后统一验证；不能把本次 Swift 编译尝试记为测试通过。
+
+### FIX1-EXT 修复验证
+
+本轮修复将已确认交接后的取消失败与交接前的明确失败分开处理。测试覆盖 Chrome / Safari 的取消失败提示、10 秒超时后迟到的成功与拒绝、宿主中途退出、畸形回复、明确拒绝及连接建立失败；只有明确失败才恢复。未新增设置键或对外协议命令。
+
+211 执行 `~/.config/mulee/remote.sh ext`：退出码 0，`tests 81`、`pass 81`、`fail 0`。本轮未改 Swift、设置键或原生消息协议，未操作真实浏览器和运行中的 App。

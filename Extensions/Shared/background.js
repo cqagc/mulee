@@ -6,34 +6,41 @@ const linksAPI = globalThis.MuleeLinks;
 // Chrome 也提供 browser 命名空间，只能按扩展 URL 的协议区分 Safari。
 const isSafari = extensionAPI.runtime.getURL("").startsWith("safari-web-extension:");
 
+function nativeHandoffError(error) {
+    const unavailable = [
+        "Specified native messaging host not found.",
+        "Failed to start native messaging host.",
+        "Access to the specified native messaging host is forbidden.",
+        "Invalid native messaging host name specified."
+    ].includes(error?.message);
+    // 只有确定没有建立连接才可恢复；中途断线不能证明 Mulee 尚未接收。
+    return new Error(unavailable ? "sendFailed" : "handoffTimeout");
+}
+
 async function openEntry(url, requireConfirmation = false, assertActive = () => {}) {
     if (requireConfirmation && !isSafari && extensionAPI.runtime.sendNativeMessage
         && await extensionAPI.permissions.contains({ permissions: ["nativeMessaging"] })) {
         let response;
-        let missingHost = false;
         try {
             response = await extensionAPI.runtime.sendNativeMessage("com.cqagc.mulee.video_login", { type: "openLinks", url });
         } catch (error) {
-            // 仅宿主尚未安装时退回协议页；其他原生错误必须恢复浏览器下载。
-            if (!String(error.message).includes("Specified native messaging host not found")) throw new Error("sendFailed");
-            missingHost = true;
+            throw nativeHandoffError(error);
         }
         assertActive();
-        if (!missingHost) {
-            if (response?.ok === true) return;
-            throw new Error("sendFailed");
-        }
+        if (response?.ok === true) return;
+        throw new Error(response?.ok === false ? "sendFailed" : "handoffTimeout");
     }
     if (extensionAPI.runtime.sendNativeMessage && isSafari) {
+        let response;
         try {
-            const response = await extensionAPI.runtime.sendNativeMessage("com.cqagc.mulee", { url });
-            if (response?.ok === true) return;
-            throw new Error("nativeRejected");
+            response = await extensionAPI.runtime.sendNativeMessage("com.cqagc.mulee", { url });
         } catch (error) {
-            if (requireConfirmation) throw new Error("sendFailed");
+            if (requireConfirmation) throw nativeHandoffError(error);
             // A missing native host falls back to the browser's external-protocol prompt.
             console.info("Mulee native handoff unavailable");
         }
+        if (response?.ok === true) return;
+        if (requireConfirmation) throw new Error(response?.ok === false ? "sendFailed" : "handoffTimeout");
     }
     // A dedicated extension tab survives the external-protocol confirmation. It closes
     // after the browser loses focus to Mulee and the user returns; cancellation is manual.
@@ -181,10 +188,16 @@ async function interceptDownload(item) {
         await handoffWithTimeout(assertActive => sendLinks([url], item.referrer || "", "", {
             ...context, requireConfirmation: true, assertActive
         }));
-        await extensionAPI.downloads.cancel(item.id);
     } catch (error) {
-        await extensionAPI.downloads.resume(item.id);
+        // 超时无法证明 Mulee 没收到，恢复会有重复下载风险。
+        if (error.message !== "handoffTimeout") await extensionAPI.downloads.resume(item.id);
         throw error;
+    }
+    try {
+        await extensionAPI.downloads.cancel(item.id);
+    } catch {
+        // 已确认交接后取消失败也不能恢复，让用户手动清理暂停的浏览器任务。
+        throw new Error("browserDownloadPaused");
     }
     // 取消成功后不能再恢复；清理历史失败只报告错误。
     await extensionAPI.downloads.erase({ id: item.id });

@@ -13,6 +13,7 @@ actor FakeEngine: DownloadEngine {
     private(set) var removedIDs: [String] = []
     private(set) var deletesFiles: [Bool] = []
     private(set) var appliedOptions: [EngineOptions] = []
+    private(set) var taskLimits: [(id: String, download: Int64, upload: Int64)] = []
     private var currentSnapshots: [EngineTaskSnapshot] = []
     private var startError: EngineError?
     private var operationError: EngineError?
@@ -59,6 +60,11 @@ actor FakeEngine: DownloadEngine {
     func pause(_ engineTaskID: String) async throws {
         if let operationError { throw operationError }
         pausedIDs.append(engineTaskID)
+    }
+
+    func setTaskLimits(id: String, download: Int64, upload: Int64) async throws {
+        if let operationError { throw operationError }
+        taskLimits.append((id, download, upload))
     }
 
     func resume(_ engineTaskID: String) async throws {

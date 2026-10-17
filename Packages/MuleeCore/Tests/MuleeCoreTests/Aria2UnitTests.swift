@@ -66,9 +66,13 @@ struct Aria2UnitTests {
     @Test("常见错误都有中文说明", arguments: [
         ("3", "资源不存在"), ("6", "网络错误"), ("9", "磁盘空间不足"),
         ("13", "文件已存在"), ("16", "文件创建失败"), ("19", "域名解析失败"),
-        ("22", "服务器响应异常"), ("24", "需要登录认证"), ("99", "下载出错")
+        ("22", "服务器响应异常"), ("24", "服务器需要认证，请输入账号和密码后重试。"), ("99", "下载出错")
     ])
     func errors(_ code: String, _ description: String) throws {
+        if code == "24" {
+            #expect(Aria2ErrorDescriptions.message(for: code) == HTTPDownloadFailure.needsLogin.localizedDescription)
+            return
+        }
         let number = try #require(Int(code))
         let localized = String(localized: String.LocalizationValue(description), bundle: .module)
         #expect(Aria2ErrorDescriptions.message(for: code) == String(localized: "\(localized)（aria2 错误码 \(number)）", bundle: .module))

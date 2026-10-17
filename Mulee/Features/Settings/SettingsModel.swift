@@ -80,6 +80,8 @@ final class SettingsModel {
         static let transferScheduleWeekdays = "schedule.weekdays"
         static let saveDirectory = "download.saveDirectory"
         static let maxConcurrentTasks = "download.maxConcurrentTasks"
+        static let stalledYieldMinutes = "download.stalledYieldMinutes"
+        static let taskSort = "ui.taskSort"
         static let downloadRules = "download.rules"
         static let sortIntoFolders = "download.sortIntoFolders"
         static let httpThreads = "download.httpThreads"
@@ -182,6 +184,13 @@ final class SettingsModel {
     var transferScheduleWeekdays: [Int] { didSet { defaults.set(transferScheduleWeekdays, forKey: Key.transferScheduleWeekdays) } }
     var saveDirectory: String { didSet { defaults.set(saveDirectory, forKey: Key.saveDirectory) } }
     var maxConcurrentTasks: Int { didSet { defaults.set(maxConcurrentTasks, forKey: Key.maxConcurrentTasks) } }
+    var stalledYieldMinutes: Int {
+        didSet {
+            if stalledYieldMinutes < 0 { stalledYieldMinutes = 0 }
+            defaults.set(stalledYieldMinutes, forKey: Key.stalledYieldMinutes)
+        }
+    }
+    var taskSort: String { didSet { defaults.set(taskSort, forKey: Key.taskSort) } }
     var downloadRules: [DownloadRule] {
         didSet {
             if let data = try? JSONEncoder().encode(downloadRules) { defaults.set(data, forKey: Key.downloadRules) }
@@ -298,6 +307,8 @@ final class SettingsModel {
         watchClipboard = Self.bool(defaults, Key.watchClipboard, false)
         saveDirectory = defaults.string(forKey: Key.saveDirectory) ?? Self.defaultSaveDirectory
         maxConcurrentTasks = Self.int(defaults, Key.maxConcurrentTasks, 5)
+        stalledYieldMinutes = max(0, Self.int(defaults, Key.stalledYieldMinutes, 10))
+        taskSort = defaults.string(forKey: Key.taskSort) ?? TaskSort.defaultValue
         downloadRules = defaults.data(forKey: Key.downloadRules).flatMap { try? JSONDecoder().decode([DownloadRule].self, from: $0) } ?? []
         sortIntoFolders = Self.bool(defaults, Key.sortIntoFolders, false)
         httpThreads = Self.int(defaults, Key.httpThreads, 8)

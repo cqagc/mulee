@@ -11,12 +11,14 @@ struct TaskInspectorView: View {
         if let task {
             let displayTask = task.kind == .bittorrent ? torrentModel.displayTask(task) : task
             let presentation = TaskPresentation(
-                task: displayTask, seedingAction: settings.seedingAction, schedule: .init(settings: settings)
+                task: displayTask, seedingAction: settings.seedingAction, schedule: .init(settings: settings),
+                isYieldingSlot: model.stalledYieldTaskIDs.contains(task.id)
             )
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     TaskInspectorHeader(presentation: presentation)
+                    if task.deletedAt == nil { TaskLimitsCard(task: task) }
                     playbackControls(task)
                     if task.deletedAt != nil {
                         Text("任务已在最近删除中，30 天后清除记录，下载文件不受影响。")
