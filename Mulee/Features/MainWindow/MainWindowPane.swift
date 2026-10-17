@@ -22,6 +22,8 @@ struct MainWindowPane: View {
                 .environment(\.bitTorrentInspectorCollapsed, state.isInspectorCollapsed)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(Color(nsColor: .windowBackgroundColor))
+                // 与侧边栏同理：inspector 分栏项让 SwiftUI 按旧式毛玻璃绘制，传统滚动条滑块会变成深色实心块。
+                .environment(\.backgroundMaterial, nil)
         }
     }
 }
