@@ -5,136 +5,85 @@ import Testing
 @testable import Mulee
 
 @Suite @MainActor struct MainWindowTests {
-    @Test func sidebarScrollerDiagnostics() async throws {
-        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
-        for minimal in [true, false] {
-            for appearance in [NSAppearance.Name.aqua, .darkAqua] {
-                for usesMaterial in [false, true] {
-                    let content: AnyView
-                    if minimal {
-                        content = AnyView(List(0..<50, id: \.self) { Text("Item \($0)") }.listStyle(.sidebar))
-                    } else {
-                        content = AnyView(MainSidebarView(selection: .constant(.all)).environment(model))
-                    }
-                    let host = NSHostingController(rootView: content)
-                    host.sizingOptions = []
-                    let split = NSSplitViewController()
-                    split.splitView.isVertical = true
-                    let container: NSViewController
-                    if usesMaterial {
-                        let sidebar = MainSidebarContainerViewController(content: host)
-                        sidebar.applyScrollerStyle(.legacy)
-                        container = sidebar
-                    } else {
-                        container = host
-                    }
-                    split.addSplitViewItem(NSSplitViewItem(sidebarWithViewController: container))
-                    split.addSplitViewItem(NSSplitViewItem(viewController: NSViewController()))
-                    let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 560),
-                                          styleMask: [.titled, .resizable], backing: .buffered, defer: false)
-                    window.contentViewController = split
-                    defer { window.contentViewController = nil }
-                    split.view.appearance = NSAppearance(named: appearance)
-                    split.view.layoutSubtreeIfNeeded()
-                    await Task.yield()
-                    split.view.layoutSubtreeIfNeeded()
-                    let scroll = try #require(sidebarDescendants(host.view).compactMap { $0 as? NSScrollView }.first)
-                    // 仅测试传统滚动条，不改用户偏好或产品中的滚动条策略。
-                    scroll.scrollerStyle = .legacy
-                    scroll.tile()
-                    let effects = sidebarAncestors(scroll).compactMap { $0 as? NSVisualEffectView }
-                    #expect(effects.contains { $0.material == .sidebar } == usesMaterial)
-                    #expect(!scroll.drawsBackground)
-                    #expect(scroll.verticalScroller != nil)
-                    #expect(scroll.bounds.width > 0 && scroll.bounds.height > 0)
-                    print("SCROLLER minimal=\(minimal) appearance=\(appearance.rawValue) material=\(usesMaterial) \(sidebarDescription(scroll))")
-                }
-            }
-        }
-    }
-
-    @Test func sidebarMaterialTracksSystemStyleWithoutRecreatingContent() throws {
-        let temporary = try TemporaryDefaults(prefix: "sidebar-style.")
+    @Test func nativeSplitInheritsWindowAppearanceAcrossSystemChanges() async throws {
+        let temporary = try TemporaryDefaults(prefix: "window-appearance.")
         defer { temporary.clean() }
-        let controller = makeController(state: MainWindowState(defaults: temporary.defaults))
-        controller.view.frame = NSRect(x: 0, y: 0, width: 1240, height: 780)
-        let sidebar = try #require(controller.splitViewItems[0].viewController as? MainSidebarContainerViewController)
-        let content = sidebar.content
-        let preferred = NSScroller.preferredScrollerStyle
-        for style: NSScroller.Style in [.legacy, .overlay, .legacy, .overlay] {
-            sidebar.applyScrollerStyle(style)
-            controller.view.layoutSubtreeIfNeeded()
-            #expect(sidebar.children.count == 1)
-            #expect(sidebar.content === content)
-            #expect(content.view.frame.size == sidebar.view.bounds.size)
-            #expect(NSScroller.preferredScrollerStyle == preferred)
-            if style == .legacy {
-                let effect = try #require(sidebar.materialView)
-                #expect(effect.material == .sidebar)
-                #expect(effect.blendingMode == .withinWindow)
-                #expect(effect.state == .followsWindowActiveState)
-                #expect(content.view.superview === effect)
-                sidebar.applyScrollerStyle(style)
-                #expect(sidebar.materialView === effect)
-            } else {
-                #expect(sidebar.materialView == nil)
-                #expect(content.view.superview === sidebar.view)
-                #expect(sidebar.view.subviews.count == 1)
-            }
-        }
-        NotificationCenter.default.post(name: NSScroller.preferredScrollerStyleDidChangeNotification, object: nil)
-        #expect((sidebar.materialView != nil) == (preferred == .legacy))
-    }
-
-    @Test func sidebarMaterialPreservesHighContrastAppearanceWithoutAList() async throws {
-        let host = NSViewController()
-        host.view = NSView()
-        let sidebar = MainSidebarContainerViewController(content: host)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 220, height: 560),
-                              styleMask: [.titled], backing: .buffered, defer: false)
-        window.contentViewController = sidebar
+        let state = MainWindowState(defaults: temporary.defaults)
+        let (window, _, controller) = try await makeNativeWindow(NativeMainSplitView(state: state), defaults: temporary.defaults)
         defer { window.contentViewController = nil }
-        for appearance in [NSAppearance.Name.accessibilityHighContrastAqua, .accessibilityHighContrastDarkAqua] {
+        #expect(controller.view.appearance == nil)
+        for appearance in [NSAppearance.Name.aqua, .darkAqua, .aqua] {
+            // 改测试窗口模拟系统外观变化，不修改全局外观或用户偏好。
             window.appearance = try #require(NSAppearance(named: appearance))
-            for style: NSScroller.Style in [.legacy, .overlay] {
-                sidebar.applyScrollerStyle(style)
-                sidebar.view.layoutSubtreeIfNeeded()
-                await Task.yield()
-                sidebar.view.layoutSubtreeIfNeeded()
-                #expect(host.view.isDescendant(of: sidebar.view))
-                let parent = try #require(host.view.superview)
-                #expect(sidebar.view.appearance == nil)
-                #expect(parent.appearance == nil)
-                #expect(host.view.effectiveAppearance.name == parent.effectiveAppearance.name)
-                #expect(host.view.frame.size == sidebar.view.bounds.size)
-            }
+            window.contentView?.layoutSubtreeIfNeeded()
+            await Task.yield()
+            window.contentView?.layoutSubtreeIfNeeded()
+            #expect(controller.view.appearance == nil)
+            #expect(controller.view.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == appearance)
+            #expect(controller.splitViewItems[0].viewController.view.appearance == nil)
         }
     }
 
-    private func sidebarDescendants(_ view: NSView) -> [NSView] {
-        [view] + view.subviews.flatMap(sidebarDescendants)
+    #if DEBUG
+    @Test(arguments: [ColorScheme.light, .dark])
+    func nativeSplitHonorsExplicitDebugAppearance(_ scheme: ColorScheme) async throws {
+        let temporary = try TemporaryDefaults(prefix: "window-debug-appearance.")
+        defer { temporary.clean() }
+        let state = MainWindowState(defaults: temporary.defaults)
+        let content = NativeMainSplitView(state: state, debugColorScheme: scheme)
+        let (window, _, controller) = try await makeNativeWindow(content, defaults: temporary.defaults)
+        defer { window.contentViewController = nil }
+        let expected: NSAppearance.Name = scheme == .dark ? .darkAqua : .aqua
+        window.appearance = NSAppearance(named: scheme == .dark ? .aqua : .darkAqua)
+        window.contentView?.layoutSubtreeIfNeeded()
+        await Task.yield()
+        #expect(controller.view.appearance?.name == expected)
+        #expect(controller.view.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == expected)
     }
 
-    private func sidebarDescription(_ scroll: NSScrollView) -> String {
-        let chain = sidebarAncestors(scroll).map { view in
-            var details = "\(type(of: view)){appearance=\(view.effectiveAppearance.name.rawValue),opaque=\(view.isOpaque),vibrant=\(view.allowsVibrancy)"
-            if let effect = view as? NSVisualEffectView {
-                details += ",material=\(effect.material.rawValue),blend=\(effect.blendingMode.rawValue)"
-            }
-            return details + "}"
-        }
-        let scroller = scroll.verticalScroller
-        return "style=\(scroll.scrollerStyle.rawValue) knob=\(scroller?.knobStyle.rawValue ?? -1) scrollerAppearance=\(scroller?.effectiveAppearance.name.rawValue ?? "nil") drawsBackground=\(scroll.drawsBackground) chain=\(chain.joined(separator: " -> "))"
+    @Test func nativeSplitClearsDebugOverrideWhenReturningToSystemAppearance() async throws {
+        let temporary = try TemporaryDefaults(prefix: "window-clear-appearance.")
+        defer { temporary.clean() }
+        let state = MainWindowState(defaults: temporary.defaults)
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let settings = SettingsModel(defaults: temporary.defaults)
+        let content = NativeMainSplitView(state: state, debugColorScheme: .dark)
+        let (window, host, controller) = try await makeNativeWindow(content, defaults: temporary.defaults)
+        defer { window.contentViewController = nil }
+        #expect(controller.view.appearance?.name == .darkAqua)
+        host.rootView = AnyView(NativeMainSplitView(state: state, debugColorScheme: nil)
+            .environment(model).environment(settings))
+        window.appearance = NSAppearance(named: .aqua)
+        window.contentView?.layoutSubtreeIfNeeded()
+        await Task.yield()
+        window.contentView?.layoutSubtreeIfNeeded()
+        #expect(mainWindowController(in: host.view) === controller)
+        #expect(controller.view.appearance == nil)
+        #expect(controller.view.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua)
+    }
+    #endif
+
+    private func makeNativeWindow(_ content: NativeMainSplitView, defaults: UserDefaults) async throws
+        -> (NSWindow, NSHostingController<AnyView>, MainSplitViewController) {
+        let model = AppModel(tasks: [], preventsSleepWhileDownloading: false)
+        let host = NSHostingController(rootView: AnyView(content
+            .environment(model).environment(SettingsModel(defaults: defaults))))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1240, height: 780),
+                              styleMask: [.titled, .resizable], backing: .buffered, defer: false)
+        window.contentViewController = host
+        window.contentView?.layoutSubtreeIfNeeded()
+        await Task.yield()
+        window.contentView?.layoutSubtreeIfNeeded()
+        let controller = try #require(mainWindowController(in: host.view))
+        return (window, host, controller)
     }
 
-    private func sidebarAncestors(_ view: NSView) -> [NSView] {
-        var chain: [NSView] = []
-        var ancestor: NSView? = view
-        while let current = ancestor {
-            chain.append(current)
-            ancestor = current.superview
+    private func mainWindowController(in view: NSView) -> MainSplitViewController? {
+        if let controller = view.nextResponder as? MainSplitViewController { return controller }
+        for child in view.subviews {
+            if let controller = mainWindowController(in: child) { return controller }
         }
-        return chain
+        return nil
     }
 
     @Test func escapeClosesNewTaskWhileMultilineEditorHasFocus() async throws {

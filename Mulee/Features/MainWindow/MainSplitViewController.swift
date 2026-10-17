@@ -35,8 +35,6 @@ final class MainSplitViewController: NSSplitViewController {
                 content.view.leadingAnchor.constraint(equalTo: controller.view.leadingAnchor),
                 content.view.trailingAnchor.constraint(equalTo: controller.view.trailingAnchor)
             ])
-        } else if kind == .sidebar {
-            controller = MainSidebarContainerViewController(content: content)
         } else {
             controller = content
         }
@@ -151,70 +149,6 @@ final class MainSplitViewController: NSSplitViewController {
 
     override func toggleInspector(_ sender: Any?) {
         setCollapsed(!splitViewItems[2].isCollapsed, at: 2)
-    }
-}
-
-/// 为玻璃侧边栏中的传统滚动条补充视觉效果材质的 vibrancy 混合路径。
-final class MainSidebarContainerViewController: NSViewController {
-    let content: NSViewController
-    private(set) var materialView: NSVisualEffectView?
-    private var appliedScrollerStyle: NSScroller.Style?
-    private var contentConstraints: [NSLayoutConstraint] = []
-
-    init(content: NSViewController) {
-        self.content = content
-        super.init(nibName: nil, bundle: nil)
-        addChild(content)
-    }
-
-    required init?(coder: NSCoder) { nil }
-
-    override func loadView() {
-        view = NSView()
-    }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        synchronizeMaterial()
-        NotificationCenter.default.addObserver(self, selector: #selector(synchronizeMaterial),
-                                               name: NSScroller.preferredScrollerStyleDidChangeNotification, object: nil)
-    }
-
-    @objc private func synchronizeMaterial() {
-        applyScrollerStyle(NSScroller.preferredScrollerStyle)
-    }
-
-    func applyScrollerStyle(_ style: NSScroller.Style) {
-        let container: NSView = view
-        guard appliedScrollerStyle != style else { return }
-        appliedScrollerStyle = style
-        NSLayoutConstraint.deactivate(contentConstraints)
-        let previousMaterial = materialView
-        let parent: NSView
-        if style == .legacy {
-            let effect = NSVisualEffectView(frame: container.bounds)
-            effect.autoresizingMask = [.width, .height]
-            effect.material = .sidebar
-            // 在窗口内混合已有玻璃，不另取一份桌面背景；只为系统选择的传统滚动条补材质。
-            effect.blendingMode = .withinWindow
-            container.addSubview(effect)
-            materialView = effect
-            parent = effect
-        } else {
-            // 浮动滚动条沿用系统玻璃，避免旧侧边栏材质长期覆盖它。
-            materialView = nil
-            parent = container
-        }
-        content.view.translatesAutoresizingMaskIntoConstraints = false
-        parent.addSubview(content.view)
-        previousMaterial?.removeFromSuperview()
-        contentConstraints = [
-            content.view.topAnchor.constraint(equalTo: parent.topAnchor),
-            content.view.bottomAnchor.constraint(equalTo: parent.bottomAnchor),
-            content.view.leadingAnchor.constraint(equalTo: parent.leadingAnchor),
-            content.view.trailingAnchor.constraint(equalTo: parent.trailingAnchor)
-        ]
-        NSLayoutConstraint.activate(contentConstraints)
     }
 }
 

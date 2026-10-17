@@ -49,6 +49,10 @@ struct MainSidebarView: View {
                 }
             }
             .listStyle(.sidebar)
+            // 侧边栏由 AppKit 的 sidebar 分栏项承载时，SwiftUI 会按旧式毛玻璃侧边栏传入 backgroundMaterial，
+            // 让列表按 vibrancy 绘制；macOS 26 的侧边栏是玻璃容器，没有可混合的材质，传统滚动条滑块会画成深色实心块。
+            // NavigationSplitView 里这个值为空，这里对齐它。
+            .environment(\.backgroundMaterial, nil)
 
             VStack(alignment: .leading) {
                 if model.isScheduledLimitActive {

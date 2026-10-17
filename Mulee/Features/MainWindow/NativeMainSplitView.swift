@@ -3,8 +3,10 @@ import SwiftUI
 struct NativeMainSplitView: NSViewControllerRepresentable {
     @Environment(AppModel.self) private var model
     @Environment(SettingsModel.self) private var settings
-    @Environment(\.colorScheme) private var colorScheme
     let state: MainWindowState
+    #if DEBUG
+    var debugColorScheme: ColorScheme? = DebugLaunchOptions.colorScheme
+    #endif
 
     func makeNSViewController(context: Context) -> MainSplitViewController {
         let controller = MainSplitViewController(state: state, model: model)
@@ -19,7 +21,14 @@ struct NativeMainSplitView: NSViewControllerRepresentable {
     }
 
     func updateNSViewController(_ controller: MainSplitViewController, context: Context) {
-        controller.view.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
+        #if DEBUG
+        // 只有显式的截图参数才覆盖外观；普通启动必须继承窗口的玻璃与 vibrant 外观。
+        controller.view.appearance = debugColorScheme.flatMap {
+            NSAppearance(named: $0 == .dark ? .darkAqua : .aqua)
+        }
+        #else
+        controller.view.appearance = nil
+        #endif
         _ = state.isSidebarCollapsed
         _ = state.isInspectorCollapsed
         controller.synchronizeCollapseState()
