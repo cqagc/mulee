@@ -174,3 +174,5 @@
 - 本地化（2026-10-17）：本轮 MuleeCore 新增的用户可见文案（报错、代理说明、播放列表回退名）一律走 `String(localized:bundle: .module)` 并补齐三种语言。`HTTPDownloadFailure.requiresCredentials` 不再靠比较文案判定。Quick Look 扩展有自己的字符串目录。
 - 真实网络验收（2026-10-17，211 上用真实 yt-dlp 与 YouTube 播放列表）发现并已修：内置静态 ffmpeg 读不到系统根证书，时间段下载在 HTTPS 上必然失败（yt-dlp 子进程默认注入 `SSL_CERT_FILE=/etc/ssl/cert.pem`，调用方已设置时不覆盖）；有时间段时不嵌章节、不加赞助片段标记；「嵌入」字幕成功后清理本任务留下的字幕文件；「兼容优先」配合编码偏好时保留 AAC 音轨约束（设置页注明 AV1、VP9 在系统播放器里可能放不了）；纯播放列表链接在模型层兜底，不经新建面板的入口不会把整个列表建成一个任务，快捷指令后台调用时返回明确错误。
 - Metalink 用真实 MirrorBrain 站点验证：新编的 aria2 只链接系统库，下载并校验成功。
+- 发版前检查（2026-10-17，未发版）：211 上 Release 构建通过，Release 翻译门禁 0 缺失；Release 产物（含重编的 aria2 与新的 Quick Look 扩展）用 `privacy-check.py --app` 扫原始字节通过。
+- 视觉验收：两台测试机夜间锁屏，改用离屏渲染（NSHostingView + cacheDisplay）给新界面出图，中英文、浅深色共 76 张。据图修整：重复提示与链接行左对齐；时间段输入框加可见标签；代理说明不出现 aria2；AV1/VP9 提示只在相关组合下显示；字幕不下载时新建面板不显示字幕语言。

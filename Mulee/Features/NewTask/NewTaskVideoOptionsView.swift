@@ -29,15 +29,27 @@ struct NewTaskVideoOptionsView: View {
             NewTaskVideoPartsView(item: item)
             if item.selectedVideoParts.count <= 1 {
                 DisclosureGroup("高级选项") {
-                    TextField("开始时间", text: $item.videoSectionStart, prompt: Text("00:00"))
-                    TextField("结束时间", text: $item.videoSectionEnd, prompt: Text("01:00"))
-                    Text("留空下载完整视频；可填写时:分:秒、分:秒或秒数。")
-                        .foregroundStyle(.secondary)
-                    if let error = item.videoSectionError {
-                        Text(error)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Text("开始时间")
+                            TextField("开始时间", text: $item.videoSectionStart, prompt: Text("00:00"))
+                                .labelsHidden()
+                                .frame(width: 90)
+                            Text("结束时间")
+                            TextField("结束时间", text: $item.videoSectionEnd, prompt: Text("01:00"))
+                                .labelsHidden()
+                                .frame(width: 90)
+                        }
+                        Text("留空下载完整视频；可填写时:分:秒、分:秒或秒数。")
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
+                        if let error = item.videoSectionError {
+                            Text(error)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }

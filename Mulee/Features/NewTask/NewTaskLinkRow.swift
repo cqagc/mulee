@@ -65,7 +65,9 @@ struct NewTaskLinkRow: View {
                 .padding(12)
             }
             if let message = item.existingDownloadMessage {
-                VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Image(systemName: MuleeSymbol.info.name)
+                        .accessibilityHidden(true)
                     Text(message)
                         .fixedSize(horizontal: false, vertical: true)
                     if item.link.kind == .video, let id = item.existingDownloadID {
@@ -78,7 +80,12 @@ struct NewTaskLinkRow: View {
                     }
                 }
                 .font(.caption)
-                .padding(12)
+                .foregroundStyle(.secondary)
+                .controlSize(.small)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 68)
+                .padding(.trailing, 14)
+                .padding(.vertical, 8)
             }
             // 种子通常包含多个文件，单个校验值只对 HTTP 下载有意义。
             if item.link.kind == .http {

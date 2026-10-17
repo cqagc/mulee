@@ -4786,31 +4786,31 @@
         }
       }
     },
-    "aria2 只支持 HTTP 代理，当前系统仅设置了 SOCKS 代理，因此使用直连。": {
+    "HTTP 下载只能使用 HTTP 代理。系统现在只设置了 SOCKS 代理，所以 HTTP 下载直连。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "aria2 只支持 HTTP 代理，当前系统仅设置了 SOCKS 代理，因此使用直连。"
+            "value": "HTTP 下载只能使用 HTTP 代理。系统现在只设置了 SOCKS 代理，所以 HTTP 下载直连。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "aria2 only supports HTTP proxies. The system only has a SOCKS proxy configured, so a direct connection is used."
+            "value": "HTTP downloads can only use HTTP proxies. The system only has a SOCKS proxy configured, so HTTP downloads connect directly."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "aria2 僅支援 HTTP 代理，目前系統僅設定 SOCKS 代理，因此使用直接連線。"
+            "value": "HTTP 下載僅支援 HTTP 代理。系統目前僅設定 SOCKS 代理，因此 HTTP 下載使用直接連線。"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "aria2はHTTPプロキシにのみ対応しています。システムにはSOCKSプロキシのみが設定されているため、直接接続しています。"
+            "value": "HTTPダウンロードで使用できるのはHTTPプロキシのみです。システムにはSOCKSプロキシのみが設定されているため、HTTPダウンロードは直接接続します。"
           }
         }
       }
@@ -4873,31 +4873,31 @@
         }
       }
     },
-    "不支持自动代理脚本（PAC），当前直连；请改用 HTTP 代理。": {
+    "HTTP 下载不支持自动代理配置（PAC），现在直连。可以在系统设置里改用 HTTP 代理，或在这里手动填写。": {
       "extractionState": "manual",
       "localizations": {
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "不支持自动代理脚本（PAC），当前直连；请改用 HTTP 代理。"
+            "value": "HTTP 下载不支持自动代理配置（PAC），现在直连。可以在系统设置里改用 HTTP 代理，或在这里手动填写。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Proxy auto-configuration scripts (PAC) are not supported. Using a direct connection. Use an HTTP proxy instead."
+            "value": "HTTP downloads do not support proxy auto-configuration (PAC) and currently connect directly. Use an HTTP proxy in System Settings, or enter one here."
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "不支援自動代理指令稿（PAC），目前為直接連線；請改用 HTTP 代理。"
+            "value": "HTTP 下載不支援自動代理設定（PAC），目前使用直接連線。可在系統設定中改用 HTTP 代理，或在此手動填寫。"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動プロキシ設定スクリプト（PAC）には対応していないため、直接接続しています。HTTPプロキシを使用してください。"
+            "value": "HTTPダウンロードは自動プロキシ設定（PAC）に対応していないため、現在は直接接続しています。システム設定でHTTPプロキシに変更するか、ここで手動入力してください。"
           }
         }
       }

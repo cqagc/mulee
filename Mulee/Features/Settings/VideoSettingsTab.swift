@@ -32,9 +32,11 @@ struct VideoSettingsTab: View {
                     Text("AV1").tag(YtDlpOutputOptions.CodecPreference.av1)
                     Text("VP9").tag(YtDlpOutputOptions.CodecPreference.vp9)
                 }
-                Text("兼容优先时选 AV1 或 VP9，系统自带播放器可能无法播放")
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if model.videoQuality == .compatible, [.av1, .vp9].contains(model.codecPreference) {
+                    Text("兼容优先时选 AV1 或 VP9，系统自带播放器可能无法播放")
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Toggle("优先选择 60 帧", isOn: $model.prefer60fps)
                 Picker("文件名", selection: $model.filenamePreset) {
                     Text("标题").tag(YtDlpOutputOptions.FilenamePreset.title)

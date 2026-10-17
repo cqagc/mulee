@@ -50,6 +50,7 @@ enum MuleeSymbol: String, CaseIterable {
     case retry = "arrow.clockwise"
     case inspector = "sidebar.right"
     case sidebar = "sidebar.left"
+    case info = "info.circle"
 
     // 网络
     case statusDot = "circle.fill"
