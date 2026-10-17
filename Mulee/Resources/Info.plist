@@ -20,6 +20,18 @@
 				<string>org.bittorrent.torrent</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Metalink 下载文件</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.metalinker.metalink</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
@@ -110,6 +122,29 @@
 				<key>public.mime-type</key>
 				<array>
 					<string>application/x-bittorrent</string>
+				</array>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.xml</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Metalink 下载文件</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.metalinker.metalink</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>metalink</string>
+					<string>meta4</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>application/metalink+xml</string>
+					<string>application/metalink4+xml</string>
 				</array>
 			</dict>
 		</dict>
