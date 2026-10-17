@@ -72,10 +72,11 @@ wxWidgets 和 Crypto++ 的键未变，直接使用现有完整缓存。许可证
 - arm64、`-mmacosx-version-min=26.0`、系统 libc++，zlib 使用 macOS SDK 系统库。
 - `--with-appletls --without-openssl --without-gnutls`：HTTPS 使用 AppleTLS 和系统钥匙串信任，
   不需要 `OPENSSL_MODULES`、OpenSSL provider 或单独的 CA 文件。
-- 关闭 BitTorrent、Metalink、SQLite、libxml2、Expat、libssh2、c-ares、NLS、libuv 及其他外部密码库。
-  aria2 只负责 HTTP / HTTPS / FTP；BT 由 libtorrent 负责。
+- 开启 Metalink，XML 解析用 macOS SDK 自带的 libxml2（`/usr/lib/libxml2.2.dylib`，系统库，不随包分发）。
+- 关闭 BitTorrent、SQLite、Expat、libssh2、c-ares、NLS、libuv 及其他外部密码库。
+  aria2 只负责 HTTP / HTTPS / FTP 和 Metalink；BT 由 libtorrent 负责。
 - 每次校验 `otool -L` 只出现 `/usr/lib/`、`/System/`，架构仅 arm64、`minos` 为 26.0，
-  `aria2c --version` 必须包含 HTTPS、GZip 和 AppleTLS。
+  `aria2c --version` 必须包含 HTTPS、GZip、AppleTLS 和 Metalink。
 
 缓存为 `${MULEE_THIRDPARTY_CACHE:-$SRCROOT/build/thirdparty}/aria2/<缓存键>/`，
 键包含子模块提交、configure / 编译参数、SDK、工具链和构建脚本。命中后跳过编译。
@@ -152,6 +153,18 @@ build/thirdparty/bin/aria2c --version
 aria2 的 GPL-2.0-or-later 文本 `COPYING` 和 OpenSSL 链接例外 `LICENSE.OpenSSL`
 随包放入 `Contents/Resources/Licenses/aria2/`，说明文件提供精确源码提交地址。
 系统库不再分发，其他引擎的许可证见下文。
+
+## Quick Look 预览扩展
+
+`MuleeQuickLook` target（`MuleeQuickLook/`）是访达里按空格预览 .torrent 的扩展，打进
+`Contents/PlugIns/MuleeQuickLook.appex`，与 App 一起签名公证。扩展开沙盒、只读 Quick Look
+提供的文件、不联网，种子解析复用 MuleeCore 的 `TorrentFileInfo`；大于 20 MB 的文件不解析。
+它有自己的字符串目录 `MuleeQuickLook/Resources/Localizable.xcstrings`。release.sh 的签名检查
+递归遍历 App 内全部 Mach-O，已覆盖这个扩展。本地确认注册：
+
+```sh
+pluginkit -m -i com.cqagc.mulee.quicklook
+```
 
 ## 已知限制
 
@@ -379,6 +392,8 @@ Enabled=0
 ## 视频工具
 
 Mulee 自行下载并校验 yt-dlp、Deno、ffmpeg 和 ffprobe，安装在 `~/Library/Application Support/Mulee/bin/`。ffmpeg 与 ffprobe 放在同一目录；传入 YtDlpEngine 的是 ffmpeg 文件路径，yt-dlp 的 `--ffmpeg-location` 会据此查找同目录的 ffprobe，HEVC 后处理也可直接执行该路径。解析顺序为已校验的托管版、仅 Debug 可用的 Homebrew、后台下载托管版。不会在下载尚未结束时显示缺少 ffmpeg。
+
+托管的 ffmpeg 是静态编译版，自己读不到系统钥匙串里的根证书。指定时间段下载（`--download-sections`）时由 ffmpeg 直接拉流，所以启动 yt-dlp 子进程时默认设置 `SSL_CERT_FILE=/etc/ssl/cert.pem`（调用方已设置时不覆盖），否则 HTTPS 会报 `certificate verify failed`。
 
 ### arm64 来源比较
 
