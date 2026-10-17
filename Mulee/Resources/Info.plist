@@ -53,6 +53,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Mulee 需要在下载全部完成后请求系统关机。</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>© 2026 CQAGC. GPL-3.0.</string>
 	<key>NSServices</key>

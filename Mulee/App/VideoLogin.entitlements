@@ -6,5 +6,7 @@
 	<array>
 		<string>LV69DG6R9Y.com.cqagc.mulee.video-login</string>
 	</array>
+	<key>com.apple.security.automation.apple-events</key>
+	<true/>
 </dict>
 </plist>
