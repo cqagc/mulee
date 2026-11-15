@@ -6,6 +6,8 @@
 
 **A native macOS download manager for HTTP, BitTorrent, eD2k, and video.**
 
+<p align="center"><a href="https://www.cqagc.com/en/mulee"><strong>Mulee official page</strong></a> — features, system requirements and downloads</p>
+
 <p align="center">
   <strong>English</strong> |
   <a href="README.zh_CN.md">简体中文</a> |
@@ -216,6 +218,6 @@ If you find Mulee useful, consider starring the project.
 
 **[Download latest](https://github.com/cqagc/mulee/releases/latest)** • **[Report an issue](https://github.com/cqagc/mulee/issues)** • **[Build guide](docs/BUILDING.md)**
 
-Maintained by [CQAGC](https://www.cqagc.com)
+Maintained by [Chongqing HongChuangDa Technology (CQAGC)](https://www.cqagc.com/en/about) · [More free Mac tools](https://www.cqagc.com/en/open-source)
 
 </div>

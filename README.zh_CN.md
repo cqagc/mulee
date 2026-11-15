@@ -6,6 +6,8 @@
 
 **macOS 原生下载器，支持 HTTP、BT、电驴和视频下载。**
 
+<p align="center"><a href="https://www.cqagc.com/mulee"><strong>Mulee 官网介绍</strong></a> — 功能、系统要求与下载</p>
+
 <p align="center">
   <a href="README.md">English</a> |
   <strong>简体中文</strong> |
@@ -216,6 +218,6 @@ Mulee 采用 [GPL-3.0](LICENSE) 许可证。第三方组件保留各自的许可
 
 **[下载最新版](https://github.com/cqagc/mulee/releases/latest)** • **[问题反馈](https://github.com/cqagc/mulee/issues)** • **[构建说明](docs/BUILDING.md)**
 
-由 [CQAGC](https://www.cqagc.com) 维护
+由 [重庆弘创达科技（CQAGC）](https://www.cqagc.com/about) 维护 · [更多免费 Mac 工具](https://www.cqagc.com/open-source)
 
 </div>
