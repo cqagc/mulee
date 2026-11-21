@@ -15,6 +15,8 @@ struct Metadata {
     json::value source = nullptr;
     std::int64_t added_at = 0;
     json::value completed_at = nullptr;
+    bool needs_relink = false;
+    bool redownload_requested = false;
     int user_download_limit = 0;
     int user_upload_limit = 0;
     int policy_upload_limit = 0;
@@ -45,6 +47,7 @@ public:
     bool locked() const;
     void log(const std::string& message);
     std::vector<lt::add_torrent_params> restore();
+    lt::add_torrent_params load_resume(const std::string& id);
     Metadata load_meta(const std::string& id);
     void save_meta(const std::string& id, const Metadata& metadata);
     void save_resume(const std::string& id, const lt::add_torrent_params& params);

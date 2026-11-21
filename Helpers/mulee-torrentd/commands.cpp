@@ -1,6 +1,7 @@
 #include "session.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cerrno>
 #include <fstream>
 #include <sstream>
@@ -17,6 +18,8 @@
 #include <libtorrent/settings_pack.hpp>
 #include <libtorrent/torrent_info.hpp>
 #include <libtorrent/torrent_status.hpp>
+#include <libtorrent/hasher.hpp>
+#include <set>
 
 namespace mulee {
 namespace {
@@ -89,6 +92,10 @@ void Session::dispatch(const std::string& line) {
             if (!field->is_object()) throw RequestError("invalid_params", "params must be an object");
             params = field->as_object();
         }
+        if (method->as_string() == "relink_storage") {
+            start_relink(id, params);
+            return;
+        }
         if (method->as_string() == "create_torrent") {
             start_create(id, params);
             return;
@@ -108,6 +115,7 @@ void Session::dispatch(const std::string& line) {
 }
 
 Session::~Session() {
+    stop_relink();
     stop_create();
 }
 
@@ -557,6 +565,7 @@ json::object Session::add_trackers(Torrent& torrent, const json::object& params)
 
 
 void Session::apply_junk_filter(Torrent& torrent) {
+    if (torrent.metadata.needs_relink) return;
     auto info = torrent.handle.torrent_file();
     if (!info || !torrent.metadata.junk_pending) return;
     auto values = torrent.handle.get_file_priorities();
@@ -983,6 +992,27 @@ json::object Session::manage(const std::string& method, const json::object& para
 }
 
 json::object Session::execute(const std::string& method, const json::object& params) {
+    if (relink_job_ && (method == "remove" || method == "redownload_missing") && string_param(params, "id") == relink_job_->id)
+        throw RequestError("relink_busy", "Checking files for this torrent");
+    if (method == "redownload_missing") {
+        auto& torrent = find(params);
+        if (!torrent.metadata.needs_relink) throw RequestError("invalid_params", "Torrent is not waiting for its files");
+        auto metadata = torrent.metadata;
+        metadata.needs_relink = false;
+        metadata.redownload_requested = true;
+        metadata.completed_at = nullptr;
+        persistence_.save_meta(string_param(params, "id"), metadata);
+        torrent.metadata = std::move(metadata);
+        torrent.handle.force_recheck();
+        save(torrent);
+        return {};
+    }
+    if (method == "move_storage" || method == "rename_file" || method == "force_recheck"
+        || method == "set_streaming" || method == "set_file_priorities" || method == "set_download_mode"
+        || (method == "remove" && bool_param(params, "delete_files"))) {
+        if (find(params).metadata.needs_relink)
+            throw RequestError("needs_relink", "The recorded files must be relinked first");
+    }
     if (method == "move_storage" || method == "rename_file" || method == "force_recheck"
         || method == "force_reannounce" || method == "trackers" || method == "set_trackers"
         || method == "peers" || method == "ban_ip" || method == "import_ip_blocklist"
@@ -1017,7 +1047,7 @@ json::object Session::execute(const std::string& method, const json::object& par
             metadata.last_payload_total = payload;
             if (status.has_metadata && status.is_finished) {
                 mark_completed(entry.second);
-            } else if (status.has_metadata && !entry.second.metadata.completed_at.is_null()
+            } else if (!entry.second.metadata.needs_relink && status.has_metadata && !entry.second.metadata.completed_at.is_null()
                 && status.state == lt::torrent_status::downloading) {
                 entry.second.metadata.completed_at = nullptr;
                 persistence_.save_meta(entry.first, entry.second.metadata);
@@ -1040,6 +1070,8 @@ json::object Session::execute(const std::string& method, const json::object& par
             torrent.handle.unset_flags(lt::torrent_flags::auto_managed);
             torrent.handle.pause();
         } else {
+            if (torrent.metadata.needs_relink)
+                throw RequestError("needs_relink", "Move the torrent storage or rename its files before resuming");
             torrent.handle.set_flags(lt::torrent_flags::auto_managed);
             torrent.handle.resume();
         }

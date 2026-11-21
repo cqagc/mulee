@@ -20,12 +20,12 @@ struct TorrentStatusMapper: Sendable {
         let source = value.source.flatMap { text in
             text.hasPrefix("/") ? URL(fileURLWithPath: text) : URL(string: text)
         }
-        return EngineTaskSnapshot(
+        var snapshot = EngineTaskSnapshot(
             engineTaskID: value.id, name: value.name,
             totalBytes: value.hasMetadata ? value.totalWanted : nil,
             receivedBytes: value.totalWantedDone,
             downloadRate: value.downloadRate, uploadRate: value.uploadRate,
-            status: status, connections: value.numPeers,
+            status: value.needsRelink == true ? .paused : status, connections: value.numPeers,
             savePath: value.contentPath.map { URL(fileURLWithPath: $0) }, sourceURL: source,
             errorMessage: status == .failed ? TorrentErrorDescriptions.taskMessage(value.error ?? "") : nil,
             detail: .bittorrent(
@@ -36,5 +36,7 @@ struct TorrentStatusMapper: Sendable {
             writeDirectories: [URL(fileURLWithPath: value.savePath)],
             isFileWriteFailure: status == .failed && EngineTaskSnapshot.describesFileWriteFailure(value.error ?? "")
         )
+        snapshot.needsFileRelink = value.needsRelink == true
+        return snapshot
     }
 }

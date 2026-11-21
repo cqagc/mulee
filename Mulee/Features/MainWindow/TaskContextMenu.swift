@@ -11,7 +11,7 @@ struct TaskContextMenu: View {
     var body: some View {
         if task.deletedAt != nil {
             Button("恢复任务", systemImage: MuleeSymbol.retry.name) { model.restoreRecord(task.id) }
-            Button("彻底删除记录", systemImage: MuleeSymbol.delete.name, role: .destructive) { model.removeRecord(task.id) }
+            Button("彻底删除记录", systemImage: MuleeSymbol.delete.name, role: .destructive) { TaskRemoval.confirm(task, in: model) }
         } else {
             activeMenu
         }
@@ -19,8 +19,16 @@ struct TaskContextMenu: View {
 
     @ViewBuilder
     private var activeMenu: some View {
+        if task.needsFileRelink == true {
+            TaskActions.relinkTorrentButton(task, model: model)
+            TaskActions.redownloadTorrentButton(task, model: model)
+            Divider()
+        }
+        if AppModel.canOfferRedownload(task) && task.needsFileRelink != true {
+            MissingFileRedownloadButton(task: task)
+        }
         Button(presentation.pauseTitle, systemImage: presentation.pauseSymbol.name, action: togglePause)
-            .disabled(!presentation.canPauseOrResume)
+            .disabled(task.needsFileRelink == true || !presentation.canPauseOrResume)
         if StreamingPlayback.canPlay(task) {
             Button("播放", systemImage: MuleeSymbol.resume.name) {
                 StreamingPlayback.shared.play(task: task, engine: model.bitTorrent?.engine, coordinator: model.coordinator)
@@ -49,7 +57,7 @@ struct TaskContextMenu: View {
                 }
             }
         }
-        if task.kind == .bittorrent {
+        if task.kind == .bittorrent && task.needsFileRelink != true {
             Divider()
             BitTorrentActionsView(task: task)
         }
@@ -74,6 +82,6 @@ struct TaskContextMenu: View {
     }
 
     private func remove() {
-        model.remove(task.id)
+        TaskRemoval.confirm(task, in: model)
     }
 }

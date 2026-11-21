@@ -218,6 +218,47 @@ public actor YtDlpEngine: DownloadEngine {
         schedule()
     }
 
+    /// Requeue a completed video job while retaining its playlist entry, format,
+    /// output options, and stable engine identifier. The caller must have checked
+    /// that the final output is absent before invoking this operation.
+    public func redownload(_ engineTaskID: String, directory: URL? = nil) async throws {
+        try requireRunning()
+        guard let index = jobs.firstIndex(where: { $0.id == engineTaskID }) else {
+            throw EngineError.unsupportedLink
+        }
+        guard [.completed, .paused].contains(jobs[index].status) else { throw EngineError.unsupportedLink }
+        if let output = jobs[index].savePath, FileManager.default.fileExists(atPath: output.path) {
+            var relationship = FileManager.URLRelationship.other
+            try? FileManager.default.getRelationship(&relationship, of: .trashDirectory, in: [], toItemAt: output)
+            let inTrash = relationship == .contains || relationship == .same
+            guard inTrash else { throw EngineError.unsupportedLink }
+        }
+        let previousJob = jobs[index]
+        let previousProgress = progress[engineTaskID]
+        if let directory {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            jobs[index].directory = directory
+        }
+        // Coordinator owns scheduling. Keep the job paused until it has reset the
+        // corresponding AppModel state and explicitly resumes this engine ID.
+        jobs[index].status = .paused
+        jobs[index].errorMessage = nil
+        jobs[index].isFileWriteFailure = nil
+        jobs[index].totalBytes = nil
+        jobs[index].receivedBytes = 0
+        jobs[index].savePath = nil
+        jobs[index].finalFiles = nil
+        jobs[index].retried = false
+        progress[engineTaskID] = nil
+        do {
+            try persist()
+        } catch {
+            jobs[index] = previousJob
+            if let previousProgress { progress[engineTaskID] = previousProgress } else { progress[engineTaskID] = nil }
+            throw error
+        }
+    }
+
     public func snapshots() async throws -> [EngineTaskSnapshot] {
         try requireRunning()
         if let persistenceError { throw EngineError.invalidResponse(persistenceError) }

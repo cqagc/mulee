@@ -56,6 +56,7 @@ enum EngineSnapshotMerger {
                     }
                 }
                 if task.deletedAt != nil { continue }
+                if kind == .bittorrent { task.needsFileRelink = snapshot.needsFileRelink ? true : nil }
                 if task.lastProgressAt == nil || task.receivedBytes != snapshot.receivedBytes
                     || (task.status != .downloading && snapshot.status == .downloading) {
                     task.lastProgressAt = now

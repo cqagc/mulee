@@ -5,6 +5,9 @@ struct TorrentErrorDescriptions: Sendable {
         let number: Int
         let message: String
         switch code {
+        case "needs_relink": (number, message) = (12, String(localized: "文件位置已更改，请先重新关联文件。", bundle: .module))
+        case "relink_busy": (number, message) = (13, String(localized: "正在校验文件，请稍候。", bundle: .module))
+        case "relink_mismatch": (number, message) = (14, String(localized: "所选位置的文件、目录结构或内容与种子不符。任务仍已暂停。", bundle: .module))
         case "invalid_request": (number, message) = (1, String(localized: "BT 引擎请求格式有误", bundle: .module))
         case "unknown_method": (number, message) = (2, String(localized: "BT 引擎不支持此操作", bundle: .module))
         case "invalid_params": (number, message) = (3, String(localized: "BT 下载参数有误", bundle: .module))

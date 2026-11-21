@@ -35,11 +35,17 @@ struct TorrentdMoveParameters: Encodable, Sendable {
     let conflict: TorrentStorageConflict
 }
 
+struct TorrentdRelinkParameters: Encodable, Sendable {
+    let id: String
+    let path: String
+}
+
 struct TorrentdRenameParameters: Encodable, Sendable {
     let id: String
     let path: String
     let newPath: String
 }
+
 
 /// Tracker 的可编辑配置；subscription 标记来自公共订阅的条目。
 public struct TorrentTracker: Codable, Sendable, Equatable {

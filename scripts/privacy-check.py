@@ -13,6 +13,7 @@
 
 有问题时返回 1，并列出位置；没问题返回 0。
 """
+import hashlib
 import os
 import re
 import shutil
@@ -103,6 +104,33 @@ def git(repo: str, *args: str) -> bytes:
     return subprocess.run(["git", "-C", repo, *args], check=True, capture_output=True).stdout
 
 
+# 仅简中 README 的这一行公开维护方署名获准使用中文公司名。
+# 固定整行摘要；检查器本身不收录私有词表内容。
+ATTRIBUTION_SHA256 = "0fd16a0197b2d5c02759bf1860ab6c34feb7293798db34dbcabd4a6c0504eaa4"
+ATTRIBUTION_COMMIT = b"1684cf1af6e541a272a61dd154640593bd178fa6"
+
+
+def mask_attribution(data: bytes, prefix: bytes = b"") -> bytes:
+    lines = data.split(b"\n")
+    for i, line in enumerate(lines):
+        if line.startswith(prefix + "由 [".encode()) and hashlib.sha256(line[len(prefix):]).hexdigest() == ATTRIBUTION_SHA256:
+            # 只屏蔽获准的品牌文字，链接、邮箱和其余内容照常扫描。
+            brand, rest = line.split("（CQAGC）".encode(), 1)
+            lines[i] = brand.split(b"[", 1)[0] + b"[CQAGC" + rest
+    return b"\n".join(lines)
+
+
+def mask_attribution_commit(chunk: bytes) -> bytes:
+    if not chunk.startswith(ATTRIBUTION_COMMIT + b"\n"):
+        return chunk
+    header = b"\ndiff --git a/README.zh_CN.md b/README.zh_CN.md\n"
+    before, match, patch = chunk.partition(header)
+    if not match:
+        return chunk
+    readme, next_diff, rest = patch.partition(b"\ndiff --git ")
+    return before + match + mask_attribution(readme, prefix=b"+") + next_diff + rest
+
+
 def check_repo(repo: str, denylist: list) -> list:
     problems = []
     label = os.path.basename(os.path.abspath(repo))
@@ -134,6 +162,8 @@ def check_repo(repo: str, denylist: list) -> list:
         if not chunk:
             continue
         commit = chunk[:12].decode()
+        if os.path.samefile(repo, ROOT):
+            chunk = mask_attribution_commit(chunk)
         for hit in scan_bytes(chunk, rules, emails=True):
             problems.append(f"[{label}] 提交 {commit}：{hit}")
 
@@ -144,7 +174,10 @@ def check_repo(repo: str, denylist: list) -> list:
         full = os.path.join(repo, path)
         if os.path.isfile(full) and not os.path.islink(full):
             with open(full, "rb") as stream:
-                for hit in scan_bytes(stream.read(), rules, emails=True):
+                data = stream.read()
+                if path == "README.zh_CN.md" and os.path.samefile(repo, ROOT):
+                    data = mask_attribution(data)
+                for hit in scan_bytes(data, rules, emails=True):
                     problems.append(f"[{label}] 工作区 {path}：{hit}")
 
     # 5. gitleaks（装了才跑；已核实的公钥指纹写在仓库的 .gitleaksignore）

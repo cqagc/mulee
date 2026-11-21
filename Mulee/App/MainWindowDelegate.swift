@@ -1,14 +1,27 @@
 import AppKit
 
-/// 保留 SwiftUI 原有窗口代理的生命周期回调，只拦截关闭判定。
+/// AppKit 安装窗口代理时注册通知；同一次安装期间，转发目标必须保持有效。
 final class MainWindowDelegate: NSObject, NSWindowDelegate {
-    // ObjC 的查询与转发入口不隔离；弱引用仅在主线程安装，回调不执行 UI 操作。
-    nonisolated(unsafe) weak var original: (any NSWindowDelegate)?
-    weak var appDelegate: AppDelegate?
+    nonisolated(unsafe) let original: (any NSWindowDelegate)?
+    weak var registration: MainWindowRegistrationView?
+    private weak var appDelegate: AppDelegate?
+
+    init(original: (any NSWindowDelegate)?, appDelegate: AppDelegate) {
+        self.original = original
+        self.appDelegate = appDelegate
+    }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         guard appDelegate?.windowShouldClose(sender) != false else { return false }
         return original?.windowShouldClose?(sender) ?? true
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        // 原代理可能是持有窗口的控制器，关闭时解除注册视图对它的强引用。
+        if let window = notification.object as? NSWindow, window.delegate === self {
+            registration?.unregisterWindow()
+        }
+        original?.windowWillClose?(notification)
     }
 
     nonisolated override func responds(to selector: Selector!) -> Bool {

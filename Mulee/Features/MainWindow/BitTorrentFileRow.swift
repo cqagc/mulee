@@ -21,13 +21,13 @@ struct BitTorrentFileRow: View {
             HStack {
                 Text(file.size, format: .byteCount(style: .file))
                 Spacer()
-                Text(progress, format: .percent.precision(.fractionLength(0)))
+                Text(progressText)
             }
             .font(.caption)
             .foregroundStyle(.secondary)
             ProgressView(value: progress)
                 .accessibilityLabel("文件下载进度")
-                .accessibilityValue(progress.formatted(.percent.precision(.fractionLength(0))))
+                .accessibilityValue(progressText)
             if StreamingPlayback.isVideo(file.path), let task = appModel.tasks.first(where: { $0.id == appModel.selectedTaskID }),
                StreamingPlayback.canPlay(task, files: [file]) {
                 Button("播放", systemImage: "play.fill") {
@@ -37,6 +37,10 @@ struct BitTorrentFileRow: View {
             }
             BitTorrentRenameView(path: file.path, model: model)
         }
+    }
+
+    private var progressText: String {
+        TaskPresentation.progressPercent(progress, incomplete: file.done < file.size)
     }
 
     private var progress: Double {

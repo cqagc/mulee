@@ -59,7 +59,7 @@ Mulee supports **Apple Silicon Macs running macOS 26 or later**. The interface s
 > Mulee is a download tool. Only download content you have the right to access. Mulee does not include resource search.
 
 > [!NOTE]
-> Mulee is an early release in the 0.1.x series. The current project version is **0.1.11**.
+> Mulee is an early release in the 0.1.x series. The current project version is **0.1.12**.
 
 ---
 

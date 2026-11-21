@@ -12,6 +12,6 @@ struct BitTorrentActionsView: View {
             Button("强制宣告") { TaskActions.reannounceTorrent(task, model: model) }
             Button("导出种子文件…") { TaskActions.exportTorrent(task, model: model) }
         }
-        .disabled(task.engineTaskID == nil || model.bitTorrent == nil)
+        .disabled(task.engineTaskID == nil || model.bitTorrent == nil || task.needsFileRelink == true)
     }
 }

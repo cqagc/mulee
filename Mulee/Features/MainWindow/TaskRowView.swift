@@ -51,7 +51,7 @@ struct TaskRowView: View, Equatable {
                 min(max(width * Theme.rowProgressFraction, Theme.rowProgressMinWidth), Theme.rowProgressMaxWidth)
             }
             TaskStatusView(presentation: presentation)
-                .frame(width: 110, alignment: .trailing)
+                .frame(width: 166, alignment: .trailing)
         }
         .accessibilityElement(children: .combine)
     }

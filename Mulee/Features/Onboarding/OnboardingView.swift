@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var showsBrowserGuide = false
     @State private var isUpdating = false
     @State private var issue: String?
 
@@ -14,6 +15,14 @@ struct OnboardingView: View {
     }
 
     var body: some View {
+        if showsBrowserGuide {
+            BrowserExtensionGuide { showsBrowserGuide = false }
+        } else {
+            defaultHandlerPrompt
+        }
+    }
+
+    private var defaultHandlerPrompt: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("将 Mulee 设为默认下载工具？")
                 .font(.title2.bold())
@@ -29,6 +38,8 @@ struct OnboardingView: View {
                     .textSelection(.enabled)
             }
             HStack {
+                Button("安装浏览器扩展…") { showsBrowserGuide = true }
+                    .disabled(isUpdating)
                 Spacer()
                 Button("以后再说", action: close)
                     .keyboardShortcut(.cancelAction)

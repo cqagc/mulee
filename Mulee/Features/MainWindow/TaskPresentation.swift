@@ -99,7 +99,10 @@ struct TaskPresentation {
     }
 
     var progressText: String {
-        switch task.status {
+        if task.needsFileRelink == true {
+            return String(localized: "上次下载已完成")
+        }
+        return switch task.status {
         case .extracting: String(localized: "解压中 · \(percent)")
         case .seeding: String(localized: "做种 \(percent) · 到 1:1 后\(seedingAction == .stop ? String(localized: "停止") : String(localized: "降速"))")
         case .postProcessing: String(localized: "\(percent) · 合并音视频")
@@ -120,6 +123,11 @@ struct TaskPresentation {
             return String(localized: "按计划暂停，\(time(next)) 自动继续")
         }
         return String(localized: "按计划暂停")
+    }
+
+    var showsBidirectionalRates: Bool {
+        guard task.kind == .bittorrent || task.kind == .ed2k else { return false }
+        return task.status == .downloading || (task.status == .waitingForSources && task.uploadRate > 0)
     }
 
     var statusTitle: String {
@@ -266,7 +274,22 @@ struct TaskPresentation {
     }
 
     private var percent: String {
-        progress.formatted(.percent.precision(.fractionLength(0)).locale(Self.displayLocale))
+        let incomplete: Bool
+        switch task.status {
+        case .extracting, .seeding, .completed:
+            incomplete = progress < 1
+        default:
+            incomplete = task.totalBytes.map { task.receivedBytes < $0 } ?? true
+        }
+        return Self.progressPercent(progress, incomplete: incomplete)
+    }
+
+    static func progressPercent(_ fraction: Double, incomplete: Bool) -> String {
+        // 接近完成时多显示一位；哪怕只差一个字节，也不能四舍五入成 100%。
+        if incomplete, fraction >= 0.99 {
+            return min(fraction, 0.999).formatted(.percent.precision(.fractionLength(0...1)).locale(displayLocale))
+        }
+        return fraction.formatted(.percent.precision(.fractionLength(0)).locale(displayLocale))
     }
 
     private var receivedAndTotal: String {

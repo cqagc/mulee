@@ -1,6 +1,93 @@
 {
   "sourceLanguage": "zh-Hans",
   "strings": {
+    "所选位置的文件、目录结构或内容与种子不符。任务仍已暂停。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所选位置的文件、目录结构或内容与种子不符。任务仍已暂停。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The files, folder layout or contents do not match the torrent. The task is still paused."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所選位置的檔案、目錄結構或內容與種子不符。任務仍已暫停。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選んだ場所のファイル、フォルダ構成、または内容がトレントと一致しません。タスクは一時停止中です。"
+          }
+        }
+      }
+    },
+    "正在校验文件，请稍候。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在校验文件，请稍候。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking files. Please wait."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在校驗檔案，請稍候。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを検証中です。しばらくお待ちください。"
+          }
+        }
+      }
+    },
+    "文件位置已更改，请先重新关联文件。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件位置已更改，请先重新关联文件。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File location changed. Relink the files first."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "檔案位置已變更，請先重新關聯檔案。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルの場所が変わりました。先に再関連付けしてください。"
+          }
+        }
+      }
+    },
     "%@\n原始信息：%@": {
       "extractionState": "manual",
       "localizations": {

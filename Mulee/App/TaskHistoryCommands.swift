@@ -13,6 +13,6 @@ struct TaskHistoryCommands: Commands {
     }
 
     private func clearCompletedTasks() {
-        model.clearCompletedTasks()
+        TaskRemoval.confirmCompleted(in: model)
     }
 }

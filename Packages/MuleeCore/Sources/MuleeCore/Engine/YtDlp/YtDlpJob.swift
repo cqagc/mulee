@@ -4,7 +4,7 @@ struct YtDlpJob: Codable, Sendable {
     let id: String
     let url: URL
     let site: VideoSite
-    let directory: URL
+    var directory: URL
     var name: String
     var playlistIndex: Int?
     var playlistTitle: String?

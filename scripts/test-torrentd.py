@@ -774,6 +774,106 @@ def second_round_bt_tests(binary, root):
     print("PASS W1-BT：magnet_uri、用户限速/策略取 min/恢复、黑名单合并/校验、未完成 piece 块进度与连续字节", flush=True)
 
 
+def external_rename_tests(binary, root):
+    payload = b"A" * 65536
+    entries = [("first.bin", payload), ("nested/second.bin", b"B" * 65536), ("ignored.bin", b"skip")]
+    torrent, tid, seed = fixture(root, "fixture", entries, multi=True)
+    original, renamed = seed / "fixture", seed / "renamed"
+    priorities = [4, 4, 0]
+    state = root / "state"
+    expected = {"id": tid}
+
+    def restart():
+        daemon = Daemon(binary, state)
+        daemon.configure(seed)
+        return daemon
+
+    daemon = restart()
+    daemon.request("add", {"torrent_file": str(torrent), "file_priorities": priorities, "mark_incomplete": False})
+    daemon.complete(tid)
+    daemon.close("shutdown")
+    (original / "ignored.bin").unlink()
+    daemon = restart()
+    assert not daemon.complete(tid)["needs_relink"], "Unselected files must not trigger protection"
+    daemon.close("shutdown")
+
+    # Older releases can clear the JSON timestamp; the resume file still records completion.
+    meta = state / "meta" / (tid + ".json")
+    previous = json.loads(meta.read_text())
+    previous["completed_at"] = None
+    meta.write_text(json.dumps(previous))
+    original.rename(renamed)
+    daemon = restart()
+    held = daemon.torrent(tid)
+    assert held["needs_relink"] and held["paused"] and held["completed_at"]
+    assert held["download_rate"] == 0 and not original.exists()
+    daemon.request("resume", expected, error="needs_relink")
+    daemon.request("force_recheck", expected, error="needs_relink")
+    daemon.close("shutdown")
+    daemon = restart()
+    assert daemon.torrent(tid)["needs_relink"] and not original.exists()
+
+    (renamed / "first.bin").write_bytes(b"X" * len(payload))
+    daemon.request("relink_storage", {**expected, "path": str(renamed)}, error="relink_mismatch")
+    assert (renamed / "first.bin").read_bytes() == b"X" * len(payload)
+    assert daemon.torrent(tid)["needs_relink"] and not original.exists()
+    (renamed / "first.bin").write_bytes(payload)
+    daemon.request("relink_storage", {**expected, "path": str(renamed)})
+    assert not daemon.torrent(tid)["needs_relink"]
+    assert daemon.torrent(tid)["paused"] and not original.exists()
+    assert [x["priority"] for x in daemon.request("files", expected)["files"]] == priorities
+    daemon.close("shutdown")
+    daemon = restart()
+    held = daemon.torrent(tid)
+    assert not held["needs_relink"] and held["paused"] and Path(held["content_path"]).resolve() == renamed.resolve(), held
+    assert (renamed / "first.bin").read_bytes() == payload and not original.exists()
+    daemon.close("shutdown")
+
+    renamed.rename(seed / "user-kept-files")
+    daemon = restart()
+    assert daemon.torrent(tid)["needs_relink"]
+    daemon.request("redownload_missing", expected)
+    assert not daemon.torrent(tid)["needs_relink"] and daemon.torrent(tid)["paused"]
+    daemon.close("shutdown")
+    daemon = restart()
+    assert not daemon.torrent(tid)["needs_relink"]
+    daemon.request("resume", expected)
+    assert (seed / "user-kept-files/first.bin").read_bytes() == payload
+    daemon.close("shutdown")
+    # Pure v2 single file with three 16 KiB leaves: the fourth leaf is a zero hash.
+    data = bytes(range(251)) * 180
+    leaves = [hashlib.sha256(data[i:i + 16384]).digest() for i in range(0, len(data), 16384)]
+    leaves.append(bytes(32))
+    pair = lambda a, b: hashlib.sha256(a + b).digest()
+    file_root = pair(pair(*leaves[:2]), pair(*leaves[2:]))
+    name = "v2-single.bin"
+    info = {"name": name, "meta version": 2, "piece length": 65536,
+            "file tree": {name: {"": {"length": len(data), "pieces root": file_root}}}}
+    v2_seed = root / "v2-seed"
+    v2_seed.mkdir()
+    (v2_seed / name).write_bytes(data)
+    v2_source = root / "v2.torrent"
+    v2_source.write_bytes(bencode({"info": info}))
+    v2 = Daemon(binary, root / "v2-state")
+    v2.configure(v2_seed)
+    vid = v2.request("add", {"torrent_file": str(v2_source)})["id"]
+    v2.complete(vid)
+    v2.close("shutdown")
+    moved = v2_seed / "user-renamed.bin"
+    (v2_seed / name).rename(moved)
+    v2 = Daemon(binary, v2.state)
+    v2.configure(v2_seed)
+    assert v2.torrent(vid)["needs_relink"]
+    moved.write_bytes(data[:-1] + bytes([data[-1] ^ 1]))
+    v2.request("relink_storage", {"id": vid, "path": str(moved)}, error="relink_mismatch")
+    moved.write_bytes(data)
+    v2.request("relink_storage", {"id": vid, "path": str(moved)})
+    assert v2.torrent(vid)["paused"] and not v2.torrent(vid)["needs_relink"]
+    assert moved.read_bytes() == data and not (v2_seed / name).exists()
+    v2.close("shutdown")
+    print("PASS 已完成 BT 外部改名：保护、拒绝错文件、关联、保留选择和显式补下载", flush=True)
+
+
 def run_tests(binary, root):
     creation_destination_safety_tests(binary, root / "creation-safety")
     creation_progress_and_cancellation(binary, root)
@@ -887,6 +987,8 @@ def run_tests(binary, root):
     a.request("set_upload_limit", {"id": single_id, "limit": -1}, error="invalid_params")
     a.request("set_upload_limit", {"id": single_id, "limit": 0})
     print("PASS 单文件、多文件中文路径、list/files、优先级和上传限速", flush=True)
+
+    external_rename_tests(binary, root / "external-rename-guard")
 
     # Handshake through the actual peer plugin. No network beyond loopback.
     def handshake(peer_id, client=None):

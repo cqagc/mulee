@@ -19,20 +19,34 @@ struct TaskInspectorView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     TaskInspectorHeader(presentation: presentation)
                     if presentation.showsTaskLimits { TaskLimitsCard(task: task) }
-                    playbackControls(task)
+                    if task.needsFileRelink != true { playbackControls(task) }
                     if task.deletedAt != nil {
                         Text("任务已在最近删除中，30 天后清除记录，下载文件不受影响。")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         HStack {
                             Button("恢复任务") { model.restoreRecord(task.id) }
-                            Button("彻底删除记录", role: .destructive) { model.removeRecord(task.id) }
+                            Button("彻底删除记录", role: .destructive) { TaskRemoval.confirm(task, in: model) }
                         }
                     }
                     if task.fileMissing == true {
                         Text("文件已不在，任务记录已保留。请检查文件是否已删除或所在磁盘是否已连接。")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                    }
+                    if task.needsFileRelink == true {
+                        Text("文件位置已更改，任务已暂停。请重新关联已改名的文件夹，或确认重新下载。")
+                            .font(.caption)
+                            .foregroundStyle(Theme.wait)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 8) {
+                            TaskActions.relinkTorrentButton(task, model: model)
+                            TaskActions.redownloadTorrentButton(task, model: model)
+                        }
+                    }
+                    if AppModel.canOfferRedownload(task) && task.needsFileRelink != true {
+                        MissingFileRedownloadButton(task: task)
+                            .buttonStyle(.bordered)
                     }
                     LabeledContent("分类", value: DownloadCategory.classify(
                         extension: task.fileExtension ?? URL(filePath: task.name).pathExtension

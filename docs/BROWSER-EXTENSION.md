@@ -31,6 +31,8 @@ Debug 自检可通过 `-MuleeOpenURLDiagnostics YES` 输出收到的预填链接
 
 ## 安装和使用
 
+首次启动时点「安装浏览器扩展…」即可选择 Safari 或 Chrome。以后可从「关于 Mulee」重新打开同一份指南，也可以到「设置 → 通用 → 浏览器扩展」查看 Safari 状态和 Chrome 安装步骤。
+
 ### Safari
 
 扩展随 Mulee.app 内置，位于 `Contents/PlugIns/MuleeSafariExtension.appex`。

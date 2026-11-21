@@ -314,6 +314,19 @@ public actor TorrentEngine: DownloadEngine {
         let _: TorrentdEmpty = try await client.call("force_recheck", TorrentdIDParameters(id: id))
     }
 
+    /// Reassociate a paused torrent with files moved outside Mulee.
+    /// The helper validates every selected file before replacing the paused handle.
+    public func relinkStorage(_ id: String, to url: URL) async throws {
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call("relink_storage", TorrentdRelinkParameters(id: id, path: url.path),
+                                                     timeout: .seconds(3600))
+    }
+
+    public func redownloadMissing(_ id: String) async throws {
+        let client = try await runningClient()
+        let _: TorrentdEmpty = try await client.call("redownload_missing", TorrentdIDParameters(id: id))
+    }
+
     /// 立即向 tracker 重新宣告。
     public func forceReannounce(_ id: String) async throws {
         let client = try await runningClient()

@@ -3,6 +3,7 @@
 #include "persistence.hpp"
 #include <chrono>
 #include <atomic>
+#include <future>
 #include <mutex>
 #include <libtorrent/extensions.hpp>
 #include <libtorrent/session.hpp>
@@ -106,6 +107,17 @@ private:
     void apply_ip_filters(const json::object& filters);
     json::array read_blocklist(const std::string& path);
     json::object manage(const std::string& method, const json::object& params);
+    struct RelinkJob {
+        std::string id;
+        json::value request;
+        lt::torrent_handle original_handle;
+        std::atomic<bool> cancelled{false};
+        std::future<lt::add_torrent_params> checked;
+    };
+    std::unique_ptr<RelinkJob> relink_job_;
+    void start_relink(const json::value& request, const json::object& params);
+    void finish_relink();
+    void stop_relink();
     json::object tracker_list(Torrent& torrent);
     void refresh_trackers(Torrent& torrent);
     void tracker_result(Torrent& torrent, const std::string& url, const std::string& result, int peers, bool failed);

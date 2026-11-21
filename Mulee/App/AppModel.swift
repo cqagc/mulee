@@ -73,6 +73,9 @@ final class AppModel {
     /// 草稿属于应用；窗口或 sheet 重建后仍使用同一份预填与交接上下文。
     private(set) var newTaskDraft = NewTaskModel()
     var openURLIssue: String?
+    var deletionIssue: String?
+    var redownloadIssue: String?
+    var redownloadingIDs: Set<DownloadTask.ID> = []
     /// 打开「新建下载」面板时预填的文本，读取后由面板清空。
     var pendingNewTaskText = ""
     var pendingNewTaskDirectory: URL?
@@ -203,7 +206,7 @@ final class AppModel {
     }
 
     func resume(_ id: DownloadTask.ID) {
-        guard tasks.contains(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+        guard tasks.contains(where: { $0.id == id && $0.deletedAt == nil && $0.needsFileRelink != true }) else { return }
         userPausedTaskIDs.remove(id)
         whenAllDoneController?.userDidInteract()
         if let index = tasks.firstIndex(where: { $0.id == id }) {
@@ -229,8 +232,8 @@ final class AppModel {
     func remove(_ id: DownloadTask.ID) {
         whenAllDoneController?.userDidInteract()
         guard let task = tasks.first(where: { $0.id == id }), task.deletedAt == nil else { return }
-        if [.bittorrent, .ed2k].contains(task.kind), coordinator != nil {
-            BitTorrentRemoval.confirm(task: task, model: self)
+        if [.bittorrent, .ed2k].contains(task.kind), let coordinator {
+            Task { await coordinator.remove(id) }
         } else if task.status == .completed {
             if task.kind == .video, let coordinator {
                 coordinator.removeCompletedVideo(task)
@@ -285,6 +288,21 @@ final class AppModel {
         var task = tasks[index]
         FileTracker.resolve(&task)
         if task != tasks[index] { tasks[index] = task }
+    }
+
+    /// Refresh completion-file bookmarks when the task list becomes visible.
+    /// This is intentionally event-driven instead of part of the engine poll loop.
+    func refreshTrackedFiles() {
+        var refreshed = tasks
+        var changed = false
+        for index in refreshed.indices {
+            guard refreshed[index].deletedAt == nil,
+                  refreshed[index].completedAt != nil || [.completed, .seeding].contains(refreshed[index].status) else { continue }
+            let before = refreshed[index]
+            FileTracker.resolve(&refreshed[index])
+            changed = changed || refreshed[index] != before
+        }
+        if changed { tasks = refreshed }
     }
 
     func setTags(_ id: DownloadTask.ID, text: String) {

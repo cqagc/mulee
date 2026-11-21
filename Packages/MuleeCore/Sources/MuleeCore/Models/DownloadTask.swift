@@ -38,6 +38,8 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
     public var tags: [String]?
     public var fileBookmark: Data?
     public var fileMissing: Bool?
+    /// BT 引擎保留了完成记录，但原位置不再包含所选文件。
+    public var needsFileRelink: Bool?
     public var deletedAt: Date?
     public var lastProgressAt: Date?
     public var pauseReason: PauseReason?
@@ -95,6 +97,7 @@ public struct DownloadTask: Identifiable, Sendable, Hashable, Codable {
         case tags
         case fileBookmark
         case fileMissing
+        case needsFileRelink
         case deletedAt
         case lastProgressAt
         case pauseReason

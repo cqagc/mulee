@@ -15,10 +15,17 @@ struct MainWindowPresenter: ViewModifier {
 
     private func present() {
         NSApp.activate()
-        if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "mulee-main" }) {
+        let isOpenMain: (NSWindow) -> Bool = {
+            $0.identifier?.rawValue == "mulee-main" && ($0.isVisible || $0.isMiniaturized)
+        }
+        if let window = NSApp.orderedWindows.first(where: isOpenMain) ?? NSApp.windows.first(where: isOpenMain) {
             if window.isMiniaturized { window.deminiaturize(nil) }
-            window.makeKeyAndOrderFront(nil)
-            window.attachedSheet?.makeKeyAndOrderFront(nil)
+            if let sheet = window.attachedSheet {
+                window.orderFront(nil)
+                sheet.makeKeyAndOrderFront(nil)
+            } else {
+                window.makeKeyAndOrderFront(nil)
+            }
         } else {
             openWindow(id: "main")
         }

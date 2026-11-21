@@ -1,6 +1,151 @@
 {
   "sourceLanguage": "zh-Hans",
   "strings": {
+    "这会清除当前任务的已完成状态，并按原始种子重新校验或下载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这会清除当前任务的已完成状态，并按原始种子重新校验或下载。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This clears the completion status, checks the original torrent location and downloads missing pieces."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這會清除任務的完成狀態，並依原始種子重新校驗或下載。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了状態を解除して元の保存場所を検証し、不足しているピースをダウンロードします。"
+          }
+        }
+      }
+    },
+    "已暂停。请选择“重新关联”或确认重新下载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已暂停。请选择“重新关联”或确认重新下载。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused. Relink the files or choose to download them again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已暫停。請選擇「重新關聯」或確認重新下載。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時停止中です。再関連付けするか、再ダウンロードを選択してください。"
+          }
+        }
+      }
+    },
+    "文件位置已更改，任务已暂停。请重新关联已改名的文件夹，或确认重新下载。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件位置已更改，任务已暂停。请重新关联已改名的文件夹，或确认重新下载。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The task is paused. Locate the downloaded content or choose to download it again."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "檔案位置已變更，任務已暫停。請重新關聯下載內容，或確認重新下載。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルの場所が変わったため一時停止しました。保存済みのファイルを指定するか、再ダウンロードしてください。"
+          }
+        }
+      }
+    },
+    "重新关联": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新关联"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relink"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新關聯"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再関連付け"
+          }
+        }
+      }
+    },
+    "上次下载已完成": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上次下载已完成"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previously completed"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上次下載已完成"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回のダウンロードは完了済み"
+          }
+        }
+      }
+    },
     "操作音效": {
       "extractionState": "manual",
       "localizations": {
@@ -7498,6 +7643,296 @@
         }
       }
     },
+    "彻底删除后，无法从“最近删除”恢复这条记录。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "彻底删除后，无法从“最近删除”恢复这条记录。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once permanently deleted, this record can’t be restored from Recently Deleted."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "永久刪除後，無法從「最近刪除」回復這筆記錄。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完全に削除すると、この記録を「最近削除した項目」から復元できません。"
+          }
+        }
+      }
+    },
+    "只删除任务会保留下载文件，任务记录可在“最近删除”中恢复。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只删除任务会保留下载文件，任务记录可在“最近删除”中恢复。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Remove Task Only to keep the downloaded files. You can restore the task from Recently Deleted."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只刪除任務會保留下載檔案，可從「最近刪除」回復任務記錄。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスクのみ削除すると、ダウンロードしたファイルは保持され、タスクは「最近削除した項目」から復元できます。"
+          }
+        }
+      }
+    },
+    "选“同时删除文件”会移除下载内容，并彻底删除任务记录。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选“同时删除文件”会移除下载内容，并彻底删除任务记录。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choosing Also Delete Files removes the downloaded content and permanently deletes the task record."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇「同時刪除檔案」會移除下載內容，並永久刪除任務記錄。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「ファイルも削除」を選ぶと、ダウンロードした内容とタスクの記録が削除されます。"
+          }
+        }
+      }
+    },
+    "清除 %lld 条已完成的任务？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除 %lld 条已完成的任务？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove %lld completed tasks?"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除 %lld 筆已完成的任務？"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了したタスク %lld 件を削除しますか？"
+          }
+        }
+      }
+    },
+    "清理 %lld 条缺失记录？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清理 %lld 条缺失记录？"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear %lld records for missing files?"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清理 %lld 筆缺失記錄？"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルが見つからない記録 %lld 件を整理しますか？"
+          }
+        }
+      }
+    },
+    "清理记录": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清理记录"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear Records"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清理記錄"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録を整理"
+          }
+        }
+      }
+    },
+    "未能删除任务": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未能删除任务"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t remove task"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法刪除任務"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タスクを削除できません"
+          }
+        }
+      }
+    },
+    "任务正在处理文件，请稍后再删除。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任务正在处理文件，请稍后再删除。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The task is processing files. Try deleting it again later."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任務正在處理檔案，請稍後再刪除。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルを処理しています。時間をおいてから削除してください。"
+          }
+        }
+      }
+    },
+    "其他任务也在使用这个文件，请选择“只删除任务”。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他任务也在使用这个文件，请选择“只删除任务”。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another task uses this file. Choose Remove Task Only to keep it."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他任務也在使用這個檔案，請選擇「只刪除任務」。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかのタスクもこのファイルを使用しています。「タスクのみ削除」を選んでください。"
+          }
+        }
+      }
+    },
+    "无法确认要删除的文件，已保留任务记录。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法确认要删除的文件，已保留任务记录。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The downloaded files could not be identified. The task record was kept."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法確認要刪除的檔案，已保留任務記錄。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除対象のファイルを特定できないため、タスクの記録を保持しました。"
+          }
+        }
+      }
+    },
     "只删除任务": {
       "extractionState": "manual",
       "localizations": {
@@ -8194,6 +8629,35 @@
         }
       }
     },
+    "打开 Safari 扩展设置": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 Safari 扩展设置"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Safari Extension Settings"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開 Safari 擴充功能設定"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari の拡張機能設定を開く"
+          }
+        }
+      }
+    },
     "在 Safari 中启用": {
       "extractionState": "manual",
       "localizations": {
@@ -8625,6 +9089,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "OK"
+          }
+        }
+      }
+    },
+    "安装浏览器扩展…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装浏览器扩展…"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install Browser Extension…"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安裝瀏覽器擴充功能…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザ拡張機能をインストール…"
           }
         }
       }
@@ -12633,6 +13126,120 @@
           "stringUnit": {
             "state": "translated",
             "value": "フォルダ"
+          }
+        }
+      }
+    },
+    "文件位置已更改": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "文件位置已更改" } },
+        "en": { "stringUnit": { "state": "translated", "value": "File location changed" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "檔案位置已變更" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "ファイルの場所が変更されました" } }
+      }
+    },
+    "重新关联…": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "重新关联…" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Relink…" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "重新關聯…" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "再関連付け…" } }
+      }
+    },
+    "重新下载「%@」？": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "重新下载「%@」？" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Download “%@” again?" } },
+        "zh-Hant": { "stringUnit": { "state": "translated", "value": "重新下載「%@」？" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "「%@」を再ダウンロードしますか？" } }
+      }
+    },
+    "找不到文件": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到文件"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File missing"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到檔案"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルが見つかりません"
+          }
+        }
+      }
+    },
+    "清理缺失记录（%lld）": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清理缺失记录（%lld）"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear missing records (%lld)"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清理缺失記錄（%lld）"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見つからない記録を整理（%lld）"
+          }
+        }
+      }
+    },
+    "将当前列表中找不到文件的记录移到“最近删除”，30 天内可恢复。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将当前列表中找不到文件的记录移到“最近删除”，30 天内可恢复。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move records for missing files in this list to Recently Deleted. You can restore them within 30 days."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將目前列表中找不到檔案的記錄移到「最近刪除」，30 天內可恢復。"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このリストでファイルが見つからない記録を「最近削除した項目」に移動します。30 日以内なら復元できます。"
           }
         }
       }
@@ -23247,6 +23854,64 @@
           "stringUnit": {
             "state": "translated",
             "value": "名前を変更…"
+          }
+        }
+      }
+    },
+    "请确认文件仍然缺失，并检查保存磁盘是否已连接。": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请确认文件仍然缺失，并检查保存磁盘是否已连接。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請確認檔案仍然缺失，並檢查儲存磁碟是否已連接。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check whether the file has been restored and the destination drive is connected."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルが復元されていないか、保存先のディスクが接続されているか確認してください。"
+          }
+        }
+      }
+    },
+    "无法重新下载": {
+      "extractionState": "manual",
+      "localizations": {
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法重新下载"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無法重新下載"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t download again"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再ダウンロードできません"
           }
         }
       }

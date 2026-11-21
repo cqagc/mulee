@@ -6,7 +6,6 @@ import SwiftUI
 struct MenuBarPasteField: View {
     @Environment(AppModel.self) private var model
     @Environment(SettingsModel.self) private var settings
-    @Environment(\.openWindow) private var openWindow
     @State private var text = ""
 
     var body: some View {
@@ -23,8 +22,6 @@ struct MenuBarPasteField: View {
         let links = LinkParser.parse(trimmed)
         if links.isEmpty {
             model.showNewTask(prefill: trimmed)
-            openWindow(id: "main")
-            NSApplication.shared.activate()
         } else {
             model.addTasks(from: links, autoExtract: settings.autoExtract)
         }

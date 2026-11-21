@@ -20,7 +20,7 @@ struct TaskChecksumView: View {
                 Text(result.matches == true ? String(localized: "校验通过") : result.matches == false ? String(localized: "校验值不一致，请重新下载。") : result.errorMessage ?? String(localized: "等待校验"))
                     .font(.caption)
                     .fixedSize(horizontal: false, vertical: true)
-                if result.matches == false {
+                if result.matches == false && !AppModel.canOfferRedownload(task) {
                     Button("重新下载") { redownload() }
                         .disabled(isWorking || model.coordinator == nil)
                 }

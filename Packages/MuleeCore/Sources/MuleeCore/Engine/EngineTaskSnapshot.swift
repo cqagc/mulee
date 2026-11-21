@@ -24,6 +24,7 @@ public struct EngineTaskSnapshot: Sendable, Hashable, Identifiable {
     public var errorMessage: String?
     /// 在清洗原始报错前记录写盘错误，卷保护不依赖本地化文案。
     public var isFileWriteFailure: Bool
+    public var needsFileRelink: Bool = false
     public var isControlFileFailure: Bool
     /// 引擎报告的类型专属详情；nil 时保留 App 已有详情。
     public var detail: TaskDetail?

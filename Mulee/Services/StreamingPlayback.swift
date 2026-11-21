@@ -19,7 +19,7 @@ final class StreamingPlayback {
     }
 
     static func canPlay(_ task: DownloadTask, files: [TorrentFileEntry] = []) -> Bool {
-        guard task.deletedAt == nil, task.fileMissing != true else { return false }
+        guard task.deletedAt == nil, task.needsFileRelink != true, task.fileMissing != true else { return false }
         if task.kind == .bittorrent {
             return task.engineTaskID != nil && [.downloading, .queued, .paused, .seeding, .completed].contains(task.status)
                 && (isVideo(task.name) || task.fileExtension.map { videoExtensions.contains($0.lowercased()) } == true || files.contains { isVideo($0.path) })
@@ -64,7 +64,7 @@ final class StreamingPlayback {
         task: DownloadTask, engine: TorrentEngine?, file: TorrentFileEntry? = nil,
         coordinator: DownloadCoordinator? = nil
     ) {
-        guard task.deletedAt == nil, task.fileMissing != true,
+        guard task.deletedAt == nil, task.needsFileRelink != true, task.fileMissing != true,
               Self.canPlay(task, files: file.map { [$0] } ?? [])
                 || task.kind == .bittorrent && task.engineTaskID != nil
                     && [.downloading, .queued, .paused, .seeding, .completed].contains(task.status),

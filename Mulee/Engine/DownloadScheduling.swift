@@ -96,7 +96,7 @@ final class DownloadScheduling {
         guard !busy, isCurrent() else { return }
         busy = true
         defer { busy = false }
-        for task in model.activeTasks where task.pauseReason == nil {
+        for task in model.activeTasks where task.pauseReason == nil && task.needsFileRelink != true {
             if pauses.reason(for: task) == "queue", task.status == .paused {
                 if let index = model.tasks.firstIndex(where: { $0.id == task.id }) {
                     model.tasks[index].status = .queued

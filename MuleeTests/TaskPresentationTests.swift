@@ -19,6 +19,20 @@ import Testing
         #expect(TaskPresentation(task: task).showsQueueActions == ![.completed, .seeding].contains(status))
     }
 
+    @Test func peerTransfersShowBothDirectionsWhenDownloadRateIsZero() {
+        var task = MockData.tasks[0]
+        task.status = .downloading
+        task.downloadRate = 0
+        task.uploadRate = 1_900_000
+        for kind in TaskKind.allCases {
+            task.kind = kind
+            #expect(TaskPresentation(task: task).showsBidirectionalRates == (kind == .bittorrent || kind == .ed2k))
+        }
+        task.kind = .bittorrent
+        task.status = .paused
+        #expect(!TaskPresentation(task: task).showsBidirectionalRates)
+    }
+
     @Test func completedHTTPHidesLimitsAndReplacementAndSeedingKeepsOnlyUpload() {
         var task = MockData.tasks[0]
         task.kind = .http
@@ -69,6 +83,20 @@ import Testing
         let now = try #require(ISO8601DateFormatter().date(from: "2026-10-17T08:00:00Z"))
         let presentation = TaskPresentation(task: task, now: now, calendar: calendar, schedule: schedule)
         #expect(presentation.statusTitle == "按计划暂停，22:00 自动继续")
+    }
+
+    @Test(arguments: [
+        (Int64(791_200_000), Int64(792_600_000), "99.8%"),
+        (999_999, 1_000_000, "99.9%"),
+        (.max - 1, .max, "99.9%"),
+        (1_000_000, 1_000_000, "100%")
+    ])
+    func downloadPercentAtCompletionBoundary(received: Int64, total: Int64, expected: String) {
+        var task = MockData.tasks[0]
+        task.status = .downloading
+        task.receivedBytes = received
+        task.totalBytes = total
+        #expect(TaskPresentation(task: task).progressText.hasPrefix(expected + " · "))
     }
 
     @Test func httpMatchesPrototype() throws {

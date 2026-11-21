@@ -70,6 +70,10 @@ final class ExtractionCoordinator {
         finishActive(outcome, job: job)
     }
 
+    func forgetCompletion(_ id: DownloadTask.ID) {
+        seenCompletions.remove(id)
+    }
+
     func requestExtraction(_ id: DownloadTask.ID) {
         guard let task = model.tasks.first(where: { $0.id == id }), task.deletedAt == nil, task.status == .completed,
               let path = task.savePath, Self.isReadyForExtraction(task),

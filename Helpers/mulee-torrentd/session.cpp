@@ -203,7 +203,7 @@ void Session::apply_download_mode(Torrent& torrent) {
 
 // 进度包含未完成 piece 的块，但完成改名必须等相关 piece 全部校验通过。
 void Session::update_incomplete_files(Torrent& torrent) {
-    if (updating_incomplete_ || stopping_) return;
+    if (torrent.metadata.needs_relink || updating_incomplete_ || stopping_) return;
     auto info = torrent.handle.torrent_file();
     if (!info) return;
     auto status = torrent.handle.status(lt::torrent_handle::query_pieces);
@@ -278,6 +278,36 @@ void Session::restore() {
     for (auto& params : persistence_.restore()) {
         auto id = torrent_id(params.info_hashes);
         auto metadata = persistence_.load_meta(id);
+        // 旧版本可能已清掉 meta 的完成时间，而 fast-resume 仍保留下载完成证据。
+        const bool was_completed = !metadata.completed_at.is_null() || params.completed_time > 0;
+        if (!metadata.needs_relink && !metadata.redownload_requested && was_completed && params.ti) {
+            const auto& files = params.ti->files();
+            for (auto index : files.file_range()) {
+                if (files.pad_file_at(index) || files.file_size(index) == 0) continue;
+                if (static_cast<std::size_t>(static_cast<int>(index)) < params.file_priorities.size()
+                    && params.file_priorities[static_cast<int>(index)] == lt::dont_download) continue;
+                auto mapped = params.renamed_files.find(index);
+                const auto* logical = metadata.original_paths.if_contains(std::to_string(static_cast<int>(index)));
+                const auto relative = logical ? std::string(logical->as_string())
+                    : mapped != params.renamed_files.end() ? mapped->second : files.file_path(index);
+                std::error_code ec;
+                const fs::path path = fs::path(params.save_path) / relative;
+                if (!fs::is_regular_file(path, ec) || fs::file_size(path, ec) != static_cast<std::uintmax_t>(files.file_size(index)) || ec) {
+                    metadata.needs_relink = true;
+                    if (metadata.completed_at.is_null() && params.completed_time > 0)
+                        metadata.completed_at = static_cast<std::int64_t>(params.completed_time);
+                    persistence_.save_meta(id, metadata);
+                    break;
+                }
+            }
+        }
+        if (metadata.needs_relink) {
+            params.flags |= lt::torrent_flags::paused;
+            params.flags &= ~lt::torrent_flags::auto_managed;
+            // Avoid a long startup check against the old path. This torrent is
+            // explicitly blocked until the user relinks its storage.
+            params.flags |= lt::torrent_flags::seed_mode;
+        }
         // meta 与 resume 保存时刻可能不同，以实际存在的后缀文件恢复磁盘映射。
         for (const auto& entry : metadata.original_paths) {
             auto index = lt::file_index_t{std::stoi(std::string(entry.key()))};
@@ -325,7 +355,14 @@ Torrent* Session::find(const lt::torrent_handle& handle) {
 }
 
 void Session::mark_completed(Torrent& torrent) {
+    if (torrent.metadata.needs_relink) return;
     if (torrent.metadata.completed_at.is_null()) {
+        if (torrent.metadata.redownload_requested) {
+            const auto status = torrent.handle.status();
+            if (!status.is_finished || status.total_wanted_done != status.total_wanted
+                || status.state == lt::torrent_status::checking_resume_data || status.state == lt::torrent_status::checking_files) return;
+        }
+        torrent.metadata.redownload_requested = false;
         torrent.metadata.completed_at = unix_time();
         persistence_.save_meta(torrent_id(torrent.handle.info_hashes()), torrent.metadata);
     }
@@ -525,6 +562,7 @@ void Session::port_mapping_alert(lt::port_mapping_t handle, lt::portmap_transpor
 }
 
 void Session::poll() {
+    finish_relink();
     for (const auto& message : take_dns_logs()) persistence_.log(message);
     alerts();
     if (refresh_extra_mappings_) {
@@ -551,6 +589,7 @@ void Session::poll() {
 
 void Session::shutdown() {
     stopping_ = true;
+    stop_relink();
     stop_create();
     clear_extra_port_mapping_handles();
     extra_mappings_.clear();

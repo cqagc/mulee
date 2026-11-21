@@ -31,6 +31,8 @@ final class DownloadCoordinator {
     private var checksumJobs: [UUID: Task<Void, Never>] = [:]
     private var checkedCompletions: Set<UUID> = []
     private var replacingHTTPTasks: Set<UUID> = []
+    private var removingTaskIDs: Set<UUID> = []
+    private var redownloadingTaskIDs: Set<UUID> = []
     private var resubmittingTaskIDs: Set<UUID> = []
     private var resubmissionAttempts: [UUID: UUID] = [:]
     private var httpResumeAttempts: [UUID: UUID] = [:]
@@ -693,6 +695,142 @@ final class DownloadCoordinator {
         await refreshScheduling(sample: false)
     }
 
+    func relinkTorrent(_ id: UUID, to url: URL) async throws {
+        guard let token = generation, let task = model.activeTasks.first(where: { $0.id == id }),
+              task.needsFileRelink == true, let engineID = task.engineTaskID,
+              let torrent = engine(for: .bittorrent) as? TorrentEngine else { throw EngineError.notRunning }
+        guard !removingTaskIDs.contains(id), redownloadingTaskIDs.insert(id).inserted else { throw CancellationError() }
+        defer { redownloadingTaskIDs.remove(id) }
+        try await torrent.relinkStorage(engineID, to: url)
+        guard generation == token, let index = model.tasks.firstIndex(where: {
+            $0.id == id && $0.deletedAt == nil && $0.engineTaskID == engineID
+        }) else { throw CancellationError() }
+        var updated = model.tasks[index]
+        updated.savePath = url
+        scheduling.userPause(updated)
+        model.userPausedTaskIDs.insert(id)
+        model.automaticPauseStore.setManuallyPaused(true, for: updated)
+        updated.fileBookmark = nil
+        FileTracker.capture(&updated)
+        model.tasks[index] = updated
+        await poll()
+        model.flushTaskHistory()
+    }
+
+    /// 重用原记录；新引擎任务就绪以后才替换旧标识。
+    func redownloadMissingFile(_ id: UUID) async throws {
+        guard !removingTaskIDs.contains(id), redownloadingTaskIDs.insert(id).inserted else { return }
+        defer { redownloadingTaskIDs.remove(id) }
+        model.refreshTrackedFile(id)
+        guard let task = model.tasks.first(where: { $0.id == id }),
+              AppModel.canOfferRedownload(task), let path = task.savePath,
+              task.needsFileRelink == true || model.confirmedMissingFileRecords(in: [id]).contains(id),
+              !FileTracker.isInTrash(path.deletingLastPathComponent()) else {
+            throw EngineError.invalidResponse(String(localized: "请确认文件仍然缺失，并检查保存磁盘是否已连接。"))
+        }
+        guard let token = generation, let engine = engine(for: task.kind) else { throw EngineError.notRunning }
+        let directory = task.kind == .bittorrent ? task.writeDirectories?.first ?? path.deletingLastPathComponent()
+            : path.deletingLastPathComponent()
+        pendingAdds[task.kind, default: 0] += 1
+        revisions[task.kind, default: 0] += 1
+        defer {
+            pendingAdds[task.kind, default: 0] -= 1
+            revisions[task.kind, default: 0] += 1
+        }
+
+        let engineID: String
+        if task.needsFileRelink == true {
+            guard let oldID = task.engineTaskID, let torrent = engine as? TorrentEngine else { throw EngineError.notRunning }
+            _ = try DiskReserveMonitor.volumeURL(directory)
+            try await torrent.redownloadMissing(oldID)
+            engineID = oldID
+        } else if let oldID = task.engineTaskID, let torrent = engine as? TorrentEngine,
+           try await torrent.snapshots().contains(where: { $0.engineTaskID == oldID }) {
+            // 重新校验缺失的分块，沿用文件选择、重命名和 tracker。
+            try await torrent.pause(oldID)
+            try await torrent.forceRecheck(oldID)
+            engineID = oldID
+        } else if let oldID = task.engineTaskID, let video = engine as? YtDlpEngine,
+                  try await video.snapshots().contains(where: { $0.engineTaskID == oldID }) {
+            try await video.redownload(oldID, directory: directory)
+            engineID = oldID
+        } else {
+            guard let link = LinkParser.parse(task.sourceLink).first(where: { $0.kind == task.kind }) else {
+                throw EngineError.invalidResponse(String(localized: "找不到任务的原始链接，尚未恢复下载；请重新添加原始链接。"))
+            }
+            if let http = engine as? Aria2Engine {
+                var context = task.requestContext ?? DownloadRequestContext()
+                context.suggestedFilename = path.lastPathComponent
+                context.duplicateAction = .rename
+                context.usesStoredHTTPCredentials = task.hasHTTPCredentials
+                if task.hasRequestCookie == true { context.cookie = try await DownloadRequestCookieStore.shared.load(taskID: id) }
+                engineID = try await http.add(
+                    link: link, directory: directory, context: context, checksum: task.checksum, paused: true,
+                    speedLimitBytes: task.downloadLimit, incompleteTaskID: (model.downloadSettings?.markIncomplete ?? true) ? id : nil
+                )
+                if let oldID = task.engineTaskID, oldID != engineID {
+                    do { try await http.forgetTransfer(oldID) }
+                    catch {
+                        try? await http.remove(engineID, deleteFiles: false)
+                        throw error
+                    }
+                }
+            } else if let video = engine as? YtDlpEngine {
+                engineID = try await video.add(link: link, directory: directory, entry: nil, paused: true, outputOptions: task.videoOptions)
+            } else if let torrent = engine as? TorrentEngine {
+                if case .bittorrent(let count, let selected, _, _) = task.detail, selected < count {
+                    // 历史只保存已选文件数。会话已丢失时由用户重新选择。
+                    model.pendingNewTaskDirectory = directory
+                    model.showNewTask(prefill: task.sourceLink)
+                    return
+                }
+                engineID = try await torrent.add(link: link, directory: directory, filePriorities: nil, paused: true,
+                                                 markIncomplete: model.downloadSettings?.markIncomplete ?? true)
+            } else {
+                engineID = try await engine.addQueued(link: link, directory: directory)
+            }
+        }
+        guard generation == token, let index = model.tasks.firstIndex(where: {
+            $0.id == id && $0.deletedAt == nil && $0.engineTaskID == task.engineTaskID
+        }) else {
+            if engineID != task.engineTaskID { try? await engine.remove(engineID, deleteFiles: false) }
+            throw CancellationError()
+        }
+        if task.engineTaskID != engineID { excludeFromSnapshots(task) }
+        excludedTaskIDs[task.kind]?.remove(engineID)
+        checkedHTTPFiles.remove(path)
+        httpFileIssues[path] = nil
+        checkedCompletions.remove(id)
+        checksumJobs.removeValue(forKey: id)?.cancel()
+        var next = model.tasks[index]
+        next.engineTaskID = engineID
+        next.fileBookmark = nil
+        next.fileMissing = false
+        if task.needsFileRelink == true { next.savePath = nil }
+        next.needsFileRelink = nil
+        next.completedAt = nil
+        next.receivedBytes = 0
+        next.downloadRate = 0
+        next.uploadRate = 0
+        next.estimatedTimeRemaining = nil
+        next.lastProgressAt = nil
+        next.checksumVerification = nil
+        next.httpValidationError = nil
+        next.errorMessage = nil
+        next.postDownload = PostDownloadInfo(autoExtract: next.postDownload.autoExtract)
+        if scheduleRequiresPause() { model.automaticPauseStore.insert(.schedule, for: next) }
+        next.pauseReason = model.automaticPauseStore.displayReason(for: next)
+        next.status = next.pauseReason == nil ? .queued : .paused
+        model.userPausedTaskIDs.remove(id)
+        model.automaticPauseStore.setManuallyPaused(false, for: next)
+        scheduling.userResume(task)
+        scheduling.queue(next)
+        model.extractionCoordinator?.forgetCompletion(id)
+        model.tasks[index] = next
+        model.flushTaskHistory()
+        await refreshScheduling(sample: false)
+    }
+
     /// 在发布完成状态前识别登录页，避免把网页当成成品发通知或交给解压。
     private func validateHTTPCompletions(_ snapshots: [EngineTaskSnapshot]) async -> [EngineTaskSnapshot] {
         var result = snapshots
@@ -887,16 +1025,28 @@ final class DownloadCoordinator {
     func remove(_ id: DownloadTask.ID, deleteFiles: Bool = false) async {
         guard let index = model.tasks.firstIndex(where: { $0.id == id }) else { return }
         let task = model.tasks[index]
+        guard removingTaskIDs.insert(id).inserted else { return }
+        defer { removingTaskIDs.remove(id) }
+        if deleteFiles {
+            do {
+                try await removeWithFiles(task)
+            } catch {
+                let reason = EngineStatusPresentation.errorMessage(error)
+                setError(reason, for: id)
+                model.deletionIssue = reason
+            }
+            return
+        }
         StreamingPlayback.shared.cancel(id)
         waitingVideoLinks[id] = nil
-        if task.kind == .video, task.status == .completed, !deleteFiles {
+        if task.kind == .video, task.status == .completed {
             await removeCompletedVideo(task).value
             return
         }
         if (task.status == .completed && ![.bittorrent, .ed2k].contains(task.kind)) || task.engineTaskID == nil {
             excludeFromSnapshots(task)
             scheduling.removed(task)
-            if deleteFiles { model.removeRecord(id) } else { model.trashRecord(id) }
+            model.trashRecord(id)
             return
         }
         guard let engine = engine(for: task.kind), let engineTaskID = task.engineTaskID else {
@@ -905,11 +1055,11 @@ final class DownloadCoordinator {
         }
         let wasSelected = model.selectedTaskID == id
         excludeFromSnapshots(task)
-        if deleteFiles { model.removeRecord(id) } else { model.trashRecord(id) }
+        model.trashRecord(id)
         revisions[task.kind, default: 0] += 1
         defer { revisions[task.kind, default: 0] += 1 }
         do {
-            try await engine.remove(engineTaskID, deleteFiles: deleteFiles)
+            try await engine.remove(engineTaskID, deleteFiles: false)
             await publishFileProgress()
             scheduling.removed(task)
         } catch {
@@ -927,9 +1077,68 @@ final class DownloadCoordinator {
         }
     }
 
+    /// 引擎负责未完成分块和多文件清单；历史成品以书签指向的文件为准。
+    private func removeWithFiles(_ task: DownloadTask) async throws {
+        guard !redownloadingTaskIDs.contains(task.id), task.status != .extracting,
+              task.postDownload.extractionState != .extracting else {
+            throw EngineError.invalidResponse(String(localized: "任务正在处理文件，请稍后再删除。"))
+        }
+        let finished = task.status == .completed || task.status == .seeding || task.deletedAt != nil
+            || (task.completedAt != nil && [.failed, .paused].contains(task.status))
+        let target = try DownloadedOutput.existingURL(for: task)
+        let engineID = task.engineTaskID
+        let sharesOutput = model.tasks.contains { other in
+            guard other.id != task.id, other.deletedAt == nil else { return false }
+            if let engineID, other.kind == task.kind, other.engineTaskID == engineID { return true }
+            guard let target, let otherURL = other.savePath else { return false }
+            return target.standardizedFileURL.resolvingSymlinksInPath().path == otherURL.standardizedFileURL.resolvingSymlinksInPath().path
+        }
+        guard !sharesOutput else {
+            throw EngineError.invalidResponse(String(localized: "其他任务也在使用这个文件，请选择“只删除任务”。"))
+        }
+        pendingAdds[task.kind, default: 0] += 1
+        revisions[task.kind, default: 0] += 1
+        defer {
+            pendingAdds[task.kind, default: 0] -= 1
+            revisions[task.kind, default: 0] += 1
+        }
+        StreamingPlayback.shared.cancel(task.id)
+        waitingVideoLinks[task.id] = nil
+        let engine = engine(for: task.kind)
+        if !finished, let engineID {
+            guard let engine else { throw EngineError.notRunning }
+            try await engine.remove(engineID, deleteFiles: true)
+        } else if task.deletedAt == nil, task.kind != .http, let engineID, let engine,
+                  let snapshot = try await engine.snapshots().first(where: { $0.engineTaskID == engineID }) {
+            let enginePath = snapshot.savePath?.standardizedFileURL
+            // 书签跟随移动后，旧位置可能已有另一个同名文件。
+            let sameOutput = enginePath?.path == target?.standardizedFileURL.path
+            let enginePathVacant = try DownloadedOutput.isAbsent(enginePath)
+            let useEngineFiles = sameOutput || enginePathVacant
+            if !sameOutput { try DownloadedOutput.validateSingleFile(target) }
+            try await engine.remove(engineID, deleteFiles: useEngineFiles)
+            // 旧视频记录可能没有 finalFiles；引擎移除后补查已确认的单文件成品。
+            if !sameOutput || task.kind != .bittorrent { try DownloadedOutput.trashSingleFile(target) }
+        } else {
+            if task.deletedAt == nil, [.bittorrent, .ed2k].contains(task.kind), engineID != nil, engine == nil {
+                throw EngineError.notRunning
+            }
+            if finished, task.savePath == nil {
+                throw EngineError.invalidResponse(String(localized: "无法确认要删除的文件，已保留任务记录。"))
+            }
+            try DownloadedOutput.trashSingleFile(target)
+        }
+        excludeFromSnapshots(task)
+        if task.kind == .video { model.excludeVideoFromHistory(task) }
+        scheduling.removed(task)
+        model.removeRecord(task.id)
+        model.flushTaskHistory()
+    }
+
     /// 彻底删除和过期清理不触碰文件，但必须移除引擎的完成结果。
     func forgetHTTPTransfer(_ task: DownloadTask) {
-        guard task.kind == .http, let id = task.engineTaskID else { return }
+        guard task.kind == .http, let id = task.engineTaskID,
+              !model.activeTasks.contains(where: { $0.id != task.id && $0.kind == .http && $0.engineTaskID == id }) else { return }
         excludeFromSnapshots(task)
         guard let http = engines.first(where: { $0.kind == .http }) as? Aria2Engine else { return }
         forgettingHTTPTasks[task.id] = Task {
@@ -1005,6 +1214,7 @@ final class DownloadCoordinator {
 
     private func perform(_ id: DownloadTask.ID, action: Action) async {
         guard let task = model.tasks.first(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+        if action == .resume && task.needsFileRelink == true { return }
         if action == .resume, resubmittingTaskIDs.contains(id) || replacingHTTPTasks.contains(id)
             || !model.automaticPauseReasons(for: task).isEmpty { return }
         if action == .resume, scheduleRequiresPause() {

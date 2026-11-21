@@ -10,7 +10,7 @@ nonisolated enum GlobalConcurrencyPolicy {
     }
 
     static func occupiesSlot(_ task: DownloadTask, yielded: Set<DownloadTask.ID> = []) -> Bool {
-        task.engineTaskID != nil && [.downloading, .queued].contains(task.status) && !yielded.contains(task.id)
+        task.needsFileRelink != true && task.engineTaskID != nil && [.downloading, .queued].contains(task.status) && !yielded.contains(task.id)
     }
 
     static func admitted(

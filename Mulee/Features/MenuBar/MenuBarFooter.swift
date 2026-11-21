@@ -5,7 +5,6 @@ import SwiftUI
 /// 面板底部：全部暂停/继续、打开主窗口、网络状态，以及防睡眠说明。
 struct MenuBarFooter: View {
     @Environment(AppModel.self) private var model
-    @Environment(\.openWindow) private var openWindow
 
     let pauseResumeAction: MenuBarPresentation.PauseResumeAction
 
@@ -88,8 +87,7 @@ struct MenuBarFooter: View {
     }
 
     private func openMain() {
-        openWindow(id: "main")
-        NSApplication.shared.activate()
+        model.mainWindowRequest += 1
     }
 }
 

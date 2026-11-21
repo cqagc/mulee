@@ -41,7 +41,7 @@ struct MuleeApp: App {
                 .frame(minWidth: Theme.mainWindowMinWidth, minHeight: Theme.mainWindowMinHeight)
                 .debugLaunchOptions()
                 .modifier(OnboardingLaunchModifier())
-                .background(MainWindowRegistration(delegate: appDelegate))
+                .background(MainWindowRegistration(delegate: appDelegate, interceptsClose: !settings.closeKeepsRunning))
                 .modifier(SettingsSyncModifier())
                 .environment(model)
                 .environment(settings)

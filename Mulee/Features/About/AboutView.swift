@@ -3,6 +3,7 @@ import SwiftUI
 
 struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var showsBrowserGuide = false
     @State private var licensesUnavailable = false
 
     var body: some View {
@@ -24,10 +25,14 @@ struct AboutView: View {
                 if let url = URL(string: "https://github.com/cqagc/mulee") {
                     Link("GitHub", destination: url)
                 }
+                if let url = URL(string: "https://alternativeto.net/software/mulee/about/") {
+                    Link(destination: url) { Text(verbatim: "AlternativeTo") }
+                }
                 if let url = URL(string: "https://github.com/cqagc/mulee/blob/main/LICENSE") {
                     Link("GPL-3.0 许可证", destination: url)
                 }
             }
+            Button("安装浏览器扩展…") { showsBrowserGuide = true }
             Button("第三方许可证", action: showLicenses)
             if licensesUnavailable {
                 Text("此构建未包含第三方许可证目录。")
@@ -39,6 +44,9 @@ struct AboutView: View {
         }
         .padding(32)
         .frame(width: 420)
+        .sheet(isPresented: $showsBrowserGuide) {
+            BrowserExtensionGuide { showsBrowserGuide = false }
+        }
     }
 
     private func showLicenses() {

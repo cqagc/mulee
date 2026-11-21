@@ -94,6 +94,20 @@ std::vector<lt::add_torrent_params> Persistence::restore() {
     return result;
 }
 
+lt::add_torrent_params Persistence::load_resume(const std::string& id) {
+    auto path = directory_ / "resume" / (id + ".resume");
+    std::ifstream input(path, std::ios::binary);
+    if (!input) throw std::runtime_error("Resume data not found");
+    std::vector<char> buffer((std::istreambuf_iterator<char>(input)), {});
+    lt::error_code error;
+    auto params = lt::read_resume_data(lt::span<char const>(buffer), error);
+    if (error) throw std::runtime_error(error.message());
+    if (params.ti) params.info_hashes = params.ti->info_hashes();
+    if (torrent_id(params.info_hashes) != id) throw std::runtime_error("Resume info-hash does not match its filename");
+    absolute_path(params.save_path);
+    return params;
+}
+
 Metadata Persistence::load_meta(const std::string& id) {
     Metadata metadata;
     metadata.added_at = unix_time();
@@ -143,6 +157,8 @@ Metadata Persistence::load_meta(const std::string& id) {
         }
         auto completed = object.if_contains("completed_at");
         if (completed && (completed->is_null() || completed->is_int64())) metadata.completed_at = *completed;
+        if (auto value = object.if_contains("redownload_requested"); value && value->is_bool()) metadata.redownload_requested = value->as_bool();
+        if (auto value = object.if_contains("needs_relink"); value && value->is_bool()) metadata.needs_relink = value->as_bool();
     } catch (const std::exception& error) {
         log("Cannot read metadata " + id + ": " + error.what());
     }
@@ -176,7 +192,7 @@ void Persistence::atomic_write(const fs::path& destination, const char* data, st
 
 void Persistence::save_meta(const std::string& id, const Metadata& metadata) {
     auto text = json::serialize(json::object{{"source", metadata.source}, {"added_at", metadata.added_at},
-        {"completed_at", metadata.completed_at}, {"sequential_download", metadata.sequential_download},
+        {"completed_at", metadata.completed_at}, {"needs_relink", metadata.needs_relink}, {"redownload_requested", metadata.redownload_requested}, {"sequential_download", metadata.sequential_download},
         {"first_last_priority", metadata.first_last_priority},
         {"user_download_limit", metadata.user_download_limit}, {"user_upload_limit", metadata.user_upload_limit},
         {"policy_upload_limit", metadata.policy_upload_limit},

@@ -1,9 +1,56 @@
 import AppKit
 import MuleeCore
+import UniformTypeIdentifiers
+import SwiftUI
 
 /// 列表菜单和详情栏共用的系统操作。
 enum TaskActions {
+    @ViewBuilder
+    static func relinkTorrentButton(_ task: DownloadTask, model: AppModel) -> some View {
+        Button("重新关联…", systemImage: "link") {
+            relinkTorrent(task, model: model)
+        }
+        .disabled(task.deletedAt != nil || task.engineTaskID == nil)
+    }
+
+    @ViewBuilder
+    static func redownloadTorrentButton(_ task: DownloadTask, model: AppModel) -> some View {
+        Button("重新下载", systemImage: MuleeSymbol.retry.name) {
+            confirmRedownload(task, model: model)
+        }
+        .disabled(task.deletedAt != nil || model.redownloadingIDs.contains(task.id))
+    }
+
+    @MainActor
+    private static func relinkTorrent(_ task: DownloadTask, model: AppModel) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = String(localized: "重新关联")
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        Task {
+            do {
+                guard let coordinator = model.coordinator else { throw EngineError.notRunning }
+                try await coordinator.relinkTorrent(task.id, to: url)
+            }
+            catch { showTorrentError(error) }
+        }
+    }
+
+    @MainActor
+    private static func confirmRedownload(_ task: DownloadTask, model: AppModel) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = String(localized: "重新下载「\(task.name)」？")
+        alert.informativeText = String(localized: "这会清除当前任务的已完成状态，并按原始种子重新校验或下载。")
+        alert.addButton(withTitle: String(localized: "取消"))
+        alert.addButton(withTitle: String(localized: "重新下载"))
+        guard alert.runModal() == .alertSecondButtonReturn else { return }
+        Task { await model.redownloadMissingFile(task.id) }
+    }
     static func moveTorrentStorage(_ task: DownloadTask, model: AppModel) {
+        guard task.needsFileRelink != true else { return }
         guard let controller = model.bitTorrent, let id = task.engineTaskID else { return }
         let panel = NSOpenPanel()
         panel.canChooseFiles = false
@@ -83,7 +130,8 @@ enum TaskActions {
         field.setAccessibilityLabel(String(localized: "标签"))
         alert.accessoryView = field
         alert.addButton(withTitle: String(localized: "保存"))
-        alert.addButton(withTitle: String(localized: "取消"))
+        let cancel = alert.addButton(withTitle: String(localized: "取消"))
+        alert.window.defaultButtonCell = cancel.cell as? NSButtonCell
         alert.window.initialFirstResponder = field
         if alert.runModal() == .alertFirstButtonReturn { model.setTags(task.id, text: field.stringValue) }
     }
@@ -123,6 +171,49 @@ enum TaskActions {
     static func localURL(for task: DownloadTask) -> URL {
         task.savePath ?? URL.downloadsDirectory.appending(path: "Mulee", directoryHint: .isDirectory)
             .appending(path: task.name, directoryHint: .inferFromPath)
+    }
+
+    enum OpenAction: Equatable {
+        case open(URL)
+        case reveal(URL)
+    }
+
+    static func openAction(for task: DownloadTask, defaultDirectory: URL) -> OpenAction? {
+        guard task.deletedAt == nil else { return nil }
+        var tracked = task
+        if tracked.fileBookmark != nil { FileTracker.resolve(&tracked) }
+
+        let manager = FileManager.default
+        let path = tracked.savePath
+        if tracked.fileMissing != true, let path, path.isFileURL, manager.fileExists(atPath: path.path),
+           let info = try? path.resourceValues(forKeys: [.isDirectoryKey, .isPackageKey, .contentTypeKey]) {
+            if info.contentType?.conforms(to: .application) == true { return .reveal(path) }
+            if info.isDirectory == true && info.isPackage != true { return .open(path) }
+            if tracked.status == .completed || tracked.status == .seeding { return .open(path) }
+            return .reveal(path)
+        }
+
+        // 元数据尚未就绪或文件已移走时，打开仍可用的保存目录。
+        let directories = [path?.deletingLastPathComponent()].compactMap { $0 }
+            + (task.writeDirectories ?? []) + [defaultDirectory, .downloadsDirectory]
+        for directory in directories where directory.isFileURL {
+            var isDirectory: ObjCBool = false
+            if manager.fileExists(atPath: directory.path, isDirectory: &isDirectory), isDirectory.boolValue {
+                return .open(directory)
+            }
+        }
+        return nil
+    }
+
+    static func openDownload(_ task: DownloadTask, defaultDirectory: URL) {
+        switch openAction(for: task, defaultDirectory: defaultDirectory) {
+        case .open(let url):
+            if !NSWorkspace.shared.open(url) { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+        case .reveal(let url):
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+        case nil:
+            break
+        }
     }
 
     static func reveal(_ task: DownloadTask) {

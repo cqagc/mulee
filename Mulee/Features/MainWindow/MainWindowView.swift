@@ -26,6 +26,22 @@ struct MainWindowView: View {
             } message: {
                 Text(model.openURLIssue ?? "")
             }
+            .alert("未能删除任务", isPresented: Binding(
+                get: { model.deletionIssue != nil },
+                set: { if !$0 { model.deletionIssue = nil } }
+            )) {
+                Button("好", role: .cancel) {}
+            } message: {
+                Text(model.deletionIssue ?? "")
+            }
+            .alert("无法重新下载", isPresented: Binding(
+                get: { model.redownloadIssue != nil },
+                set: { if !$0 { model.redownloadIssue = nil } }
+            )) {
+                Button("好", role: .cancel) {}
+            } message: {
+                Text(model.redownloadIssue ?? "")
+            }
             .onChange(of: state.selection) { state.clearHiddenSelection(in: model) }
             .onChange(of: state.search) { state.clearHiddenSelection(in: model) }
             .onChange(of: model.tasks) { state.clearHiddenSelection(in: model) }

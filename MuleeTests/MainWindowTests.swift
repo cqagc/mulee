@@ -4,7 +4,118 @@ import SwiftUI
 import Testing
 @testable import Mulee
 
+@MainActor
+private final class MainWindowDelegateProbe: NSObject, NSWindowDelegate {
+    var keyCount = 0
+    var willCloseCount = 0
+
+    func windowDidBecomeKey(_ notification: Notification) { keyCount += 1 }
+
+    func windowWillClose(_ notification: Notification) {
+        willCloseCount += 1
+    }
+}
+
 @Suite @MainActor struct MainWindowTests {
+    @Test func registrationLeavesDelegateUntouchedWhenCloseInterceptionIsOff() {
+        let appDelegate = AppDelegate()
+        let original = MainWindowDelegateProbe()
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.delegate = original
+        let view = MainWindowRegistrationView(appDelegate: appDelegate)
+        view.interceptsClose = false
+        view.frame = window.contentView?.bounds ?? .zero
+        window.contentView?.addSubview(view)
+        view.registerWindow()
+
+        #expect(window.delegate === original)
+        view.unregisterWindow()
+        #expect(window.delegate === original)
+    }
+
+    @Test func movingRegistrationRestoresKeyNotificationsToFirstWindow() {
+        let delegate = AppDelegate()
+        let original = MainWindowDelegateProbe()
+        let first = NSWindow(contentRect: .zero, styleMask: [.titled], backing: .buffered, defer: false)
+        let second = NSWindow(contentRect: .zero, styleMask: [.titled], backing: .buffered, defer: false)
+        first.delegate = original
+        let registration = MainWindowRegistrationView(appDelegate: delegate)
+        registration.interceptsClose = true
+        first.contentView?.addSubview(registration)
+        second.contentView?.addSubview(registration)
+
+        #expect(first.delegate === original)
+        NotificationCenter.default.post(name: NSWindow.didBecomeKeyNotification, object: first)
+        #expect(original.keyCount == 1)
+        registration.interceptsClose = false
+        registration.registerWindow()
+        #expect(second.delegate == nil)
+    }
+
+    @Test func registrationReplacesAndRestoresDelegateAcrossViewReplacement() throws {
+        weak var releasedFirstDelegate: MainWindowDelegate?
+        try autoreleasepool {
+            let appDelegate = AppDelegate()
+            let original = MainWindowDelegateProbe()
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),
+                                  styleMask: [.titled], backing: .buffered, defer: false)
+            window.delegate = original
+            let first = MainWindowRegistrationView(appDelegate: appDelegate)
+            let second = MainWindowRegistrationView(appDelegate: appDelegate)
+            first.interceptsClose = true
+            second.interceptsClose = true
+            window.contentView?.addSubview(first)
+            first.registerWindow()
+            var firstDelegate: MainWindowDelegate? = try #require(window.delegate as? MainWindowDelegate)
+            releasedFirstDelegate = firstDelegate
+
+            second.frame = window.contentView?.bounds ?? .zero
+            window.contentView?.addSubview(second)
+            second.registerWindow()
+            let secondDelegate = try #require(window.delegate as? MainWindowDelegate)
+            #expect(secondDelegate !== firstDelegate)
+            #expect(secondDelegate.original === original)
+
+            first.unregisterWindow()
+            #expect(window.delegate === secondDelegate)
+            firstDelegate = nil
+
+            second.unregisterWindow()
+            #expect(window.delegate === original)
+        }
+        #expect(releasedFirstDelegate == nil)
+    }
+
+    @Test func delegateRestoresOriginalAfterWindowWillCloseAndRetainsNotificationTarget() throws {
+        weak var releasedOriginal: MainWindowDelegateProbe?
+        try autoreleasepool {
+            let appDelegate = AppDelegate()
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 640, height: 480),
+                                  styleMask: [.titled], backing: .buffered, defer: false)
+            var original: MainWindowDelegateProbe? = MainWindowDelegateProbe()
+            releasedOriginal = original
+            window.delegate = original
+            let registration = MainWindowRegistrationView(appDelegate: appDelegate)
+            registration.interceptsClose = true
+            window.contentView?.addSubview(registration)
+            registration.registerWindow()
+            var installed: MainWindowDelegate? = try #require(window.delegate as? MainWindowDelegate)
+            #expect(installed?.original === original)
+
+            let notification = Notification(name: NSWindow.willCloseNotification, object: window)
+            NotificationCenter.default.post(notification)
+            #expect(original?.willCloseCount == 1)
+            #expect(window.delegate === original)
+
+            registration.unregisterWindow()
+            installed = nil
+            original = nil
+            window.delegate = nil
+        }
+        #expect(releasedOriginal == nil)
+    }
+
     @Test func nativeSplitInheritsWindowAppearanceAcrossSystemChanges() async throws {
         let temporary = try TemporaryDefaults(prefix: "window-appearance.")
         defer { temporary.clean() }

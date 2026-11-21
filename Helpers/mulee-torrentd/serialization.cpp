@@ -156,6 +156,6 @@ json::object serialize_torrent(const std::string& id, const Torrent& torrent) {
         {"download_limit", std::max(0, torrent.handle.download_limit())},
         {"is_private", info ? info->priv() : false}, {"upload_limit", std::max(0, torrent.handle.upload_limit())},
         {"error", error}, {"source", torrent.metadata.source}, {"added_at", torrent.metadata.added_at},
-        {"completed_at", torrent.metadata.completed_at}, {"eta", eta}};
+        {"completed_at", torrent.metadata.completed_at}, {"needs_relink", torrent.metadata.needs_relink}, {"eta", eta}};
 }
 }

@@ -52,6 +52,42 @@ struct YtDlpRemovalTests {
         }
     }
 
+    @Test func redownloadReusesSavedFormatAndPlaylistEntry() async throws {
+        let root = URL.temporaryDirectory.appending(path: UUID().uuidString)
+        let state = root.appending(path: "state")
+        let downloads = root.appending(path: "downloads")
+        try FileManager.default.createDirectory(at: state, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try FileManager.default.createDirectory(at: downloads, withIntermediateDirectories: true)
+        let binary = root.appending(path: "yt-dlp")
+        try Data(Self.script.utf8).write(to: binary)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
+        let source = try #require(URL(string: "https://example.invalid/video"))
+        let output = downloads.appending(path: "fixture.mp4")
+        var job = YtDlpJob(id: UUID().uuidString.lowercased(), url: source, site: .other, directory: downloads,
+                           name: "Example", playlistIndex: 3, playlistTitle: "Example", formatID: "18", status: .completed)
+        job.savePath = output
+        let saved = state.appending(path: "jobs.json")
+        try JSONEncoder().encode([job]).write(to: saved)
+        let engine = YtDlpEngine(stateDirectory: state, binaryURL: binary, installer: nil, updatesEnabled: false)
+        do {
+            try await engine.start(options: EngineOptions(downloadDirectory: downloads))
+            try await engine.redownload(job.id, directory: downloads)
+            let paused = try #require(try JSONDecoder().decode([YtDlpJob].self, from: Data(contentsOf: saved)).first)
+            #expect(paused.status == .paused && paused.id == job.id)
+            #expect(paused.playlistIndex == 3 && paused.formatID == "18")
+            try await engine.resume(job.id)
+            let result = try await YtDlpIntegrationFixture.waitFor(engine, id: job.id) { $0.status == .completed }
+            let file = try #require(result.savePath)
+            #expect(try Data(contentsOf: file) == Data("video".utf8))
+            #expect(try await engine.snapshots().count == 1)
+        } catch {
+            await engine.stop()
+            throw error
+        }
+        await engine.stop()
+    }
+
     private static let script = """
     #!/bin/sh
     if [ "$1" = "--version" ]; then echo fixture; exit 0; fi
